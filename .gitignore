@@ -22,3 +22,58 @@
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 replay_pid*
+
+# Environment variables
+.env
+
+# Compiled python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Packages
+bin/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Local database
+*.sqlite3
+*.db
+
+# Logs
+*.log
+
+# VS Code
+.vscode/
+
+# PyCharm / IntelliJ
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
