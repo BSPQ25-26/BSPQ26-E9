@@ -85,10 +85,10 @@ services:
       - wallabot-net
     restart: unless-stopped
 
-  # ── Wallabot AI Service ──────────────────────
-  wallabot-service:
+  # ── Agentic Service ──────────────────────
+  agentic-service:
     build:
-      context: ./backend/wallabot-service
+      context: ./backend/agentic-service
       dockerfile: Dockerfile
     container_name: wallabot-ai
     ports:
@@ -96,15 +96,15 @@ services:
     env_file:
       - .env
     environment:
-      - DATABASE_URL=sqlite:////app/data/wallabot.db
-      - SERVICE_NAME=wallabot-service
+      - DATABASE_URL=sqlite:////app/data/test-database.db
+      - SERVICE_NAME=agentic-service
       # LangChain / Tavily keys come from .env
       # - LANGCHAIN_API_KEY=${LANGCHAIN_API_KEY}
       # - TAVILY_API_KEY=${TAVILY_API_KEY}
       # - OPENAI_API_KEY=${OPENAI_API_KEY}
     volumes:
       - ./data:/app/data
-      - ./backend/wallabot-service:/app
+      - ./backend/agentic-service:/app
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
