@@ -99,11 +99,11 @@ jobs:
   # ─────────────────────────────────────────────
 
   test-wallabot:
-    name: "Test · wallabot-service"
+    name: "Test · agentic-service"
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: backend/wallabot-service
+        working-directory: backend/agentic-service
     steps:
       - uses: actions/checkout@v4
 
@@ -111,7 +111,7 @@ jobs:
         with:
           python-version: '3.11'
           cache: 'pip'
-          cache-dependency-path: backend/wallabot-service/requirements.txt
+          cache-dependency-path: backend/agentic-service/requirements.txt
 
       - name: Install dependencies
         run: |
