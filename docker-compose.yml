@@ -1,0 +1,154 @@
+version: '3.8'
+
+# ─────────────────────────────────────────────
+#  Wallabot — Local Dev Stack (SQLite 4 now, Supabase later)
+#  Usage: docker compose up --build
+# ─────────────────────────────────────────────
+
+services:
+
+  # ── Auth Service ────────────────────────────
+  auth-service:
+    build:
+      context: ./backend/auth-service
+      dockerfile: Dockerfile
+    container_name: wallabot-auth
+    ports:
+      - "8001:8000"
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=sqlite:////app/data/auth.db
+      - SERVICE_NAME=auth-service
+    volumes:
+      - ./data:/app/data        # shared SQLite directory
+      - ./backend/auth-service:/app  # hot-reload in dev
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - wallabot-net
+    restart: unless-stopped
+
+  # ── Inventory Service ────────────────────────
+  inventory-service:
+    build:
+      context: ./backend/inventory-service
+      dockerfile: Dockerfile
+    container_name: wallabot-inventory
+    ports:
+      - "8002:8000"
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=sqlite:////app/data/inventory.db
+      - SERVICE_NAME=inventory-service
+    volumes:
+      - ./data:/app/data
+      - ./backend/inventory-service:/app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - wallabot-net
+    restart: unless-stopped
+
+  # ── Transaction Service ──────────────────────
+  transaction-service:
+    build:
+      context: ./backend/transaction-service
+      dockerfile: Dockerfile
+    container_name: wallabot-transactions
+    ports:
+      - "8003:8000"
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=sqlite:////app/data/transactions.db
+      - SERVICE_NAME=transaction-service
+    volumes:
+      - ./data:/app/data
+      - ./backend/transaction-service:/app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - wallabot-net
+    restart: unless-stopped
+
+  # ── Wallabot AI Service ──────────────────────
+  wallabot-service:
+    build:
+      context: ./backend/wallabot-service
+      dockerfile: Dockerfile
+    container_name: wallabot-ai
+    ports:
+      - "8004:8000"
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=sqlite:////app/data/wallabot.db
+      - SERVICE_NAME=wallabot-service
+      # LangChain / Tavily keys come from .env
+      # - LANGCHAIN_API_KEY=${LANGCHAIN_API_KEY}
+      # - TAVILY_API_KEY=${TAVILY_API_KEY}
+      # - OPENAI_API_KEY=${OPENAI_API_KEY}
+    volumes:
+      - ./data:/app/data
+      - ./backend/wallabot-service:/app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - wallabot-net
+    restart: unless-stopped
+
+# ── Frontend - framework to be defined, so this is a Vite + React placeholder by default
+#  frontend:
+#    build:
+#      context: ./frontend
+#      dockerfile: Dockerfile
+#    container_name: wallabot-frontend
+#    ports:
+#      - "5173:5173"
+#    env_file:
+#      - .env
+#    environment:
+#      - VITE_API_AUTH_URL=http://localhost:8001
+#      - VITE_API_INVENTORY_URL=http://localhost:8002
+#      - VITE_API_TRANSACTION_URL=http://localhost:8003
+#      - VITE_API_WALLABOT_URL=http://localhost:8004
+#    volumes:
+#      - ./frontend:/app
+#      - /app/node_modules          # prevent host node_modules override
+#    networks:
+#      - wallabot-net
+#    restart: unless-stopped
+
+# ─────────────────────────────────────────────
+#  Shared Network
+# ─────────────────────────────────────────────
+networks:
+  wallabot-net:
+    driver: bridge
+
+# ─────────────────────────────────────────────
+#  NOTE: Supabase migration (Sprint 2)
+#  When ready, replace DATABASE_URL with:
+#    - DATABASE_URL=${SUPABASE_DB_URL}
+#  and remove the ./data volume mounts.
+#  A docker-compose.prod.yml will override
+#  these values without modifying this file.
+# ─────────────────────────────────────────────

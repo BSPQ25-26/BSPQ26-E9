@@ -93,6 +93,35 @@ Wallabot is a multi-tier, distributed **RESTful microservice architecture** desi
 
 ## Development & Deployment
 
+## Current Project Structure
+
+```text
+BSPQ26-E9/
+├── .env
+├── .github/
+├── .gitignore
+├── LICENSE
+├── README.md
+├── docker-compose.yml
+├── backend/
+│   ├── agentic-service/
+│   │   ├── Dockerfile
+│   │   └── requirements.txt
+│   ├── auth-service/
+│   ├── inventory-service/
+│   │   ├── Dockerfile
+│   │   └── requirements.txt
+│   └── transaction-service/
+│       ├── Dockerfile
+│       └── requirements.txt
+├── data/
+│   └── test-wallabot.db
+├── frontend/
+│   └── Dockerfile
+└── tests/
+	└── integration/
+```
+
 ### **Containerization**
 
 Each microservice is containerized using optimized **Dockerfiles**. You can spin up the entire local environment, including the database and services, using **Docker Compose**.

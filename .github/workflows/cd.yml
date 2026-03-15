@@ -1,0 +1,120 @@
+name: Wallabot CD
+
+on:
+  # Only deploy when CI has passed on main
+  workflow_run:
+    workflows: ["Wallabot CI"]
+    branches: [main]
+    types: [completed]
+
+jobs:
+
+  # ── Guard: skip everything if CI failed ─────
+  check-ci:
+    name: "Guard · CI passed"
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    steps:
+      - run: echo "CI passed — proceeding to deploy"
+
+  # ── Build & push all images to GHCR ─────────
+  build-and-push:
+    name: "Build · ${{ matrix.service }}"
+    runs-on: ubuntu-latest
+    needs: check-ci
+    permissions:
+      contents: read
+      packages: write
+
+    strategy:
+      matrix:
+        service:
+          - auth-service
+          - inventory-service
+          - transaction-service
+          - wallabot-service
+          - frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}   # auto-provided by GitHub
+
+      - name: Set image name
+        id: meta
+        run: |
+          # ghcr.io/<owner>/<repo>/<service>:<sha>
+          REPO=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          echo "image=ghcr.io/${REPO}/${{ matrix.service }}" >> $GITHUB_OUTPUT
+
+      # Determine the correct build context path
+      - name: Resolve build context
+        id: ctx
+        run: |
+          if [ "${{ matrix.service }}" = "frontend" ]; then
+            echo "context=./frontend" >> $GITHUB_OUTPUT
+          else
+            echo "context=./backend/${{ matrix.service }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ steps.ctx.outputs.context }}
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.image }}:latest
+            ${{ steps.meta.outputs.image }}:${{ github.sha }}
+          # BuildKit cache: reuse layers across runs for faster builds
+          cache-from: type=registry,ref=${{ steps.meta.outputs.image }}:buildcache
+          cache-to:   type=registry,ref=${{ steps.meta.outputs.image }}:buildcache,mode=max
+
+  # ── Deploy ───────────────────────────────────
+  #
+  #  This job is intentionally minimal for Sprint 1.
+  #  It runs after all images are pushed and provides
+  #  a hook for your actual deploy step.
+  #
+  #  Common patterns to drop in here:
+  #    - SSH into a virtual machine in a VPS or a raspberry pi and run docker compose pull + up
+
+
+  deploy:
+    name: "Deploy · production"
+    runs-on: ubuntu-latest
+    needs: build-and-push
+    environment: production   # enables manual approval in GitHub settings
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # ── Option A: SSH deploy (uncomment when ready) ──────────
+      # - name: Deploy via SSH
+      #   uses: appleboy/ssh-action@v1
+      #   with:
+      #     host: ${{ secrets.DEPLOY_HOST }}
+      #     username: ${{ secrets.DEPLOY_USER }}
+      #     key: ${{ secrets.DEPLOY_SSH_KEY }}
+      #     script: |
+      #       cd /opt/wallabot
+      #       echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+      #       docker compose -f docker-compose.prod.yml pull
+      #       docker compose -f docker-compose.prod.yml up -d --remove-orphans
+
+      # ── Option B: Placeholder until we migrate to supabase ────────────────
+      - name: Deploy placeholder
+        run: |
+          echo "Images built and pushed to GHCR for commit ${{ github.sha }}"
+          echo "Actual deploy target to be configured in Sprint 2"
+          echo ""
+          echo "Images available:"
+          REPO=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          for svc in auth-service inventory-service transaction-service wallabot-service frontend; do
+            echo "  ghcr.io/${REPO}/${svc}:${{ github.sha }}"
+          done
+
