@@ -64,6 +64,7 @@ htmlcov/
 # Local database
 *.sqlite3
 test_auth.db
+.db
 
 # Logs
 *.log
