@@ -1,11 +1,9 @@
 
 
 import pytest
-from app.models.product import ProductState
-
 def get_auth_header():
-    # Simula un usuario autenticado (ajusta según tu sistema de auth real)
-    return {"Authorization": "testtoken"}
+from app.models.product import ProductState
+# Nota: Este test es solo de ejemplo, los tests de integración usan JWT real.
 
 def test_create_product_success(client):
     product_data = {
