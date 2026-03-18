@@ -1,15 +1,20 @@
-from fastapi import Depends, HTTPException, status, Header
-from typing import Optional
+from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from jose import jwt, JWTError
+import os
 
-# Dummy user for testing
-class User:
-    def __init__(self, id: int):
-        self.id = id
+SECRET_KEY = os.getenv("SECRET_KEY", "mi_clave_secreta")
+ALGORITHM = os.getenv("ALGORITHM", "HS256")
 
-# Simula autenticación por token
-def get_current_user(authorization: Optional[str] = Header(None)):
-    # En un entorno real, validarías el token JWT aquí
-    # Para test, si hay header Authorization, devuelve un usuario simulado
-    if authorization == "testtoken":
-        return User(id=1)
-    raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+security = HTTPBearer()
+
+def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    token = credentials.credentials
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_email = payload.get("sub")
+        if user_email is None:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token payload")
+        return user_email
+    except JWTError:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token")

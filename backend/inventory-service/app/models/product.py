@@ -19,7 +19,7 @@ class Product(Base):
     price = Column(Float, nullable=False)
     condition = Column(String, nullable=False)
     state = Column(Enum(ProductState), default=ProductState.AVAILABLE, nullable=False)
-    seller_id = Column(Integer, nullable=False)
+    seller_id = Column(String, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     # seller = relationship("User", back_populates="products")
