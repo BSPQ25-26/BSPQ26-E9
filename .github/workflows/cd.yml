@@ -34,12 +34,14 @@ jobs:
         service:
           - auth-service
           #- inventory-service
-          #- transaction-service
+          - transaction-service
           #- wallabot-service
           #- frontend
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
@@ -100,6 +102,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       # ── Option A: SSH deploy (uncomment when ready) ──────────
       # - name: Deploy via SSH
@@ -117,13 +121,13 @@ jobs:
       # ── Option B: Placeholder until we migrate to supabase ────────────────
       - name: Deploy placeholder
         run: |
-          echo "Images built and pushed to GHCR for commit ${{ github.sha }}"
+          echo "Images built and pushed to GHCR for commit ${{ needs.build-and-push.outputs.sha }}"
           echo "Actual deploy target to be configured in Sprint 2"
           echo ""
           echo "Images available:"
           REPO=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
-          for svc in auth-service; do
+          for svc in auth-service transaction-service; do
             echo "  ghcr.io/${REPO}/${svc}:${{ needs.build-and-push.outputs.sha }}" 
           done
 
-#inventory-service transaction-service wallabot-service frontend (to complete when services are developed)
+#inventory-service  wallabot-service frontend (to complete when services are developed)
