@@ -19,6 +19,7 @@ services:
       - .env
     environment:
       - DATABASE_URL=sqlite:////app/data/auth.db
+      - AUTH_SEED_SAMPLE_DATA=true
       - SERVICE_NAME=auth-service
     volumes:
       - ./data:/app/data        # shared SQLite directory
