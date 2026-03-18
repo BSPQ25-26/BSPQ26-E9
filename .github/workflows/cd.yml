@@ -22,21 +22,26 @@ jobs:
     name: "Build · ${{ matrix.service }}"
     runs-on: ubuntu-latest
     needs: check-ci
+    timeout-minutes: 30
     permissions:
       contents: read
       packages: write
+    outputs:
+      sha: ${{ steps.sha.outputs.sha }}
 
     strategy:
       matrix:
         service:
           - auth-service
-          - inventory-service
+          #- inventory-service
           - transaction-service
-          - wallabot-service
-          - frontend
+          #- wallabot-service
+          #- frontend
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
@@ -44,6 +49,11 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}   # auto-provided by GitHub
+
+      - name: Get correct SHA
+        id: sha
+        run: |
+          echo "sha=${{ github.event.workflow_run.head_sha || github.sha }}" >> $GITHUB_OUTPUT
 
       - name: Set image name
         id: meta
@@ -69,7 +79,7 @@ jobs:
           push: true
           tags: |
             ${{ steps.meta.outputs.image }}:latest
-            ${{ steps.meta.outputs.image }}:${{ github.sha }}
+            ${{ steps.meta.outputs.image }}:${{ steps.sha.outputs.sha }} 
           # BuildKit cache: reuse layers across runs for faster builds
           cache-from: type=registry,ref=${{ steps.meta.outputs.image }}:buildcache
           cache-to:   type=registry,ref=${{ steps.meta.outputs.image }}:buildcache,mode=max
@@ -92,6 +102,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       # ── Option A: SSH deploy (uncomment when ready) ──────────
       # - name: Deploy via SSH
@@ -109,12 +121,13 @@ jobs:
       # ── Option B: Placeholder until we migrate to supabase ────────────────
       - name: Deploy placeholder
         run: |
-          echo "Images built and pushed to GHCR for commit ${{ github.sha }}"
+          echo "Images built and pushed to GHCR for commit ${{ needs.build-and-push.outputs.sha }}"
           echo "Actual deploy target to be configured in Sprint 2"
           echo ""
           echo "Images available:"
           REPO=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
-          for svc in auth-service inventory-service transaction-service wallabot-service frontend; do
-            echo "  ghcr.io/${REPO}/${svc}:${{ github.sha }}"
+          for svc in auth-service transaction-service; do
+            echo "  ghcr.io/${REPO}/${svc}:${{ needs.build-and-push.outputs.sha }}" 
           done
 
+#inventory-service  wallabot-service frontend (to complete when services are developed)
