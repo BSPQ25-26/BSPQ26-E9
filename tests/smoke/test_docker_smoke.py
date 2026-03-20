@@ -5,16 +5,16 @@ import httpx
 import pytest
 
 #for running:
-#docker compose up --build -d auth-service transaction-service (until the rest is done or working)
-#$env:RUN_DOCKER_SMOKE="1"; python.exe -m pytest tests/smoke/test_docker_smoke.py -v
+# docker compose up --build -d auth-service inventory-service transaction-service //(until the rest is done or working)
+# $env:RUN_DOCKER_SMOKE="1"; python.exe -m pytest tests/smoke/test_docker_smoke.py -v
 
 
 RUN_SMOKE = os.getenv("RUN_DOCKER_SMOKE") == "1"
 SMOKE_TIMEOUT_SECONDS = float(os.getenv("SMOKE_TIMEOUT_SECONDS", "10"))
 
 # Current working baseline: auth + transaction are required.
-DEFAULT_REQUIRED_SERVICES = "auth-service,transaction-service"
-DEFAULT_OPTIONAL_SERVICES = "inventory-service,agentic-service"
+DEFAULT_REQUIRED_SERVICES = "auth-service,transaction-service,inventory-service"
+DEFAULT_OPTIONAL_SERVICES = "agentic-service"
 
 SERVICE_URLS = {
     "auth-service": "http://localhost:8001",

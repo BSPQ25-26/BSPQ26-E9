@@ -5,7 +5,7 @@ import httpx
 import pytest
 
 # running auth-service in 8001 & transaction-service in 8003 is required for these tests to work
-#$env:RUN_STATE_MACHINE_INTEGRATION="1"; python.exe -m pytest tests/integration/test_state_machine_integration.py -v
+# $env:RUN_STATE_MACHINE_INTEGRATION="1"; python.exe -m pytest tests/integration/test_state_machine_integration.py -v
 
 
 RUN_INTEGRATION = os.getenv("RUN_STATE_MACHINE_INTEGRATION") == "1"
