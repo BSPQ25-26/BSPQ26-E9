@@ -5,7 +5,6 @@ import os
 
 SECRET_KEY = os.getenv("SECRET_KEY", "mi_clave_secreta")
 ALGORITHM = os.getenv("ALGORITHM", "HS256")
-
 security = HTTPBearer()
 
 def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):

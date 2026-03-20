@@ -54,6 +54,7 @@ env/
 ENV/
 env.bak/
 venv.bak/
+.venv*
 
 # Testing
 .pytest_cache/
