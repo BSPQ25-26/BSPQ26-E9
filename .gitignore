@@ -79,3 +79,11 @@ test_auth.db
 # OS
 .DS_Store
 Thumbs.db
+
+# UV
+uv.lock
+pyproject.toml
+.python-version
+
+# Copilot
+.github/copilot-instructions.md
