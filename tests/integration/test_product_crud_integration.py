@@ -6,7 +6,10 @@ import pytest
 
 # Start services:
 # docker compose up --build
+
 # Run with integration flag:
+# cd backend/auth-service
+# uvicorn app.main:app --port 8001 --reload
 # $env:RUN_PRODUCT_INTEGRATION="1"; python.exe -m pytest tests/integration/test_product_crud_integration.py -q -v
 
 RUN_INTEGRATION = os.getenv("RUN_PRODUCT_INTEGRATION") == "1"
@@ -14,8 +17,8 @@ AUTH_BASE_URL = os.getenv("AUTH_BASE_URL", "http://localhost:8001")
 INVENTORY_BASE_URL = os.getenv("INVENTORY_BASE_URL", "http://localhost:8002")
 PRODUCTS_PATH = os.getenv("PRODUCTS_PATH", "/products")
 PRODUCT_ID_FIELD = os.getenv("PRODUCT_ID_FIELD", "id")
-OWNER_FIELD = os.getenv("PRODUCT_OWNER_FIELD", "owner_id")
-CREATE_OWNER_FIELD = os.getenv("PRODUCT_CREATE_OWNER_FIELD", "owner_id")
+OWNER_FIELD = os.getenv("PRODUCT_OWNER_FIELD", "seller_id")
+CREATE_OWNER_FIELD = os.getenv("PRODUCT_CREATE_OWNER_FIELD", "seller_id")
 
 pytestmark = pytest.mark.skipif(
     not RUN_INTEGRATION,
@@ -158,7 +161,7 @@ def test_create_rejects_owner_spoofing_when_owner_field_is_client_settable(api_c
         pytest.skip(f"Cannot run spoof test: '{OWNER_FIELD}' not in product response.")
 
     spoof_payload = {
-        CREATE_OWNER_FIELD: created[OWNER_FIELD],
+        CREATE_OWNER_FIELD: created[OWNER_FIELD],  # attempt to use owner's seller_id
         "name": f"spoof-{uuid4().hex[:6]}",
         "description": "spoof attempt",
         "price": 50,
@@ -171,4 +174,10 @@ def test_create_rejects_owner_spoofing_when_owner_field_is_client_settable(api_c
         json=spoof_payload,
         headers=_headers(outsider["token"]),
     )
-    assert spoof_response.status_code == 403, f"Spoof should be 403: {spoof_response.text}"
+    # Server must ignore seller_id from body and assign it from the JWT instead
+    assert spoof_response.status_code == 201, f"Expected 201, got: {spoof_response.text}"
+    data = spoof_response.json()
+    assert data[OWNER_FIELD] != created[OWNER_FIELD], \
+        "seller_id must not be the spoofed owner's id"
+    assert data[OWNER_FIELD] == outsider["email"], \
+        "seller_id must match the authenticated user from the JWT, not the spoofed value"
