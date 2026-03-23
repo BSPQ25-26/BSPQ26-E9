@@ -33,10 +33,10 @@ jobs:
       matrix:
         service:
           - auth-service
-          #- inventory-service
+          - inventory-service
           - transaction-service
-          #- wallabot-service
-          #- frontend
+          - wallabot-service
+          - frontend
 
     steps:
       - uses: actions/checkout@v4
@@ -129,8 +129,7 @@ jobs:
           echo ""
           echo "Images available:"
           REPO=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
-          for svc in auth-service transaction-service; do
+          for svc in auth-service transaction-service inventory-service wallabot-service frontend; do
             echo "  ghcr.io/${REPO}/${svc}:${{ needs.build-and-push.outputs.sha }}" 
           done
 
-#inventory-service  wallabot-service frontend (to complete when services are developed)
