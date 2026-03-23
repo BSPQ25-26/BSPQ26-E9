@@ -115,29 +115,27 @@ services:
     networks:
       - wallabot-net
     restart: unless-stopped
-
-# ── Frontend - framework to be defined, so this is a Vite + React placeholder by default
-#  frontend:
-#    build:
-#      context: ./frontend
-#      dockerfile: Dockerfile
-#    container_name: wallabot-frontend
-#    ports:
-#      - "5173:5173"
-#    env_file:
-#      - .env
-#    environment:
-#      - VITE_API_AUTH_URL=http://localhost:8001
-#      - VITE_API_INVENTORY_URL=http://localhost:8002
-#      - VITE_API_TRANSACTION_URL=http://localhost:8003
-#      - VITE_API_WALLABOT_URL=http://localhost:8004
-#    volumes:
-#      - ./frontend:/app
-#      - /app/node_modules          # prevent host node_modules override
-#    networks:
-#      - wallabot-net
-#    restart: unless-stopped
-
+ #─ Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: wallabot-frontend
+    ports:
+      - "5173:5173"
+    env_file:
+      - .env
+    environment:
+      - VITE_API_AUTH_URL=http://localhost:8001
+      - VITE_API_INVENTORY_URL=http://localhost:8002
+      - VITE_API_TRANSACTION_URL=http://localhost:8003
+      - VITE_API_WALLABOT_URL=http://localhost:8004
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules          # prevent host node_modules override
+    networks:
+      - wallabot-net
+    restart: unless-stopped
 # ─────────────────────────────────────────────
 #  Shared Network
 # ─────────────────────────────────────────────
