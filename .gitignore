@@ -56,6 +56,13 @@ env.bak/
 venv.bak/
 .venv*
 
+# uv
+uv.lock
+.python-version
+.uv/
+pyproject.toml
+.python-version
+
 # Testing
 .pytest_cache/
 .coverage

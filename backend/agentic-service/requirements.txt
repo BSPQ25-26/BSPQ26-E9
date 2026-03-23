@@ -1,0 +1,8 @@
+fastapi==0.135.1
+uvicorn==0.42.0
+langchain==0.3.27
+langchain-core==0.3.79
+langchain-openai==0.3.35
+python-dotenv==1.1.1
+tavily-python==0.3.3
+pytest==9.0.2
