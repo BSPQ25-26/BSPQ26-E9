@@ -4,7 +4,7 @@ on:
   # Only deploy when CI has passed on main
   workflow_run:
     workflows: ["Wallabot CI"]
-    branches: [main]
+    branches: [main, develop, test]
     types: [completed]
 
 jobs:
@@ -71,6 +71,9 @@ jobs:
           else
             echo "context=./backend/${{ matrix.service }}" >> $GITHUB_OUTPUT
           fi
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Build and push
         uses: docker/build-push-action@v5
