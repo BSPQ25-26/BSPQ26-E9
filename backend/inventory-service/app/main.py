@@ -8,7 +8,7 @@ app = FastAPI()
 def on_startup():
     init_db()
 
-app.include_router(product_router, prefix="/api/v1")
+app.include_router(product_router)
 
 # Healthcheck endpoint igual que en auth-service
 @app.get("/health")
