@@ -9,7 +9,7 @@ import pytest
 RUN_INTEGRATION = os.getenv("RUN_PRODUCT_INTEGRATION") == "1"
 AUTH_BASE_URL = os.getenv("AUTH_BASE_URL", "http://localhost:8001")
 INVENTORY_BASE_URL = os.getenv("INVENTORY_BASE_URL", "http://localhost:8002")
-PRODUCTS_PATH = os.getenv("PRODUCTS_PATH", "/products")
+PRODUCTS_PATH = os.getenv("PRODUCTS_PATH", "/api/v1/products")
 PRODUCT_ID_FIELD = os.getenv("PRODUCT_ID_FIELD", "id")
 
 pytestmark = pytest.mark.skipif(
