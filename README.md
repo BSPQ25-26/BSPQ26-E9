@@ -126,6 +126,35 @@ BSPQ26-E9/
 
 Each microservice is containerized using optimized **Dockerfiles**. You can spin up the entire local environment, including the database and services, using **Docker Compose**.
 
+### **Quick Start (Run the App Locally)**
+
+Use these steps to run the full project and open the main page in the browser.
+
+1. From repository root, start backend services:
+
+```bash
+docker compose up --build
+```
+
+2. In a second terminal, start the frontend:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+3. Open the frontend URL shown by Vite (usually `http://localhost:5173`).
+
+4. Go to the app root (`/`). The router redirects to `/products`.
+	If you are not authenticated, it will redirect automatically to `/login`.
+
+Useful local URLs:
+- Frontend: `http://localhost:5173`
+- Auth service: `http://localhost:8001/health`
+- Inventory service: `http://localhost:8002/health`
+- Transaction service: `http://localhost:8003/health`
+
 ### **CI/CD Pipeline**
 
 The project uses **GitHub Actions** to automate quality assurance. The pipeline:
