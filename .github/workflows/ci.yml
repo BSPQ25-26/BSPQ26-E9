@@ -18,6 +18,45 @@ permissions:
 
 jobs:
 
+  lint-backend:
+    name: "Lint · backend"
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install ruff
+        run: pip install ruff
+      - name: Run ruff
+        run: ruff check .
+  # TODO
+  #  NOTE FOR FRONTEND DEV/s: Frontend lint dependencies should be added in frontend/package.json
+  #  devDependencies (eslint + any required plugins/config), with an eslint config file committed in frontend/.
+  #lint-frontend:
+  #  name: "Lint · frontend"
+  #  runs-on: ubuntu-latest
+
+  #  defaults:
+  #    run:
+  #      working-directory: frontend
+  #  steps:
+  #    - uses: actions/checkout@v4
+  #    - uses: actions/setup-node@v4
+  #      with:
+  #        node-version: '20'
+  #        cache: 'npm'
+  #        cache-dependency-path: frontend/package-lock.json
+  #    - name: Install dependencies
+  #      run: npm ci
+  #    - name: Install eslint
+  #      run: npm install --no-save eslint
+  #    - name: Run eslint
+  #      run: npx --yes eslint src/
+
   # ── One job per service, all run in parallel ─
   test-auth:
     name: "Test · auth-service"
@@ -129,8 +168,8 @@ jobs:
   docker-smoke:
     name: "Smoke · docker compose"
     runs-on: ubuntu-latest
-    
-    needs: [test-auth, test-inventory, test-transactions, test-wallabot]
+    #TODO add lint-frontend as a dependency once it's implemented, to ensure we don't push images with lint errors
+    needs: [test-auth, test-inventory, test-transactions, test-wallabot, lint-backend]
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
