@@ -150,7 +150,7 @@ def test_malformed_agent_response_retries_and_500(
     assert response.status_code == 500
     body = response.json()
     assert body["detail"]["error"] == "agent_validation_failure"
-    assert "bad json" in body["detail"]["message"]
+    assert body["detail"]["message"] == "Failed to process agent output."
     assert failing_chain.call_count == 3
 
 
