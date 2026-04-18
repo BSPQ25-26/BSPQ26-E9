@@ -160,6 +160,53 @@ jobs:
           OPENAI_API_KEY: "ci-mock-key"
         run: pytest --cov=app --cov-report=term-missing -q
 
+  test-backend-docker:
+    name: "Test · backend (docker + live DB)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    container:
+      image: python:3.11-slim
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: wallabot
+          POSTGRES_PASSWORD: wallabot
+          POSTGRES_DB: wallabot_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U wallabot -d wallabot_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install backend test dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends curl gcc libpq-dev
+          rm -rf /var/lib/apt/lists/*
+          python -m pip install --upgrade pip
+          pip install -r backend/auth-service/requirements.txt
+          pip install -r backend/inventory-service/requirements.txt
+          pip install -r backend/transaction-service/requirements.txt
+          pip install -r backend/agentic-service/requirements.txt
+
+      - name: Run backend pytest suite
+        env:
+          DATABASE_URL: postgresql+psycopg2://wallabot:wallabot@postgres:5432/wallabot_test
+          TEST_DATABASE_URL: postgresql+psycopg2://wallabot:wallabot@postgres:5432/wallabot_test
+          JWT_SECRET: "ci-test-secret"
+          JWT_EXPIRY_MINUTES: "30"
+          SECRET_KEY: "ci-test-secret"
+          ALGORITHM: "HS256"
+          TAVILY_API_KEY: "ci-mock-key"
+          OPENAI_API_KEY: "ci-mock-key"
+        run: |
+          pytest backend/auth-service/tests backend/inventory-service/tests backend/transaction-service/tests backend/agentic-service/test -q
+
   # ─────────────────────────────────────────────
 
   # Docker smoke test — only runs after ALL service
@@ -169,7 +216,7 @@ jobs:
     name: "Smoke · docker compose"
     runs-on: ubuntu-latest
     #TODO add lint-frontend as a dependency once it's implemented, to ensure we don't push images with lint errors
-    needs: [test-auth, test-inventory, test-transactions, test-wallabot, lint-backend]
+    needs: [test-auth, test-inventory, test-transactions, test-wallabot, test-backend-docker, lint-backend]
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4

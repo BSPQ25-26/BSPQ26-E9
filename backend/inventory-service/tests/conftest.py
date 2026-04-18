@@ -14,12 +14,16 @@ from app.db.base import Base
 from app.db.session import get_db
 from app.main import app
 
-TEST_DATABASE_URL = "sqlite:///./test_inventory.db"
-
-engine = create_engine(
-    TEST_DATABASE_URL,
-    connect_args={"check_same_thread": False},
+TEST_DATABASE_URL = os.getenv(
+    "TEST_DATABASE_URL",
+    os.getenv("DATABASE_URL", "sqlite:///./test_inventory.db"),
 )
+
+engine_kwargs = {}
+if TEST_DATABASE_URL.startswith("sqlite"):
+    engine_kwargs["connect_args"] = {"check_same_thread": False}
+
+engine = create_engine(TEST_DATABASE_URL, **engine_kwargs)
 
 TestingSessionLocal = sessionmaker(
     autocommit=False,
