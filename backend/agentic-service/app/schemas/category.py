@@ -6,7 +6,8 @@ class CategoryRequest(BaseModel):
     description: str
     available_categories: list[str] = Field(
         ...,
-        description="Category list provided by the caller (hardcoded in Sprint 1).",
+        min_length=1,
+        description="Category list provided by the caller and must not be empty.",
     )
 
 

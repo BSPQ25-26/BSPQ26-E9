@@ -19,6 +19,20 @@ class MockChainFromLlmText:
         return self._parser.parse(self._llm_text)
 
 
+class MockFailingChain:
+    """Simulates a chain that always fails to exercise retry exhaustion."""
+
+    def __init__(self, error: Exception):
+        self.error = error
+        self.call_count = 0
+        self.last_payload = None
+
+    def invoke(self, payload):
+        self.call_count += 1
+        self.last_payload = payload
+        raise self.error
+
+
 @pytest.fixture
 def category_agent_module(monkeypatch):
     # ChatOpenAI is constructed at module import time; provide a dummy key for tests.
@@ -44,11 +58,10 @@ def test_suggest_category_accepts_valid_mocked_llm_response(category_agent_modul
     assert result.suggested_category == "Electronics"
     assert result.confidence == 0.92
     assert result.is_new_category is False
-    assert mock_chain.last_payload == {
-        "title": "iPhone 13",
-        "description": "Used smartphone, 128GB",
-        "available_categories": "Electronics, Other",
-    }
+    assert mock_chain.last_payload["title"] == "iPhone 13"
+    assert mock_chain.last_payload["description"] == "Used smartphone, 128GB"
+    assert mock_chain.last_payload["available_categories"] == "Electronics, Other"
+    assert "format_instructions" in mock_chain.last_payload
 
 
 def test_suggest_category_raises_on_malformed_json_llm_response(
@@ -57,7 +70,7 @@ def test_suggest_category_raises_on_malformed_json_llm_response(
     request = CategoryRequest(
         title="Homemade sourdough starter",
         description="Active culture, 200g, ships refrigerated.",
-        available_categories=category_agent_module.DEFAULT_CATEGORIES,
+        available_categories=["Electronics", "Books & Media"],
     )
     mock_chain = MockChainFromLlmText(
         category_agent_module._parser,
@@ -75,7 +88,7 @@ def test_suggest_category_raises_on_validation_failure_llm_response(
     request = CategoryRequest(
         title="Homemade sourdough starter",
         description="Active culture, 200g, ships refrigerated.",
-        available_categories=category_agent_module.DEFAULT_CATEGORIES,
+        available_categories=["Electronics", "Books & Media"],
     )
     # confidence is out of bounds and suggested_category is empty.
     mock_chain = MockChainFromLlmText(
@@ -89,3 +102,20 @@ def test_suggest_category_raises_on_validation_failure_llm_response(
 
     assert "suggested_category" in str(exc.value)
     assert "confidence" in str(exc.value)
+
+
+def test_suggest_category_retries_three_times_before_raising(
+    category_agent_module, monkeypatch
+):
+    request = CategoryRequest(
+        title="Homemade sourdough starter",
+        description="Active culture, 200g, ships refrigerated.",
+        available_categories=["Electronics", "Books & Media"],
+    )
+    failing_chain = MockFailingChain(OutputParserException("bad json"))
+    monkeypatch.setattr(category_agent_module, "_chain", failing_chain)
+
+    with pytest.raises(OutputParserException):
+        category_agent_module.suggest_category(request)
+
+    assert failing_chain.call_count == 3
