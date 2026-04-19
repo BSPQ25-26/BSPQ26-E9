@@ -33,6 +33,18 @@ class MockFailingChain:
         raise self.error
 
 
+class MockProviderFailingChain:
+    """Simulates provider/config failures where fallback should be returned."""
+
+    def __init__(self, error: Exception):
+        self.error = error
+        self.call_count = 0
+
+    def invoke(self, payload):
+        self.call_count += 1
+        raise self.error
+
+
 @pytest.fixture
 def category_agent_module(monkeypatch):
     # ChatOpenAI is constructed at module import time; provide a dummy key for tests.
@@ -119,3 +131,40 @@ def test_suggest_category_retries_three_times_before_raising(
         category_agent_module.suggest_category(request)
 
     assert failing_chain.call_count == 3
+
+
+def test_suggest_category_returns_other_fallback_on_provider_failure(
+    category_agent_module, monkeypatch
+):
+    request = CategoryRequest(
+        title="iPhone 13",
+        description="Used smartphone, 128GB",
+        available_categories=["Electronics", "Other"],
+    )
+    failing_chain = MockProviderFailingChain(RuntimeError("missing api key"))
+    monkeypatch.setattr(category_agent_module, "_chain", failing_chain)
+
+    result = category_agent_module.suggest_category(request)
+
+    assert result.suggested_category == "Other"
+    assert result.confidence == 0.0
+    assert result.is_new_category is False
+    assert failing_chain.call_count == 1
+
+
+def test_suggest_category_returns_first_category_when_other_not_present(
+    category_agent_module, monkeypatch
+):
+    request = CategoryRequest(
+        title="iPhone 13",
+        description="Used smartphone, 128GB",
+        available_categories=["Electronics", "Books & Media"],
+    )
+    failing_chain = MockProviderFailingChain(RuntimeError("invalid api key"))
+    monkeypatch.setattr(category_agent_module, "_chain", failing_chain)
+
+    result = category_agent_module.suggest_category(request)
+
+    assert result.suggested_category == "Electronics"
+    assert result.confidence == 0.0
+    assert result.is_new_category is False

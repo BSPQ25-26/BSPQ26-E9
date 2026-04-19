@@ -11,6 +11,11 @@ from app.schemas.category import CategoryRequest
 
 load_dotenv(dotenv_path=Path(__file__).resolve().parents[1] / ".env")
 
+# When explicitly enabling live mode, mark the full module as live so
+# `pytest -m live` runs both mocked endpoint tests and the real live test.
+if os.getenv("RUN_LIVE_TESTS", "false").lower() == "true":
+    pytestmark = pytest.mark.live
+
 
 class MockChainFromLlmText:
     """Simulates the chain by parsing a mocked raw LLM response."""
@@ -36,6 +41,18 @@ class MockFailingChain:
     def invoke(self, payload):
         self.call_count += 1
         self.last_payload = payload
+        raise self.error
+
+
+class MockProviderFailingChain:
+    """Simulates provider/config failures where fallback should be returned."""
+
+    def __init__(self, error: Exception):
+        self.error = error
+        self.call_count = 0
+
+    def invoke(self, payload):
+        self.call_count += 1
         raise self.error
 
 
@@ -152,6 +169,31 @@ def test_malformed_agent_response_retries_and_500(
     assert body["detail"]["error"] == "agent_validation_failure"
     assert body["detail"]["message"] == "Failed to process agent output."
     assert failing_chain.call_count == 3
+
+
+def test_provider_failure_returns_fallback_other(
+    category_agent_module, wallabot_app, monkeypatch
+):
+    failing_chain = MockProviderFailingChain(RuntimeError("invalid api key"))
+    monkeypatch.setattr(category_agent_module, "_chain", failing_chain)
+    client = TestClient(wallabot_app)
+
+    response = client.post(
+        "/wallabot/category",
+        json={
+            "title": "iPhone 13 128GB",
+            "description": "Used smartphone, barely scratched.",
+            "available_categories": ["Electronics", "Other"],
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "suggested_category": "Other",
+        "confidence": 0.0,
+        "is_new_category": False,
+    }
+    assert failing_chain.call_count == 1
 
 
 @pytest.mark.live

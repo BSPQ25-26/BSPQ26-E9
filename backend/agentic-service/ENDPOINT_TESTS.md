@@ -42,10 +42,10 @@ pytest test\test_category_endpoint.py -q
 ```
 
 Expected result:
-- 5 passed
+- 6 passed
 - 1 skipped (the live test is skipped by default)
 
-## 5) Run live endpoint test (real LLM call)
+## 5) Run with live marker (real LLM call + same-file endpoint tests)
 
 If RUN_LIVE_TESTS is set to true in your .env, run:
 
@@ -53,11 +53,22 @@ If RUN_LIVE_TESTS is set to true in your .env, run:
 pytest test\test_category_endpoint.py -m live -q
 ```
 
+Current behavior in this project:
+- With RUN_LIVE_TESTS=true, this command runs all tests in `test_category_endpoint.py` (live + non-live).
+- With RUN_LIVE_TESTS=false, this command selects only the live-marked test and it is skipped.
+
 If you want to force it from CMD for the current terminal session only:
 
 ```bat
 set RUN_LIVE_TESTS=true
 pytest test\test_category_endpoint.py -m live -q
+```
+
+If you want to run only the real live test function:
+
+```bat
+set RUN_LIVE_TESTS=true
+pytest test\test_category_endpoint.py -k test_live_category_suggestion -q
 ```
 
 ## 6) Run all endpoint-relevant tests together

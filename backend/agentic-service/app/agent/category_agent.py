@@ -85,6 +85,21 @@ _prompt = ChatPromptTemplate.from_messages(
 _chain: Any | None = None
 
 
+def _build_safe_fallback(req: CategoryRequest) -> CategorySuggestion:
+    for category in req.available_categories:
+        if category.strip().lower() == "other":
+            fallback_category = category
+            break
+    else:
+        fallback_category = req.available_categories[0]
+
+    return CategorySuggestion(
+        suggested_category=fallback_category,
+        confidence=0.0,
+        is_new_category=False,
+    )
+
+
 def _get_chain() -> Any:
     global _chain
     if _chain is None:
@@ -97,7 +112,6 @@ def _get_chain() -> Any:
 
 
 def suggest_category(req: CategoryRequest) -> CategorySuggestion:
-    chain = _chain if _chain is not None else _get_chain()
     payload = {
         "title": req.title,
         "description": req.description,
@@ -108,6 +122,7 @@ def suggest_category(req: CategoryRequest) -> CategorySuggestion:
 
     for attempt in range(3):
         try:
+            chain = _chain if _chain is not None else _get_chain()
             return chain.invoke(payload)
         except (OutputParserException, ValidationError) as exc:
             last_error = exc
@@ -118,6 +133,13 @@ def suggest_category(req: CategoryRequest) -> CategorySuggestion:
                 exc.__class__.__name__,
                 exc,
             )
+        except Exception as exc:  # noqa: BLE001 - intentionally graceful for provider failures
+            logger.error(
+                "Wallabot category agent provider failure title=%r error_type=%s; returning fallback category",
+                req.title,
+                exc.__class__.__name__,
+            )
+            return _build_safe_fallback(req)
 
     logger.error(
         "Wallabot category agent exhausted retries title=%r attempts=3 final_error_type=%s final_error=%s",
