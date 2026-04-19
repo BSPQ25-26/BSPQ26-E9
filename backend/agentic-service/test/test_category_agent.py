@@ -33,6 +33,24 @@ class MockFailingChain:
         raise self.error
 
 
+class MockFailThenSuccessChain:
+    """Fails once with parser error, then succeeds to validate retry payload updates."""
+
+    def __init__(self, parser):
+        self._parser = parser
+        self.call_count = 0
+        self.payloads = []
+
+    def invoke(self, payload):
+        self.call_count += 1
+        self.payloads.append(dict(payload))
+        if self.call_count == 1:
+            raise OutputParserException("bad json", llm_output="not-json")
+        return self._parser.parse(
+            '{"suggested_category":"Electronics","confidence":0.91,"is_new_category":false}'
+        )
+
+
 class MockProviderFailingChain:
     """Simulates provider/config failures where fallback should be returned."""
 
@@ -131,6 +149,27 @@ def test_suggest_category_retries_three_times_before_raising(
         category_agent_module.suggest_category(request)
 
     assert failing_chain.call_count == 3
+
+
+def test_suggest_category_injects_retry_feedback_after_first_failure(
+    category_agent_module, monkeypatch
+):
+    request = CategoryRequest(
+        title="iPhone 13",
+        description="Used smartphone, 128GB",
+        available_categories=["Electronics", "Other"],
+    )
+    flaky_chain = MockFailThenSuccessChain(category_agent_module._parser)
+    monkeypatch.setattr(category_agent_module, "_chain", flaky_chain)
+
+    result = category_agent_module.suggest_category(request)
+
+    assert result.suggested_category == "Electronics"
+    assert flaky_chain.call_count == 2
+    assert flaky_chain.payloads[0]["retry_feedback"] == ""
+    assert "Previous response failed schema validation." in flaky_chain.payloads[1][
+        "retry_feedback"
+    ]
 
 
 def test_suggest_category_returns_other_fallback_on_provider_failure(

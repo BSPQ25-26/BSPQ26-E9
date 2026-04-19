@@ -167,7 +167,7 @@ def test_malformed_agent_response_retries_and_500(
     assert response.status_code == 500
     body = response.json()
     assert body["detail"]["error"] == "agent_validation_failure"
-    assert body["detail"]["message"] == "Failed to process agent output."
+    assert "bad json" in body["detail"]["message"]
     assert failing_chain.call_count == 3
 
 
@@ -194,6 +194,22 @@ def test_provider_failure_returns_fallback_other(
         "is_new_category": False,
     }
     assert failing_chain.call_count == 1
+
+
+def test_price_endpoint_returns_501(category_agent_module, wallabot_app):
+    client = TestClient(wallabot_app)
+
+    response = client.post(
+        "/wallabot/price",
+        json={
+            "title": "iPhone 13 128GB",
+            "description": "Used smartphone, barely scratched.",
+            "condition": "Good",
+        },
+    )
+
+    assert response.status_code == 501
+    assert response.json()["detail"] == "Not Implemented"
 
 
 @pytest.mark.live

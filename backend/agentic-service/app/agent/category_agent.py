@@ -9,6 +9,11 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 from pydantic import ValidationError
 
+try:
+    from langsmith import Client as LangSmithClient
+except ImportError:  # pragma: no cover - langsmith is bundled via langchain in runtime envs
+    LangSmithClient = None
+
 from app.schemas.category import CategoryRequest, CategorySuggestion
 
 # Local testing convenience only. Production requests must provide categories via
@@ -79,10 +84,18 @@ _parser = PydanticOutputParser(pydantic_object=CategorySuggestion)
 _prompt = ChatPromptTemplate.from_messages(
     [
         ("system", SYSTEM_PROMPT),
-        ("human", "Product title: {title}\nDescription: {description}"),
+        (
+            "human",
+            (
+                "Product title: {title}\n"
+                "Description: {description}\n"
+                "{retry_feedback}"
+            ),
+        ),
     ]
 )
 _chain: Any | None = None
+_langsmith_client: Any | None = None
 
 
 def _build_safe_fallback(req: CategoryRequest) -> CategorySuggestion:
@@ -111,12 +124,80 @@ def _get_chain() -> Any:
     return _chain
 
 
+def _get_langsmith_client() -> Any | None:
+    global _langsmith_client
+    tracing_enabled = (
+        os.getenv("LANGSMITH_TRACING", "").lower() == "true"
+        or os.getenv("LANGCHAIN_TRACING_V2", "").lower() == "true"
+    )
+    if not tracing_enabled or LangSmithClient is None:
+        return None
+
+    if _langsmith_client is None:
+        _langsmith_client = LangSmithClient(
+            api_key=os.getenv("LANGSMITH_API_KEY"),
+            api_url=os.getenv("LANGSMITH_ENDPOINT"),
+        )
+    return _langsmith_client
+
+
+def _log_validation_event(req: CategoryRequest, attempt: int, error: Exception) -> None:
+    client = _get_langsmith_client()
+    if client is None:
+        return
+
+    try:
+        client.create_run(
+            project_name=os.getenv("LANGSMITH_PROJECT", "wallabot"),
+            name="wallabot_category_validation_failure",
+            run_type="tool",
+            inputs={
+                "title": req.title,
+                "attempt": attempt,
+                "max_attempts": 3,
+                "event": "validation_failure",
+            },
+            error=f"{error.__class__.__name__}: {error}",
+            extra={
+                "metadata": {
+                    "service": "agentic-service",
+                    "component": "category_agent",
+                    "error_type": error.__class__.__name__,
+                }
+            },
+        )
+    except Exception as telemetry_exc:  # noqa: BLE001 - telemetry must never break requests
+        logger.warning(
+            "Wallabot category agent could not emit LangSmith validation event title=%r error_type=%s telemetry_error_type=%s",
+            req.title,
+            error.__class__.__name__,
+            telemetry_exc.__class__.__name__,
+        )
+
+
+def _build_retry_feedback(error: Exception) -> str:
+    llm_output = getattr(error, "llm_output", None)
+    feedback_lines = [
+        "Previous response failed schema validation.",
+        f"Validation error type: {error.__class__.__name__}",
+        f"Validation error message: {error}",
+    ]
+    if llm_output:
+        feedback_lines.append(f"Previous invalid output: {llm_output}")
+
+    feedback_lines.append(
+        "Return ONLY a valid JSON object that exactly matches the format instructions."
+    )
+    return "\n".join(feedback_lines)
+
+
 def suggest_category(req: CategoryRequest) -> CategorySuggestion:
     payload = {
         "title": req.title,
         "description": req.description,
         "available_categories": ", ".join(req.available_categories),
         "format_instructions": _parser.get_format_instructions(),
+        "retry_feedback": "",
     }
     last_error: Exception | None = None
 
@@ -126,13 +207,16 @@ def suggest_category(req: CategoryRequest) -> CategorySuggestion:
             return chain.invoke(payload)
         except (OutputParserException, ValidationError) as exc:
             last_error = exc
+            attempt_number = attempt + 1
             logger.warning(
                 "Wallabot category agent validation failure attempt=%d title=%r error_type=%s error=%s",
-                attempt + 1,
+                attempt_number,
                 req.title,
                 exc.__class__.__name__,
                 exc,
             )
+            _log_validation_event(req, attempt_number, exc)
+            payload["retry_feedback"] = _build_retry_feedback(exc)
         except Exception as exc:  # noqa: BLE001 - intentionally graceful for provider failures
             logger.error(
                 "Wallabot category agent provider failure title=%r error_type=%s; returning fallback category",
