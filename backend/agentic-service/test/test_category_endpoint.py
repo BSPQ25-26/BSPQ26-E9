@@ -7,8 +7,6 @@ from dotenv import load_dotenv
 from fastapi.testclient import TestClient
 from langchain_core.exceptions import OutputParserException
 
-from app.schemas.category import CategoryRequest
-
 load_dotenv(dotenv_path=Path(__file__).resolve().parents[1] / ".env")
 
 # When explicitly enabling live mode, mark the full module as live so
