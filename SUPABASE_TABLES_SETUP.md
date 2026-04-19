@@ -30,12 +30,43 @@ This is the domain-separated design (Option B): each service owns its own produc
 5. Replace role passwords if needed.
 6. Click `Run`.
 
+## Quick Bootstrap Steps (Exact Sequence)
+If you want the exact minimal sequence, use this block first:
+
+```sql
+create schema if not exists wallabot;
+
+create role auth_service login password 'CHANGE_ME_AUTH';
+create role inventory_service login password 'CHANGE_ME_INVENTORY';
+create role transaction_service login password 'CHANGE_ME_TRANSACTION';
+
+grant usage on schema wallabot to auth_service, inventory_service, transaction_service;
+
+alter role auth_service set search_path = wallabot, public;
+alter role inventory_service set search_path = wallabot, public;
+alter role transaction_service set search_path = wallabot, public;
+
+grant select, insert, update, delete on all tables in schema wallabot to auth_service, inventory_service, transaction_service;
+grant usage, select, update on all sequences in schema wallabot to auth_service, inventory_service, transaction_service;
+alter default privileges in schema wallabot grant select, insert, update, delete on tables to auth_service, inventory_service, transaction_service;
+alter default privileges in schema wallabot grant usage, select, update on sequences to auth_service, inventory_service, transaction_service;
+
+create extension if not exists pgcrypto;
+create extension if not exists "uuid-ossp";
+```
+
+Note: if roles already exist, the three `create role ...` lines will fail. In that case, use the idempotent main script below.
+
 ## Main SQL Script
 ```sql
 begin;
 
 -- 1) Shared schema
 create schema if not exists wallabot;
+
+-- 1.1) Extensions
+create extension if not exists pgcrypto;
+create extension if not exists "uuid-ossp";
 
 -- 2) Roles (idempotent creation)
 do $$
