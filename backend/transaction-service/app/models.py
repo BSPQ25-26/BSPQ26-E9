@@ -2,7 +2,7 @@
 Definition of database table with SQLAlchemy 
 
 Two  Tables needed 
-products: (ID, title, description, category, price, state, owner_id, created_at, updated_at)
+transaction_products: (ID, title, description, category, price, state, owner_id, created_at, updated_at)
 product_state_history:
 """
 
@@ -18,7 +18,7 @@ class Base(DeclarativeBase):
 
 #Product table definition
 class Product(Base):
-    __tablename__ = "products"
+    __tablename__ = "transaction_products"
 
     id          = Column(Integer, primary_key=True, index=True)
     title       = Column(String(255), nullable=False)
@@ -39,7 +39,7 @@ class ProductStateHistory(Base):
     __tablename__ = "product_state_history"
 
     id         = Column(Integer, primary_key=True, index=True)
-    product_id = Column(Integer, ForeignKey("products.id"), nullable=False)
+    product_id = Column(Integer, ForeignKey("transaction_products.id"), nullable=False)
     from_state = Column(String(20), nullable=True)
     to_state   = Column(String(20), nullable=False)
     changed_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))

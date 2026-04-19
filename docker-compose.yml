@@ -18,7 +18,7 @@ services:
     env_file:
       - .env
     environment:
-      - DATABASE_URL=sqlite:////app/data/auth.db
+      - DATABASE_URL=${AUTH_DATABASE_URL}
       - AUTH_SEED_SAMPLE_DATA=true
       - SERVICE_NAME=auth-service
     volumes:
@@ -45,7 +45,7 @@ services:
     env_file:
       - .env
     environment:
-      - DATABASE_URL=sqlite:////app/data/inventory.db
+      - DATABASE_URL=${INVENTORY_DATABASE_URL}
       - SERVICE_NAME=inventory-service
     volumes:
       - ./data:/app/data
@@ -71,7 +71,7 @@ services:
     env_file:
       - .env
     environment:
-      - DATABASE_URL=sqlite:////app/data/transactions.db
+      - DATABASE_URL=${TRANSACTION_DATABASE_URL}
       - SERVICE_NAME=transaction-service
     volumes:
       - ./data:/app/data
@@ -97,7 +97,6 @@ services:
     env_file:
       - .env
     environment:
-      - DATABASE_URL=sqlite:////app/data/test-database.db
       - SERVICE_NAME=agentic-service
       # LangChain / Tavily keys come from .env
       # - LANGCHAIN_API_KEY=${LANGCHAIN_API_KEY}
