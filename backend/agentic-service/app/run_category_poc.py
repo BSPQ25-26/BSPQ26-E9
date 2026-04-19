@@ -4,6 +4,8 @@ from app.schemas.category import CategoryRequest
 
 load_dotenv()
 
+# For running, use the following command:
+# python -m app.run_category_poc
 
 def main():
     test_cases = [

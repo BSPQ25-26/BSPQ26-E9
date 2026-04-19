@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from app.schemas import CategoryRequest, CategorySuggestion
+from app.schemas import CategoryRequest, CategorySuggestion, PriceRecommendation
 
 
 def test_category_suggestion_valid_data() -> None:
@@ -38,3 +38,45 @@ def test_category_request_valid_data() -> None:
 
     assert request.title == "iPhone 13"
     assert request.available_categories == ["Electronics", "Other"]
+
+
+def test_category_request_rejects_empty_available_categories() -> None:
+    with pytest.raises(ValidationError):
+        CategoryRequest(
+            title="iPhone 13",
+            description="Used smartphone, 128GB",
+            available_categories=[],
+        )
+
+
+def test_price_recommendation_valid_data() -> None:
+    recommendation = PriceRecommendation(
+        recommended_price=129.99,
+        price_range_min=110.0,
+        price_range_max=150.0,
+        data_source="Tavily web search",
+    )
+
+    assert recommendation.recommended_price == 129.99
+    assert recommendation.price_range_min == 110.0
+    assert recommendation.price_range_max == 150.0
+
+
+def test_price_recommendation_rejects_negative_price() -> None:
+    with pytest.raises(ValidationError):
+        PriceRecommendation(
+            recommended_price=-1.0,
+            price_range_min=110.0,
+            price_range_max=150.0,
+            data_source="Tavily web search",
+        )
+
+
+def test_price_recommendation_rejects_max_not_greater_than_min() -> None:
+    with pytest.raises(ValidationError):
+        PriceRecommendation(
+            recommended_price=129.99,
+            price_range_min=150.0,
+            price_range_max=140.0,
+            data_source="Tavily web search",
+        )
