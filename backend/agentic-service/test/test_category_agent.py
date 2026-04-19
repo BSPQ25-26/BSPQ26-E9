@@ -172,6 +172,37 @@ def test_suggest_category_injects_retry_feedback_after_first_failure(
     ]
 
 
+def test_suggest_category_truncates_large_llm_output_in_retry_feedback(
+    category_agent_module, monkeypatch
+):
+    request = CategoryRequest(
+        title="iPhone 13",
+        description="Used smartphone, 128GB",
+        available_categories=["Electronics", "Other"],
+    )
+    long_output = "x" * 1500
+    failing_once = MockFailThenSuccessChain(category_agent_module._parser)
+
+    def invoke_with_large_output(payload):
+        failing_once.call_count += 1
+        failing_once.payloads.append(dict(payload))
+        if failing_once.call_count == 1:
+            raise OutputParserException("bad json", llm_output=long_output)
+        return category_agent_module._parser.parse(
+            '{"suggested_category":"Electronics","confidence":0.91,"is_new_category":false}'
+        )
+
+    monkeypatch.setattr(failing_once, "invoke", invoke_with_large_output)
+    monkeypatch.setattr(category_agent_module, "_chain", failing_once)
+
+    result = category_agent_module.suggest_category(request)
+
+    assert result.suggested_category == "Electronics"
+    retry_feedback = failing_once.payloads[1]["retry_feedback"]
+    assert "... [truncated]" in retry_feedback
+    assert len(retry_feedback) < 1400
+
+
 def test_suggest_category_returns_other_fallback_on_provider_failure(
     category_agent_module, monkeypatch
 ):

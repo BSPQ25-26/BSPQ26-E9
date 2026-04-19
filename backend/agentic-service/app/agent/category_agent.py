@@ -1,5 +1,6 @@
 import os
 import logging
+import threading
 from typing import Any
 
 from dotenv import load_dotenv
@@ -95,6 +96,7 @@ _prompt = ChatPromptTemplate.from_messages(
     ]
 )
 _chain: Any | None = None
+_chain_lock = threading.Lock()
 _langsmith_client: Any | None = None
 
 
@@ -116,11 +118,13 @@ def _build_safe_fallback(req: CategoryRequest) -> CategorySuggestion:
 def _get_chain() -> Any:
     global _chain
     if _chain is None:
-        llm = ChatOpenAI(
-            model=os.getenv("LLM_MODEL", "gpt-4o-mini"),
-            temperature=float(os.getenv("LLM_TEMPERATURE", "0")),
-        )
-        _chain = _prompt | llm | _parser
+        with _chain_lock:
+            if _chain is None:
+                llm = ChatOpenAI(
+                    model=os.getenv("LLM_MODEL", "gpt-4o-mini"),
+                    temperature=float(os.getenv("LLM_TEMPERATURE", "0")),
+                )
+                _chain = _prompt | llm | _parser
     return _chain
 
 
@@ -177,13 +181,17 @@ def _log_validation_event(req: CategoryRequest, attempt: int, error: Exception) 
 
 def _build_retry_feedback(error: Exception) -> str:
     llm_output = getattr(error, "llm_output", None)
+    max_llm_output_chars = 1000
     feedback_lines = [
         "Previous response failed schema validation.",
         f"Validation error type: {error.__class__.__name__}",
         f"Validation error message: {error}",
     ]
     if llm_output:
-        feedback_lines.append(f"Previous invalid output: {llm_output}")
+        llm_output_text = str(llm_output)
+        if len(llm_output_text) > max_llm_output_chars:
+            llm_output_text = f"{llm_output_text[:max_llm_output_chars]}... [truncated]"
+        feedback_lines.append(f"Previous invalid output: {llm_output_text}")
 
     feedback_lines.append(
         "Return ONLY a valid JSON object that exactly matches the format instructions."

@@ -27,7 +27,7 @@ async def category_suggestion(req: CategoryRequest) -> CategorySuggestion:
             status_code=500,
             detail={
                 "error": "agent_validation_failure",
-                "message": str(exc),
+                "message": "The request could not be processed due to an internal validation failure.",
             },
         ) from exc
 
