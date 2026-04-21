@@ -67,6 +67,7 @@ def _create_product(client: httpx.Client, owner_token: str, payload: dict | None
     base_payload = {
         "name": f"product-{uuid4().hex[:6]}",
         "description": "integration test item",
+        "category": "general",
         "price": 100,
         "stock": 3,
     }
@@ -164,6 +165,7 @@ def test_create_rejects_owner_spoofing_when_owner_field_is_client_settable(api_c
         CREATE_OWNER_FIELD: created[OWNER_FIELD],  # attempt to use owner's seller_id
         "name": f"spoof-{uuid4().hex[:6]}",
         "description": "spoof attempt",
+        "category": "general",
         "price": 50,
         "stock": 1,
     }

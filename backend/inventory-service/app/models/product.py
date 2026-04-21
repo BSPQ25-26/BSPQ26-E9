@@ -10,7 +10,7 @@ class ProductState(str, enum.Enum):
     SOLD = "Sold"
 
 class Product(Base):
-    __tablename__ = "products"
+    __tablename__ = "inventory_products"
 
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, nullable=False)
@@ -18,7 +18,15 @@ class Product(Base):
     category = Column(String, nullable=False)
     price = Column(Float, nullable=False)
     condition = Column(String, nullable=False)
-    state = Column(Enum(ProductState), default=ProductState.AVAILABLE, nullable=False)
+    state = Column(
+        Enum(
+            ProductState,
+            values_callable=lambda enum_cls: [item.value for item in enum_cls],
+            native_enum=False,
+        ),
+        default=ProductState.AVAILABLE,
+        nullable=False,
+    )
     seller_id = Column(String, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 

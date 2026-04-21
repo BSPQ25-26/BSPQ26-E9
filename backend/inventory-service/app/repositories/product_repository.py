@@ -5,18 +5,12 @@ from app.schemas.product import ProductCreate
 class ProductRepository:
     @staticmethod
     def create_product(db: Session, product_in: ProductCreate, seller_id: str) -> Product:
-        # Accept both 'name' and 'title', and require category/condition
-        title = product_in.title or product_in.name
-        if not title or not isinstance(title, str) or not title.strip():
-            raise ValueError('title (or name) is required and must be a non-empty string')
-        category = product_in.category or "general"
-        condition = product_in.condition or "new"
         product = Product(
-            title=title,
+            title=product_in.title,
             description=product_in.description,
-            category=category,
+            category=product_in.category,
             price=product_in.price,
-            condition=condition,
+            condition=product_in.condition,
             seller_id=seller_id
         )
         db.add(product)
