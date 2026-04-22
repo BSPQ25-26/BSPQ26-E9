@@ -1,5 +1,3 @@
-version: '3.8'
-
 # ─────────────────────────────────────────────
 #  Wallabot — Local Dev Stack (SQLite 4 now, Supabase later)
 #  Usage: docker compose up --build
