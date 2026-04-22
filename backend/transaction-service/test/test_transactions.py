@@ -17,7 +17,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
-from main import app
+from app.main import app
 from app.database import get_db
 from app.models import Base, Product, WalletLedger, Transaction, ProductStateHistory
 from app.services.state_machine import ProductState
