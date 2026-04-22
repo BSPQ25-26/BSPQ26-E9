@@ -1,12 +1,14 @@
 """
-Definition of database table with SQLAlchemy 
+Definition of database tables with SQLAlchemy 
 
-Two  Tables needed 
-transaction_products: (ID, title, description, category, price, state, owner_id, created_at, updated_at)
-product_state_history:
+Tables:
+- transaction_products: Products for transactions
+- product_state_history: State transitions history
+- wallet_ledger: Wallet movements and balance history
+- transactions: Purchase/sale transactions
 """
 
-from sqlalchemy import Column, String, Float, DateTime, ForeignKey, Integer
+from sqlalchemy import Column, String, Float, DateTime, ForeignKey, Integer, Numeric, Index, TypeDecorator
 from datetime import datetime, timezone
 from sqlalchemy.orm import DeclarativeBase, relationship
 
@@ -15,6 +17,24 @@ from app.services.state_machine import ProductState
 
 class Base(DeclarativeBase):
     pass
+
+
+class ProductStateType(TypeDecorator):
+    """Custom type for ProductState enum - converts string to enum on load."""
+    impl = String(20)
+    cache_ok = True
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return None
+        if isinstance(value, ProductState):
+            return value.value
+        return value
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return None
+        return ProductState(value)
 
 #Product table definition
 class Product(Base):
@@ -25,8 +45,9 @@ class Product(Base):
     description = Column(String(1000), nullable=True)
     category    = Column(String(100), nullable=True)
     price       = Column(Float, nullable=False)
-    state       = Column(String(20), nullable=False, default=ProductState.AVAILABLE)
+    state       = Column(ProductStateType, nullable=False, default=ProductState.AVAILABLE)
     owner_id    = Column(String(255), nullable=False)
+    reserved_at = Column(DateTime, nullable=True)  # Sprint 2: Timestamp when product was reserved 
     created_at  = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at  = Column(DateTime, default=lambda: datetime.now(timezone.utc),
                          onupdate=lambda: datetime.now(timezone.utc))
@@ -42,8 +63,51 @@ class ProductStateHistory(Base):
     product_id = Column(Integer, ForeignKey("transaction_products.id"), nullable=False)
     from_state = Column(String(20), nullable=True)
     to_state   = Column(String(20), nullable=False)
-    changed_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    changed_at = Column(DateTime, default=lambda: datetime.now())
     changed_by = Column(String(255), nullable=True)
 
     #Relationship with product
     product = relationship("Product", back_populates="state_history")
+
+
+# Sprint 2: Wallet & Transaction Models 
+
+# BALANCE INTEGRITY GUARANTEE:
+#   - EVERY wallet mutation (top-up, purchase, refund) creates a NEW entry
+#   - NEVER update balance_after directly (no UPDATE on this table)
+#   - Current balance = balance_after from the LAST entry ordered by created_at
+#   - This ensures a complete, immutable audit trail
+class WalletLedger(Base):
+    __tablename__ = "wallet_ledger"
+
+    id              = Column(Integer, primary_key=True, index=True)
+    user_id         = Column(String(255), nullable=False, index=True)  
+    amount          = Column(Numeric(12, 2), nullable=False)  # positive=credit, negative=debit
+    transaction_type = Column(String(50), nullable=False)  # TOP_UP, PURCHASE, REFUND, etc
+    description     = Column(String(500), nullable=True)
+    balance_after   = Column(Numeric(12, 2), nullable=False)  # Balance AFTER this movement (immutable)
+    created_at      = Column(DateTime, default=lambda: datetime.now(), index=True)
+
+    __table_args__ = (
+        Index('ix_wallet_ledger_user_id_created_at', 'user_id', 'created_at'),
+    )
+
+
+# Transaction: Purchase or sale between buyer and seller
+class Transaction(Base):
+    __tablename__ = "trasacctions"  # Note: matches existing table name in Supabase (with typo)
+
+    id              = Column(Integer, primary_key=True, index=True)
+    buyer_id        = Column(String(255), nullable=False)  #user_id of the buyer
+    seller_id       = Column(String(255), nullable=False)  #user_id of the seller
+    product_id      = Column(Integer, ForeignKey("transaction_products.id"), nullable=False)
+    amount          = Column(Numeric(12, 2), nullable=False)  
+    status          = Column(String(20), nullable=False, default="completed")  # completed, pending, refunded
+    created_at      = Column(DateTime, default=lambda: datetime.now())
+    completed_at    = Column(DateTime, nullable=True)
+
+    __table_args__ = (
+        Index('ix_trasacctions_buyer_id', 'buyer_id'),
+        Index('ix_trasacctions_seller_id', 'seller_id'),
+        Index('ix_trasacctions_created_at', 'created_at'),
+    )

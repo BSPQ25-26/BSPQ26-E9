@@ -2,10 +2,6 @@
 Dependency functions for FastAPI routes, including authentication and database session management.
 """
 
-f"""
-Dependency functions for FastAPI routes, including authentication and database session management.
-"""
-
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session

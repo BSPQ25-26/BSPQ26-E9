@@ -1,16 +1,11 @@
 """
 Main entry point for the Transaction Service.
-Initializes the FastAPI application, creates database tables,
-and registers all routers.
+Initializes the FastAPI application and registers all routers.
+Tables are managed directly in Supabase via SQL scripts.
 """
 
 from fastapi import FastAPI
-from app.database import engine
-from app.models import Base
-from app.routers import products
-
-# Create SQL tables if they don't exist
-Base.metadata.create_all(bind=engine)
+from app.routers import products, wallet, transactions
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -20,12 +15,14 @@ app = FastAPI(
 )
 
 # ── Routers ──────────────────────────────────
-#Register all the endpoints of products.py
+# Register all the endpoints
 app.include_router(products.router)
+app.include_router(wallet.router)
+app.include_router(transactions.router)
 
 
 # ── Health Check ─────────────────────────────
-#Dockers endpoint to check if the service is alive
+# Docker endpoint to check if the service is alive
 @app.get("/health", tags=["health"])
 def health_check():
     """Returns service status. Used by Docker healthcheck."""
