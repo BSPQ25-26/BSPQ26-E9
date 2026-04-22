@@ -63,7 +63,7 @@ class ProductStateHistory(Base):
     product_id = Column(Integer, ForeignKey("transaction_products.id"), nullable=False)
     from_state = Column(String(20), nullable=True)
     to_state   = Column(String(20), nullable=False)
-    changed_at = Column(DateTime, default=lambda: datetime.now())
+    changed_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     changed_by = Column(String(255), nullable=True)
 
     #Relationship with product
@@ -86,7 +86,7 @@ class WalletLedger(Base):
     transaction_type = Column(String(50), nullable=False)  # TOP_UP, PURCHASE, REFUND, etc
     description     = Column(String(500), nullable=True)
     balance_after   = Column(Numeric(12, 2), nullable=False)  # Balance AFTER this movement (immutable)
-    created_at      = Column(DateTime, default=lambda: datetime.now(), index=True)
+    created_at      = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
 
     __table_args__ = (
         Index('ix_wallet_ledger_user_id_created_at', 'user_id', 'created_at'),
@@ -103,7 +103,7 @@ class Transaction(Base):
     product_id      = Column(Integer, ForeignKey("transaction_products.id"), nullable=False)
     amount          = Column(Numeric(12, 2), nullable=False)  
     status          = Column(String(20), nullable=False, default="completed")  # completed, pending, refunded
-    created_at      = Column(DateTime, default=lambda: datetime.now())
+    created_at      = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     completed_at    = Column(DateTime, nullable=True)
 
     __table_args__ = (

@@ -5,7 +5,7 @@ Ensures all wallet mutations go through the ledger for integrity.
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
-from datetime import datetime
+from datetime import datetime, timezone
 from decimal import Decimal
 
 from app.database import get_db
@@ -61,7 +61,8 @@ def top_up_wallet(
         amount=amount,
         transaction_type="TOP_UP",
         description=f"Top-up of {amount}",
-        balance_after=balance_after
+        balance_after=balance_after,
+        created_at=datetime.now(timezone.utc)
     )
     
     db.add(ledger_entry)
