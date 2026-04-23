@@ -16,7 +16,7 @@ services:
     env_file:
       - .env
     environment:
-      - DATABASE_URL=${AUTH_DATABASE_URL}
+      - AUTH_DATABASE_URL=${AUTH_DATABASE_URL}
       - AUTH_SEED_SAMPLE_DATA=true
       - SERVICE_NAME=auth-service
       - DB_SCHEMA=wallabot

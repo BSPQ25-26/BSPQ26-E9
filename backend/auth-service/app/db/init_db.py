@@ -6,7 +6,7 @@ from app.core.security import hash_password
 from app.models.user import User
 from app.models.social_account import SocialAccount
 
-DATABASE_URL = os.getenv("AUTH_DATABASE_URL", "")
+DATABASE_URL = str(engine.url)
 
 
 def _as_bool(value: str) -> bool:
