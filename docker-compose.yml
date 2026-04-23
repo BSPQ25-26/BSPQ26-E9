@@ -19,6 +19,9 @@ services:
       - DATABASE_URL=${AUTH_DATABASE_URL}
       - AUTH_SEED_SAMPLE_DATA=true
       - SERVICE_NAME=auth-service
+      - DB_SCHEMA=wallabot
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
     volumes:
       - ./data:/app/data        # shared SQLite directory
       - ./backend/auth-service:/app  # hot-reload in dev
