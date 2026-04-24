@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+import os
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
@@ -11,6 +12,8 @@ async def lifespan(app: FastAPI):
     init_db()
     yield
 
+# Create directory for local image storage for tests
+os.makedirs("uploads", exist_ok=True)
 
 app = FastAPI(lifespan=lifespan)
 
