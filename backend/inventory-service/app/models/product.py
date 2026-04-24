@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, Enum, ForeignKey, DateTime
+from sqlalchemy import Column, Integer, String, Float, Enum, ForeignKey, DateTime, JSON
 from sqlalchemy.orm import relationship
 from datetime import datetime
 import enum
@@ -44,5 +44,7 @@ class Product(Base):
     )
     seller_id = Column(String, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+    images = Column(JSON(String), nullable=False, default=list)
 
     # seller = relationship("User", back_populates="products")

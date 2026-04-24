@@ -1,11 +1,13 @@
 
-from fastapi import APIRouter, Depends, HTTPException, status, Path
+from fastapi import APIRouter, Depends, HTTPException, status, Path, File, UploadFile
 from sqlalchemy.orm import Session
 from app.schemas.product import ProductCreate, ProductOut, ProductUpdate
 from app.repositories.product_repository import ProductRepository
 from app.auth import get_current_user
 from app.db.session import get_db
 from app.models.product import Product
+import os
+import uuid
 
 router = APIRouter()
 
@@ -63,3 +65,59 @@ def delete_product(
         raise HTTPException(status_code=403, detail="Forbidden")
     ProductRepository.delete_product(db, product)
     return None
+
+MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
+ALLOWED_TYPES = {"image/jpeg", "image/png"}
+MAX_IMAGES = 8
+
+UPLOAD_DIR = "uploads"
+
+@router.post("/products/{product_id}/images")
+def upload_product_image(
+    product_id: int,
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user),
+):
+    product = db.query(Product).filter(Product.id == product_id).first()
+
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    if product.seller_id != current_user:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    # Validate image count
+    current_images = product.images or []
+    if len(current_images) >= MAX_IMAGES:
+        raise HTTPException(status_code=400, detail="Image limit exceeded")
+
+    # Validate content type
+    if file.content_type not in ALLOWED_TYPES:
+        raise HTTPException(status_code=422, detail="Invalid file format")
+
+    # Validate file size
+    contents = file.file.read()
+    if len(contents) > MAX_FILE_SIZE:
+        raise HTTPException(status_code=422, detail="File too large")
+
+    # Save file
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+    file_ext = file.filename.split(".")[-1]
+    filename = f"{uuid.uuid4()}.{file_ext}"
+    file_path = os.path.join(UPLOAD_DIR, filename)
+
+    with open(file_path, "wb") as f:
+        f.write(contents)
+
+    # Generate URL (simple version)
+    file_url = f"/uploads/{filename}"
+
+    # Save in DB
+    product.images = current_images + [file_url]
+    db.commit()
+    db.refresh(product)
+
+    return {"image_url": file_url}
+

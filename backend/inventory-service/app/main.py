@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from app.api.v1.product_router import router as product_router
 from app.db.init_db import init_db
 
@@ -14,6 +15,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 app.include_router(product_router, prefix="/api/v1")
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 # Healthcheck endpoint igual que en auth-service
 @app.get("/health")

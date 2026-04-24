@@ -1,5 +1,5 @@
 
-from typing import Any, Optional
+from typing import Any, Optional, List
 from enum import Enum
 from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -70,5 +70,6 @@ class ProductOut(BaseModel):
     state: ProductState
     seller_id: str
     created_at: datetime
+    images: List[str] = []
 
     model_config = ConfigDict(from_attributes=True)
