@@ -7,7 +7,7 @@ def _product_payload(**overrides):
         "description": "Well maintained film camera.",
         "category": "electronics",
         "price": 149.99,
-        "condition": "used",
+        "condition": "New",
     }
     payload.update(overrides)
     return payload
@@ -27,7 +27,7 @@ def test_create_product_success(client, db_session, auth_headers):
     assert data["description"] == "Well maintained film camera."
     assert data["category"] == "electronics"
     assert data["price"] == 149.99
-    assert data["condition"] == "used"
+    assert data["condition"] == "New"
     assert data["state"] == "Available"
     assert data["seller_id"] == "seller@example.com"
     assert "created_at" in data
@@ -76,7 +76,7 @@ def test_update_product_success_by_owner(client, auth_headers):
             "description": "Now includes the carrying case.",
             "category": "collectibles",
             "price": 179.5,
-            "condition": "refurbished",
+            "condition": "Like New",
         },
         headers=auth_headers,
     )
@@ -88,8 +88,13 @@ def test_update_product_success_by_owner(client, auth_headers):
     assert data["description"] == "Now includes the carrying case."
     assert data["category"] == "collectibles"
     assert data["price"] == 179.5
-    assert data["condition"] == "refurbished"
+    assert data["condition"] == "Like New"
     assert data["seller_id"] == "seller@example.com"
+def test_create_product_invalid_condition_returns_422(client, auth_headers):
+    response = _create_product(client, auth_headers, condition="refurbished")
+    assert response.status_code == 422
+    errors = response.json()["detail"]
+    assert any(error["loc"][-1] == "condition" for error in errors)
 
 
 def test_partial_update_only_changes_supplied_fields(client, auth_headers):
