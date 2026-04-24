@@ -40,6 +40,13 @@ class AuthService:
                 detail="Credenciales inválidas"
             )
 
+        # Si el usuario se registró con OAuth no tiene contraseña
+        if not user.password_hash:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Esta cuenta usa login social. Accede con Google o Facebook."
+            )
+
         if not verify_password(password, user.password_hash):
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -47,7 +54,6 @@ class AuthService:
             )
 
         token = create_access_token({"sub": user.email})
-
         return {
             "message": "login correcto",
             "access_token": token,
