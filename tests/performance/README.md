@@ -65,3 +65,13 @@ When you stop the server, the script writes the profiling snapshot to the path a
 - If throughput is flat while latency rises, the bottleneck is usually DB-bound or lock-bound.
 - If failures increase after wallet top-ups or purchase attempts, check balance validation, transaction rollbacks, and row locking in the transaction service.
 - If the profiler points to repeated ORM query work, look for N+1 reads in the history endpoints and product lookup paths.
+
+## Sprint 2 Performance Runs
+
+- `locust-report-docker-clean.html`: Successful performance run  
+  - Config: 20 users, spawn rate 4/s, duration 5m.  
+  - P95 latency and failure rate within our targets.
+
+- `locust-report-docker-more-users.html`: Failing performance run  
+  - Config: 50 users, higher spawn rate.  
+  - P95 latency grows too high and/or failures increase, showing the system limit.
