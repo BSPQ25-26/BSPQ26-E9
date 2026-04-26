@@ -29,6 +29,7 @@ class PerfSettings:
     top_up_amount: float = _as_float(os.getenv("PERF_TOPUP_AMOUNT", "500"), 500.0)
     product_price: float = _as_float(os.getenv("PERF_PRODUCT_PRICE", "49.90"), 49.9)
     upload_images: bool = _as_bool(os.getenv("PERF_UPLOAD_IMAGES", "true"))
+    enable_inventory_flow: bool = _as_bool(os.getenv("PERF_ENABLE_INVENTORY_FLOW", "false"))
     enable_wallabot: bool = _as_bool(os.getenv("PERF_ENABLE_WALLABOT", "false"))
 
 

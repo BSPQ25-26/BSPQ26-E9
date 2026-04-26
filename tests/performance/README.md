@@ -29,9 +29,12 @@ $env:PERF_AUTH_BASE_URL = "http://localhost:8001"
 $env:PERF_INVENTORY_BASE_URL = "http://localhost:8002"
 $env:PERF_TRANSACTION_BASE_URL = "http://localhost:8003"
 $env:PERF_WALLABOT_BASE_URL = "http://localhost:8004"
+$env:PERF_ENABLE_INVENTORY_FLOW = "false"
 
 .\.venv\Scripts\python.exe -m locust -f tests/performance/locustfile.py --headless -u 20 -r 4 -t 5m --html tests/performance/reports/locust-report.html
 ```
+
+Set `PERF_ENABLE_INVENTORY_FLOW=true` only when your `inventory_products` RLS policy allows service-role CRUD.
 
 Suggested starting points:
 

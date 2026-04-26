@@ -122,6 +122,29 @@ class SellerJourneyUser(MarketplaceUser):
         self._create_product()
 
     def _create_product(self) -> None:
+        transaction_payload = {
+            "title": f"Perf Transaction Product {settings.run_id}",
+            "description": "Synthetic product for reserve and buy flow.",
+            "category": "electronics",
+            "price": settings.product_price,
+        }
+        transaction_response = _json_request(
+            self,
+            "POST",
+            build_absolute_url(settings.transaction_base_url, "/products/"),
+            name="transactions/create-product",
+            json_body=transaction_payload,
+            headers=self._headers(),
+            expected=(201,),
+        )
+        if transaction_response.status_code == 201:
+            product_id = transaction_response.json()["id"]
+            _push_product_id(product_id)
+            logger.info("Created transaction product product_id=%s seller=%s", product_id, self.auth.email)
+
+        if not settings.enable_inventory_flow:
+            return
+
         payload = {
             "title": f"Perf Listing {settings.run_id}",
             "description": "Synthetic listing created for performance profiling.",
@@ -149,6 +172,8 @@ class SellerJourneyUser(MarketplaceUser):
 
     @task(2)
     def update_my_listing(self) -> None:
+        if not settings.enable_inventory_flow:
+            return
         if not self.product_id:
             return
 
@@ -168,7 +193,7 @@ class SellerJourneyUser(MarketplaceUser):
 
     @task(2)
     def upload_image(self) -> None:
-        if not settings.upload_images or not self.product_id:
+        if not settings.enable_inventory_flow or not settings.upload_images or not self.product_id:
             return
 
         image_bytes = io.BytesIO(b"fake png bytes for perf testing")
@@ -184,6 +209,8 @@ class SellerJourneyUser(MarketplaceUser):
 
     @task(1)
     def read_my_listing(self) -> None:
+        if not settings.enable_inventory_flow:
+            return
         if not self.product_id:
             return
 

@@ -60,7 +60,6 @@ def top_up_wallet(
         user_id=user_id,
         amount=amount,
         transaction_type="TOP_UP",
-        description=f"Top-up of {amount}",
         balance_after=balance_after,
         created_at=datetime.now(timezone.utc)
     )
