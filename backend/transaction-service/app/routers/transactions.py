@@ -171,6 +171,7 @@ def purchase_product(
             user_id=user_id,
             amount=-product_price,  # Negative = money OUT
             transaction_type="PURCHASE",
+            description=f"Sale of product {product_id}",
             balance_after=buyer_new_balance,  # Final balance after debit
             created_at=datetime.now(timezone.utc)
         )
@@ -190,6 +191,7 @@ def purchase_product(
         seller_credit = WalletLedger(
             user_id=product.owner_id,
             amount=product_price,  # Positive = money IN
+            description=f"Sale of product {product_id}",
             transaction_type="SALE",
             balance_after=seller_new_balance,  # Final balance after credit
             created_at=datetime.now(timezone.utc)
