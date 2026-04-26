@@ -102,6 +102,7 @@ class Transaction(Base):
     seller_id       = Column(String(255), nullable=False)  #user_id of the seller
     product_id      = Column(Integer, ForeignKey("transaction_products.id"), nullable=False)
     amount          = Column(Float, nullable=False)
+    status          = Column(String(20), nullable=False, default="completed")
     created_at      = Column(DateTime, default=lambda: datetime.now(timezone.utc))
 
     __table_args__ = (

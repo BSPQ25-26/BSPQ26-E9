@@ -219,6 +219,7 @@ def purchase_product(
             seller_id=product.owner_id,
             product_id=product.id,
             amount=product_price,
+            status="completed",
             created_at=datetime.now(timezone.utc)
         )
         db.add(transaction)
@@ -240,7 +241,7 @@ def purchase_product(
         seller_id=transaction.seller_id,
         product_id=transaction.product_id,
         amount=float(transaction.amount),
-        status="completed",
+        status=transaction.status,
         created_at=transaction.created_at,
         completed_at=transaction.created_at
     )
@@ -300,7 +301,7 @@ def get_transaction_history(
             product_id=txn.product_id,
             product_title=product.title if product else "Unknown",
             amount=float(txn.amount),
-            status="completed",
+            status=txn.status,
             created_at=txn.created_at,
             completed_at=txn.created_at
         ))
@@ -345,7 +346,7 @@ def get_purchase_history(
             product_id=txn.product_id,
             product_title=product.title if product else "Unknown",
             amount=float(txn.amount),
-            status="completed",
+            status=txn.status,
             created_at=txn.created_at,
             completed_at=txn.created_at
         ))
@@ -389,7 +390,7 @@ def get_sales_history(
             product_id=txn.product_id,
             product_title=product.title if product else "Unknown",
             amount=float(txn.amount),
-            status="completed",
+            status=txn.status,
             created_at=txn.created_at,
             completed_at=txn.created_at
         ))
