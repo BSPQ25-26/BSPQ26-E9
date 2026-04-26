@@ -1,4 +1,5 @@
 from app.models.product import Product
+import io
 
 
 def _product_payload(**overrides):
@@ -7,7 +8,7 @@ def _product_payload(**overrides):
         "description": "Well maintained film camera.",
         "category": "electronics",
         "price": 149.99,
-        "condition": "used",
+        "condition": "New",
     }
     payload.update(overrides)
     return payload
@@ -27,7 +28,7 @@ def test_create_product_success(client, db_session, auth_headers):
     assert data["description"] == "Well maintained film camera."
     assert data["category"] == "electronics"
     assert data["price"] == 149.99
-    assert data["condition"] == "used"
+    assert data["condition"] == "New"
     assert data["state"] == "Available"
     assert data["seller_id"] == "seller@example.com"
     assert "created_at" in data
@@ -76,7 +77,7 @@ def test_update_product_success_by_owner(client, auth_headers):
             "description": "Now includes the carrying case.",
             "category": "collectibles",
             "price": 179.5,
-            "condition": "refurbished",
+            "condition": "Like New",
         },
         headers=auth_headers,
     )
@@ -88,8 +89,13 @@ def test_update_product_success_by_owner(client, auth_headers):
     assert data["description"] == "Now includes the carrying case."
     assert data["category"] == "collectibles"
     assert data["price"] == 179.5
-    assert data["condition"] == "refurbished"
+    assert data["condition"] == "Like New"
     assert data["seller_id"] == "seller@example.com"
+def test_create_product_invalid_condition_returns_422(client, auth_headers):
+    response = _create_product(client, auth_headers, condition="refurbished")
+    assert response.status_code == 422
+    errors = response.json()["detail"]
+    assert any(error["loc"][-1] == "condition" for error in errors)
 
 
 def test_partial_update_only_changes_supplied_fields(client, auth_headers):
@@ -165,3 +171,88 @@ def test_delete_missing_product_returns_404(client, auth_headers):
 
     assert response.status_code == 404
     assert response.json()["detail"] == "Product not found"
+
+
+def test_upload_image_success(client, auth_headers):
+    created = _create_product(client, auth_headers)
+    product_id = created.json()["id"]
+
+    file = io.BytesIO(b"fake image data")
+    
+    response = client.post(
+        f"/api/v1/products/{product_id}/images",
+        files={"file": ("test.png", file, "image/png")},
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 200
+    assert "image_url" in response.json()
+
+
+def test_upload_invalid_format_returns_422(client, auth_headers):
+    created = _create_product(client, auth_headers)
+    product_id = created.json()["id"]
+
+    file = io.BytesIO(b"not an image")
+
+    response = client.post(
+        f"/api/v1/products/{product_id}/images",
+        files={"file": ("test.txt", file, "text/plain")},
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 422
+
+
+def test_upload_oversized_file_returns_422(client, auth_headers):
+    created = _create_product(client, auth_headers)
+    product_id = created.json()["id"]
+
+    big_file = io.BytesIO(b"a" * (6 * 1024 * 1024))  # 6MB
+
+    response = client.post(
+        f"/api/v1/products/{product_id}/images",
+        files={"file": ("big.png", big_file, "image/png")},
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 422
+
+
+def test_upload_image_non_owner_forbidden(client, auth_headers, other_seller_token):
+    created = _create_product(client, auth_headers)
+    product_id = created.json()["id"]
+
+    file = io.BytesIO(b"fake image data")
+
+    response = client.post(
+        f"/api/v1/products/{product_id}/images",
+        files={"file": ("test.png", file, "image/png")},
+        headers={"Authorization": f"Bearer {other_seller_token}"},
+    )
+
+    assert response.status_code == 403
+
+
+def test_upload_exceed_image_limit(client, auth_headers):
+    created = _create_product(client, auth_headers)
+    product_id = created.json()["id"]
+
+    for _ in range(8):
+        file = io.BytesIO(b"img")
+        client.post(
+            f"/api/v1/products/{product_id}/images",
+            files={"file": ("test.png", file, "image/png")},
+            headers=auth_headers,
+        )
+
+    extra_file = io.BytesIO(b"img")
+
+    response = client.post(
+        f"/api/v1/products/{product_id}/images",
+        files={"file": ("extra.png", extra_file, "image/png")},
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 400
+

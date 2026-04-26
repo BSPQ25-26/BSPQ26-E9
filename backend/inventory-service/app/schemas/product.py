@@ -1,4 +1,5 @@
-from typing import Any
+
+from typing import Any, Optional, List
 from enum import Enum
 from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -8,13 +9,19 @@ class ProductState(str, Enum):
     RESERVED = "Reserved"
     SOLD = "Sold"
 
+class ProductCondition(str, Enum):
+    NEW = "New"
+    LIKE_NEW = "Like New"
+    GOOD = "Good"
+    FAIR = "Fair"
+    POOR = "Poor"
 
 class ProductCreate(BaseModel):
     title: str = Field(..., min_length=1)
     description: str = Field(..., min_length=1)
     category: str = Field(..., min_length=1)
     price: float = Field(..., gt=0)
-    condition: str = Field(default="new", min_length=1)
+    condition: ProductCondition = Field(default=ProductCondition.NEW)
 
     model_config = ConfigDict(extra="allow")
 
@@ -23,21 +30,19 @@ class ProductCreate(BaseModel):
     def normalize_legacy_fields(cls, data: Any) -> Any:
         if not isinstance(data, dict):
             return data
-
         normalized = dict(data)
         if normalized.get("title") is None and normalized.get("name") is not None:
             normalized["title"] = normalized["name"]
         if normalized.get("condition") is None:
-            normalized["condition"] = "new"
+            normalized["condition"] = ProductCondition.NEW
         return normalized
 
-
 class ProductUpdate(BaseModel):
-    title: str | None = Field(default=None, min_length=1)
-    description: str | None = Field(default=None, min_length=1)
-    category: str | None = Field(default=None, min_length=1)
-    price: float | None = Field(default=None, gt=0)
-    condition: str | None = Field(default=None, min_length=1)
+    title: Optional[str] = Field(default=None, min_length=1)
+    description: Optional[str] = Field(default=None, min_length=1)
+    category: Optional[str] = Field(default=None, min_length=1)
+    price: Optional[float] = Field(default=None, gt=0)
+    condition: Optional[ProductCondition] = Field(default=None)
 
     model_config = ConfigDict(extra="forbid")
 
@@ -46,7 +51,6 @@ class ProductUpdate(BaseModel):
     def normalize_legacy_fields(cls, data: Any) -> Any:
         if not isinstance(data, dict):
             return data
-
         normalized = dict(data)
         if normalized.get("title") is None and normalized.get("name") is not None:
             normalized["title"] = normalized.pop("name")
@@ -66,5 +70,6 @@ class ProductOut(BaseModel):
     state: ProductState
     seller_id: str
     created_at: datetime
+    images: List[str] = []
 
     model_config = ConfigDict(from_attributes=True)

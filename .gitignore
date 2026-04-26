@@ -74,6 +74,11 @@ htmlcov/
 test_auth.db
 .db
 
+# Local images
+*.jpg
+*.jpeg
+*.png
+
 # Logs
 *.log
 
