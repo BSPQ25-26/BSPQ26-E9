@@ -84,6 +84,7 @@ class WalletLedger(Base):
     user_id         = Column(String(255), nullable=False, index=True)  
     amount          = Column("delta", Numeric(12, 2), nullable=False)  # positive=credit, negative=debit
     transaction_type = Column("type", String(20), nullable=False)  # TOP_UP, PURCHASE, SALE
+    description     = Column(String(255), nullable=True)
     balance_after   = Column(Numeric(12, 2), nullable=False)  # Balance AFTER this movement (immutable)
     created_at      = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
 
