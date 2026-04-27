@@ -1,4 +1,5 @@
 import os
+from urllib.parse import urlencode, urlsplit, urlunsplit
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
@@ -10,6 +11,11 @@ from app.models.social_account import SocialAccount
 from app.core.security import create_access_token
 
 router = APIRouter(prefix="/auth", tags=["social-auth"])
+
+FRONTEND_AUTH_CALLBACK_URL = os.getenv(
+    "FRONTEND_AUTH_CALLBACK_URL",
+    "http://localhost:5173/#/auth/callback",
+)
 
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
@@ -58,7 +64,7 @@ async def google_callback(code: str, db: Session = Depends(get_db)):
     if not email or not provider_user_id:
         raise HTTPException(status_code=400, detail="No se pudo obtener el email de Google")
 
-    return _handle_social_login(db, email, provider_user_id, "google")
+    return _social_login_response(_handle_social_login(db, email, provider_user_id, "google"))
 
 
 @router.get("/facebook")
@@ -91,7 +97,30 @@ async def facebook_callback(code: str, db: Session = Depends(get_db)):
     if not email or not provider_user_id:
         raise HTTPException(status_code=400, detail="No se pudo obtener el email de Facebook")
 
-    return _handle_social_login(db, email, provider_user_id, "facebook")
+    return _social_login_response(_handle_social_login(db, email, provider_user_id, "facebook"))
+
+
+def _append_query_params(url: str, params: dict):
+    encoded_params = urlencode(params)
+    parsed_url = urlsplit(url)
+
+    if parsed_url.fragment:
+        separator = "&" if "?" in parsed_url.fragment else "?"
+        return urlunsplit(
+            parsed_url._replace(
+                fragment=f"{parsed_url.fragment}{separator}{encoded_params}"
+            )
+        )
+
+    separator = "&" if parsed_url.query else "?"
+    return f"{url}{separator}{encoded_params}"
+
+
+def _social_login_response(payload: dict):
+    if not FRONTEND_AUTH_CALLBACK_URL:
+        return payload
+
+    return RedirectResponse(_append_query_params(FRONTEND_AUTH_CALLBACK_URL, payload))
 
 
 def _handle_social_login(db: Session, email: str, provider_user_id: str, provider: str):

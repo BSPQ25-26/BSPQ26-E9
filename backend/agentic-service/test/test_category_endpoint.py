@@ -62,6 +62,13 @@ def category_agent_module(monkeypatch):
 
 
 @pytest.fixture
+def price_agent_module(monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    module = importlib.import_module("app.agent.price_agent")
+    return importlib.reload(module)
+
+
+@pytest.fixture
 def wallabot_app(category_agent_module):
     main_module = importlib.import_module("app.main")
     return importlib.reload(main_module).app
@@ -197,7 +204,15 @@ def test_provider_failure_returns_fallback_other(
     assert failing_chain.call_count == 1
 
 
-def test_price_endpoint_returns_501(category_agent_module, wallabot_app):
+def test_price_endpoint_returns_recommendation(price_agent_module, wallabot_app, monkeypatch):
+    mock_chain = MockChainFromLlmText(
+        price_agent_module._parser,
+        (
+            '{"recommended_price":100.0,"price_range_min":80.0,'
+            '"price_range_max":120.0,"data_source":"LLM estimate from product details"}'
+        ),
+    )
+    monkeypatch.setattr(price_agent_module, "_chain", mock_chain)
     client = TestClient(wallabot_app)
 
     response = client.post(
@@ -209,8 +224,13 @@ def test_price_endpoint_returns_501(category_agent_module, wallabot_app):
         },
     )
 
-    assert response.status_code == 501
-    assert response.json()["detail"] == "Not Implemented"
+    assert response.status_code == 200
+    assert response.json() == {
+        "recommended_price": 100.0,
+        "price_range_min": 80.0,
+        "price_range_max": 120.0,
+        "data_source": "LLM estimate from product details",
+    }
 
 
 @pytest.mark.live

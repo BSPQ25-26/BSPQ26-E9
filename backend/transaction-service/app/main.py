@@ -5,7 +5,12 @@ Tables are managed directly in Supabase via SQL scripts.
 """
 
 from fastapi import FastAPI
+from threading import Lock
+from app.database import DATABASE_URL, engine
+from app.models import Base
 from app.routers import products, wallet, transactions
+
+startup_lock = Lock()
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -13,6 +18,14 @@ app = FastAPI(
     description="Handles product state transitions and transaction history for Wallabot.",
     version="1.0.0"
 )
+
+
+@app.on_event("startup")
+def on_startup():
+    if DATABASE_URL.startswith("sqlite"):
+        with startup_lock:
+            Base.metadata.create_all(bind=engine)
+
 
 # ── Routers ──────────────────────────────────
 # Register all the endpoints

@@ -23,25 +23,19 @@ from app.models import Base, Product, WalletLedger, Transaction, ProductStateHis
 from app.services.state_machine import ProductState
 
 
-# Test Database Setup
-
 @pytest.fixture(scope="function", autouse=True)
 def test_db():
     """Create in-memory SQLite database for testing."""
-    # Create engine with StaticPool to maintain single connection for :memory: DB
     engine = create_engine(
         "sqlite:///:memory:",
         connect_args={"check_same_thread": False},
         poolclass=StaticPool
     )
     
-    # Create all tables
     Base.metadata.create_all(bind=engine)
     
-    # Create session factory
     TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     
-    # Override get_db dependency
     def override_get_db():
         db = TestingSessionLocal()
         try:
@@ -53,7 +47,6 @@ def test_db():
     
     yield engine
     
-    # Cleanup
     app.dependency_overrides.clear()
     Base.metadata.drop_all(bind=engine)
 
@@ -68,7 +61,6 @@ def client(test_db):
 def mock_verify_token(monkeypatch):
     """Mock JWT token verification to return user ID from token."""
     def verify_token(token):
-        # Extract user ID from token (format: "valid-token-{user_id}")
         if token.startswith("valid-token-"):
             return token.replace("valid-token-", "")
         return None
@@ -116,7 +108,6 @@ def buyer_with_funds(test_db, mock_verify_token):
     
     buyer_id = "buyer-user-id"
     
-    # Top-up wallet
     ledger = WalletLedger(
         user_id=buyer_id,
         amount=500.0,
@@ -139,7 +130,6 @@ def poor_buyer(test_db, mock_verify_token):
     
     buyer_id = "poor-buyer-id"
     
-    # Top-up wallet with insufficient funds
     ledger = WalletLedger(
         user_id=buyer_id,
         amount=10.0,
@@ -154,9 +144,6 @@ def poor_buyer(test_db, mock_verify_token):
     return buyer_id
 
 
-# Reservation state testss
-
-#Test 1: Vrify that a product can be successfully reserved by a user who is not the seller
 def test_reserve_successful(client, product, auth_headers, mock_verify_token):
     """Test successful product reservation."""
     user_id = "reserve-user-id"
@@ -169,10 +156,38 @@ def test_reserve_successful(client, product, auth_headers, mock_verify_token):
     assert data["state"] == ProductState.RESERVED
     assert data["reserved_by"] == user_id
 
-#Test 2: Verify that a seller cannot reserve their own product
+
+def test_reserve_is_idempotent_for_same_user(client, product, mock_verify_token):
+    """Test that retrying the same reservation returns the current reserved state."""
+    user_id = "reserve-user-id"
+    headers = {"Authorization": f"Bearer valid-token-{user_id}"}
+
+    first_response = client.post(f"/products/{product}/reserve", headers=headers)
+    retry_response = client.post(f"/products/{product}/reserve", headers=headers)
+
+    assert first_response.status_code == 200
+    assert retry_response.status_code == 200
+    assert retry_response.json()["state"] == ProductState.RESERVED
+    assert retry_response.json()["reserved_by"] == user_id
+
+
+def test_cancel_reservation_releases_product(client, product, mock_verify_token):
+    """Test that a reservation owner can cancel and release the product."""
+    user_id = "reserve-user-id"
+    headers = {"Authorization": f"Bearer valid-token-{user_id}"}
+
+    reserve_response = client.post(f"/products/{product}/reserve", headers=headers)
+    cancel_response = client.post(f"/products/{product}/cancel-reservation", headers=headers)
+    detail_response = client.get(f"/products/{product}", headers=headers)
+
+    assert reserve_response.status_code == 200
+    assert cancel_response.status_code == 200
+    assert cancel_response.json()["state"] == ProductState.AVAILABLE
+    assert detail_response.status_code == 200
+    assert detail_response.json()["state"] == ProductState.AVAILABLE
+
 def test_reserve_ownership_guard(client, product, auth_headers, mock_verify_token):
     """Test that seller cannot reserve own product."""
-    # The seller is "seller-user-id" from the product fixture
     headers = {"Authorization": "Bearer valid-token-seller-user-id"}
     
     response = client.post(f"/products/{product}/reserve", headers=headers)
@@ -180,7 +195,6 @@ def test_reserve_ownership_guard(client, product, auth_headers, mock_verify_toke
     assert response.status_code == 403
     assert "Cannot reserve your own product" in response.json()["detail"]
 
-#Test 3: Verify that a non-existent product cannot be reserved 
 def test_reserve_nonexistent_product(client, auth_headers, mock_verify_token):
     """Test reservation of non-existent product."""
     user_id = "buyer-user-id"
@@ -191,8 +205,6 @@ def test_reserve_nonexistent_product(client, auth_headers, mock_verify_token):
     assert response.status_code == 404
 
 
-#String 2: Purchase test 
-#Test 1: Verify that a product can be successfully purchased by a user with sufficient funds
 def test_purchase_successful(client, product, buyer_with_funds, auth_headers, mock_verify_token):
     """Test successful product purchase with sufficient funds."""
     headers = {"Authorization": f"Bearer valid-token-{buyer_with_funds}"}
@@ -207,7 +219,6 @@ def test_purchase_successful(client, product, buyer_with_funds, auth_headers, mo
     assert data["amount"] == 100.0
     assert data["status"] == "completed"
 
-#Test 2: In case of inssuficients funds verify that the purchase is rejected and no changes are made 
 def test_purchase_insufficient_funds(client, product, poor_buyer, mock_verify_token):
     """Test purchase rejected due to insufficient funds."""
     headers = {"Authorization": f"Bearer valid-token-{poor_buyer}"}
@@ -217,7 +228,6 @@ def test_purchase_insufficient_funds(client, product, poor_buyer, mock_verify_to
     assert response.status_code == 402
     assert "Insufficient funds" in response.json()["detail"]
 
-#Test 3: Verify that a seller cannot buy its own products
 def test_purchase_ownership_guard(client, product, auth_headers, mock_verify_token):
     """Test that seller cannot buy own product."""
     headers = {"Authorization": "Bearer valid-token-seller-user-id"}
@@ -227,7 +237,6 @@ def test_purchase_ownership_guard(client, product, auth_headers, mock_verify_tok
     assert response.status_code == 403
     assert "Cannot purchase your own product" in response.json()["detail"]
 
-#Test 4: Verify that both buyer and seller wallet entries are created correctly after purchase, debit and credit
 def test_purchase_atomic_transaction(client, product, buyer_with_funds, test_db, mock_verify_token):
     """Test that purchase is atomic: all operations succeed or none."""
     SessionLocal = sessionmaker(bind=test_db)
@@ -243,7 +252,6 @@ def test_purchase_atomic_transaction(client, product, buyer_with_funds, test_db,
     
     db.close()
 
-#Test 5: Verify that the product change state from available or reserved to solfd correctly 
 def test_purchase_product_state_transition(client, product, buyer_with_funds, test_db, mock_verify_token):
     """Test that product state transitions to SOLD after purchase."""
     SessionLocal = sessionmaker(bind=test_db)
@@ -257,7 +265,6 @@ def test_purchase_product_state_transition(client, product, buyer_with_funds, te
     
     db.close()
 
-#Test 6: Verify that a trasaction is created in the database correctly 
 def test_purchase_creates_transaction_record(client, product, buyer_with_funds, test_db, mock_verify_token):
     """Test that transaction record is created in database."""
     SessionLocal = sessionmaker(bind=test_db)
@@ -279,8 +286,6 @@ def test_purchase_creates_transaction_record(client, product, buyer_with_funds, 
     db.close()
 
 
-# Sprint 2: History Tests
-#Test 1: Verify that a user who has not done any transacction has an empty history 
 def test_history_empty(client, auth_headers, mock_verify_token):
     """Test history for user with no transactions."""
     user_id = "new-user"
@@ -293,16 +298,13 @@ def test_history_empty(client, auth_headers, mock_verify_token):
     assert len(data["transactions"]) == 0
     assert data["total"] == 0
 
-#Test 2: Verify that a user can see all their transactions 
 def test_history_as_buyer(client, product, buyer_with_funds, test_db, mock_verify_token):
     """Test transaction history for buyer."""
     SessionLocal = sessionmaker(bind=test_db)
     headers = {"Authorization": f"Bearer valid-token-{buyer_with_funds}"}
     
-    # Make purchase
     client.post(f"/products/{product}/buy", headers=headers)
     
-    # Get history
     response = client.get("/products/history", headers=headers)
     
     assert response.status_code == 200
@@ -314,16 +316,13 @@ def test_history_as_buyer(client, product, buyer_with_funds, test_db, mock_verif
     db = SessionLocal()
     db.close()
 
-#Test 3: Verify that a seller can see all their transactions as a seller in the history endpoint
 def test_history_as_seller(client, product, buyer_with_funds, test_db, mock_verify_token):
     """Test transaction history for seller."""
     headers_buyer = {"Authorization": f"Bearer valid-token-{buyer_with_funds}"}
     headers_seller = {"Authorization": "Bearer valid-token-seller-user-id"}
     
-    # Buy the product (as buyer)
     client.post(f"/products/{product}/buy", headers=headers_buyer)
     
-    # Get seller history
     response = client.get("/products/history", headers=headers_seller)
     
     assert response.status_code == 200
@@ -331,12 +330,10 @@ def test_history_as_seller(client, product, buyer_with_funds, test_db, mock_veri
     assert data["total"] == 1
     assert data["transactions"][0]["seller_id"] == "seller-user-id"
 
-# Test 4: Verify multiple trasactions history
 def test_history_pagination(client, test_db, buyer_with_funds, mock_verify_token):
     """Test transaction history pagination."""
     SessionLocal = sessionmaker(bind=test_db)
     
-    # Create multiple products and purchase them
     db = SessionLocal()
     for i in range(5):
         product = Product(
@@ -355,11 +352,9 @@ def test_history_pagination(client, test_db, buyer_with_funds, mock_verify_token
     
     headers = {"Authorization": f"Bearer valid-token-{buyer_with_funds}"}
     
-    # Buy each product
-    for p in products[:3]:  # Buy 3 products
+    for p in products[:3]:
         client.post(f"/products/{p.id}/buy", headers=headers)
     
-    # Get paginated history
     response = client.get("/products/history?page=1&per_page=2", headers=headers)
     
     assert response.status_code == 200
@@ -369,25 +364,18 @@ def test_history_pagination(client, test_db, buyer_with_funds, mock_verify_token
     assert data["page"] == 1
     assert data["per_page"] == 2
 
-#Test 5: Verify that a trasaction record cannot be modified after being created 
 def test_history_immutability(client, test_db, product, buyer_with_funds, mock_verify_token):
     """Test that transaction records are immutable (read-only from user perspective)."""
     headers = {"Authorization": f"Bearer valid-token-{buyer_with_funds}"}
     
-    # Make purchase
     client.post(f"/products/{product}/buy", headers=headers)
     
-    # Get history
     response = client.get("/products/history", headers=headers)
     txn_id = response.json()["transactions"][0]["id"]
     
-    # Try to modify (should fail or not be possible via API)
-    # This test just verifies the transaction record exists and was recorded
     assert txn_id > 0
 
 
-# Sprint 2: Concurrent Reservation Tests
-#Test 1: Simulate two simultaneos reservation for the same product 
 def test_concurrent_reservation(client, test_db, mock_verify_token):
     """
     Test concurrent reservation attempts --> Only one can be succesfully done 
@@ -408,11 +396,9 @@ def test_concurrent_reservation(client, test_db, mock_verify_token):
     product_id = product.id
     db.close()
 
-    # Primera reserva — debe tener éxito
     headers1 = {"Authorization": "Bearer valid-token-buyer1"}
     response1 = client.post(f"/products/{product_id}/reserve", headers=headers1)
 
-    # Segunda reserva — debe fallar porque ya está reservado
     headers2 = {"Authorization": "Bearer valid-token-buyer2"}
     response2 = client.post(f"/products/{product_id}/reserve", headers=headers2)
 
@@ -420,7 +406,6 @@ def test_concurrent_reservation(client, test_db, mock_verify_token):
     assert response2.status_code in [400, 409], f"Segunda reserva debería fallar: {response2.json()}"
 
 
-#Test 2: Verify that after timeout the product can be reserved again 
 def test_timeout_release_expired_reservation(client, test_db, mock_verify_token):
     """
     Test timeout release of expired reservations.
@@ -428,7 +413,6 @@ def test_timeout_release_expired_reservation(client, test_db, mock_verify_token)
     from app.routers.transactions import release_expired_reservations, RESERVATION_TIMEOUT_SECONDS
     from datetime import timedelta
     
-    # Setup: Create product and reserve it
     TestingSessionLocal = sessionmaker(bind=test_db)
     db = TestingSessionLocal()
     
@@ -444,22 +428,17 @@ def test_timeout_release_expired_reservation(client, test_db, mock_verify_token)
     db.refresh(product)
     product_id = product.id
     
-    # Manually set product to RESERVED with old timestamp
     product.state = ProductState.RESERVED
-    product.reserved_at = datetime.now() - timedelta(seconds=RESERVATION_TIMEOUT_SECONDS + 60)  # Expired
+    product.reserved_at = datetime.now() - timedelta(seconds=RESERVATION_TIMEOUT_SECONDS + 60)
     db.commit()
     
-    # Verify product is RESERVED before release
     db.refresh(product)
     assert product.state == ProductState.RESERVED
     
-    # Call release function
     released_count = release_expired_reservations(db, timeout_seconds=RESERVATION_TIMEOUT_SECONDS)
     
-    # Verify one was released
     assert released_count == 1, f"Expected 1 released reservation, got {released_count}"
     
-    # Verify product is now AVAILABLE
     db.refresh(product)
     assert product.state == ProductState.AVAILABLE
     assert product.reserved_at is None

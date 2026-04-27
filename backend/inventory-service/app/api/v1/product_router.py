@@ -99,7 +99,9 @@ MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
 ALLOWED_TYPES = {"image/jpeg", "image/png"}
 MAX_IMAGES = 8
 
-UPLOAD_DIR = "uploads"
+DEFAULT_UPLOAD_DIR = "/app/data/uploads" if os.path.isdir("/app/data") else "uploads"
+UPLOAD_DIR = os.getenv("INVENTORY_UPLOAD_DIR", DEFAULT_UPLOAD_DIR)
+UPLOAD_URL_PREFIX = os.getenv("INVENTORY_UPLOAD_URL_PREFIX", "/uploads").rstrip("/")
 
 @router.post("/products/{product_id}/images")
 def upload_product_image(
@@ -116,21 +118,17 @@ def upload_product_image(
     if product.seller_id != current_user:
         raise HTTPException(status_code=403, detail="Forbidden")
 
-    # Validate image count
     current_images = product.images or []
     if len(current_images) >= MAX_IMAGES:
         raise HTTPException(status_code=400, detail="Image limit exceeded")
 
-    # Validate content type
     if file.content_type not in ALLOWED_TYPES:
         raise HTTPException(status_code=422, detail="Invalid file format")
 
-    # Validate file size
     contents = file.file.read()
     if len(contents) > MAX_FILE_SIZE:
         raise HTTPException(status_code=422, detail="File too large")
 
-    # Save file
     os.makedirs(UPLOAD_DIR, exist_ok=True)
 
     file_ext = file.filename.split(".")[-1]
@@ -140,13 +138,10 @@ def upload_product_image(
     with open(file_path, "wb") as f:
         f.write(contents)
 
-    # Generate URL (simple version)
-    file_url = f"/uploads/{filename}"
+    file_url = f"{UPLOAD_URL_PREFIX}/{filename}"
 
-    # Save in DB
     product.images = current_images + [file_url]
     db.commit()
     db.refresh(product)
 
     return {"image_url": file_url}
-

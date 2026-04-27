@@ -3,7 +3,8 @@ from sqlalchemy import Column, String, DateTime, BigInteger, Integer, UniqueCons
 from datetime import datetime
 from app.db.base import Base
 
-DB_SCHEMA = os.getenv("DB_SCHEMA", None)
+DATABASE_URL = os.getenv("AUTH_DATABASE_URL", "sqlite:///./auth.db")
+DB_SCHEMA = None if DATABASE_URL.startswith("sqlite") else os.getenv("DB_SCHEMA", None)
 
 
 class SocialAccount(Base):

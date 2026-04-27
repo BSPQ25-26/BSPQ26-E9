@@ -79,7 +79,7 @@ describe('RegisterView', () => {
     await inputs[2].setValue('secret123')
     await wrapper.find('form').trigger('submit.prevent')
 
-    expect(wrapper.find('button[type=\"submit\"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.find('button[type="submit"]').attributes('disabled')).toBeDefined()
     expect(authState.register).toHaveBeenCalledWith({
       email: 'seller@example.com',
       password: 'secret123',
