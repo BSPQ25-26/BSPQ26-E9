@@ -171,7 +171,7 @@ def purchase_product(
             user_id=user_id,
             amount=-product_price,  # Negative = money OUT
             transaction_type="PURCHASE",
-            description=f"Purchase of product {product_id}",
+            description=f"Sale of product {product_id}",
             balance_after=buyer_new_balance,  # Final balance after debit
             created_at=datetime.now(timezone.utc)
         )
@@ -191,8 +191,8 @@ def purchase_product(
         seller_credit = WalletLedger(
             user_id=product.owner_id,
             amount=product_price,  # Positive = money IN
-            transaction_type="SALE",
             description=f"Sale of product {product_id}",
+            transaction_type="SALE",
             balance_after=seller_new_balance,  # Final balance after credit
             created_at=datetime.now(timezone.utc)
         )
@@ -220,8 +220,7 @@ def purchase_product(
             product_id=product.id,
             amount=product_price,
             status="completed",
-            created_at=datetime.now(timezone.utc),
-            completed_at=datetime.now(timezone.utc)
+            created_at=datetime.now(timezone.utc)
         )
         db.add(transaction)
         
@@ -244,7 +243,7 @@ def purchase_product(
         amount=float(transaction.amount),
         status=transaction.status,
         created_at=transaction.created_at,
-        completed_at=transaction.completed_at
+        completed_at=transaction.created_at
     )
 
 
@@ -304,7 +303,7 @@ def get_transaction_history(
             amount=float(txn.amount),
             status=txn.status,
             created_at=txn.created_at,
-            completed_at=txn.completed_at
+            completed_at=txn.created_at
         ))
     
     #Return paginated response
@@ -349,7 +348,7 @@ def get_purchase_history(
             amount=float(txn.amount),
             status=txn.status,
             created_at=txn.created_at,
-            completed_at=txn.completed_at
+            completed_at=txn.created_at
         ))
     
     return TransactionHistoryListResponse(
@@ -393,7 +392,7 @@ def get_sales_history(
             amount=float(txn.amount),
             status=txn.status,
             created_at=txn.created_at,
-            completed_at=txn.completed_at
+            completed_at=txn.created_at
         ))
     
     return TransactionHistoryListResponse(

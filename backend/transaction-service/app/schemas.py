@@ -90,7 +90,7 @@ class WalletLedgerEntry(BaseModel):
     user_id:           str
     amount:            float                   # Signed: +credit, -debit
     transaction_type:  str                     # TOP_UP, PURCHASE, SALE, REFUND, etc
-    description:       Optional[str]           # Human-readable description
+    description:       Optional[str] = None    # Human-readable description
     balance_after:     float                   # Balance AFTER this operation (immutable)
     created_at:        datetime
     class Config:

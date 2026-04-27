@@ -82,9 +82,9 @@ class WalletLedger(Base):
 
     id              = Column(Integer, primary_key=True, index=True)
     user_id         = Column(String(255), nullable=False, index=True)  
-    amount          = Column(Numeric(12, 2), nullable=False)  # positive=credit, negative=debit
-    transaction_type = Column(String(50), nullable=False)  # TOP_UP, PURCHASE, REFUND, etc
-    description     = Column(String(500), nullable=True)
+    amount          = Column("delta", Numeric(12, 2), nullable=False)  # positive=credit, negative=debit
+    transaction_type = Column("type", String(20), nullable=False)  # TOP_UP, PURCHASE, SALE
+    description     = Column(String(255), nullable=True)
     balance_after   = Column(Numeric(12, 2), nullable=False)  # Balance AFTER this movement (immutable)
     created_at      = Column(DateTime, default=lambda: datetime.now(timezone.utc), index=True)
 
@@ -95,19 +95,18 @@ class WalletLedger(Base):
 
 # Transaction: Purchase or sale between buyer and seller
 class Transaction(Base):
-    __tablename__ = "trasacctions"  # Note: matches existing table name in Supabase (with typo)
+    __tablename__ = "transactions"  
 
     id              = Column(Integer, primary_key=True, index=True)
     buyer_id        = Column(String(255), nullable=False)  #user_id of the buyer
     seller_id       = Column(String(255), nullable=False)  #user_id of the seller
     product_id      = Column(Integer, ForeignKey("transaction_products.id"), nullable=False)
-    amount          = Column(Numeric(12, 2), nullable=False)  
-    status          = Column(String(20), nullable=False, default="completed")  # completed, pending, refunded
+    amount          = Column(Float, nullable=False)
+    status          = Column(String(20), nullable=False, default="completed")
     created_at      = Column(DateTime, default=lambda: datetime.now(timezone.utc))
-    completed_at    = Column(DateTime, nullable=True)
 
     __table_args__ = (
-        Index('ix_trasacctions_buyer_id', 'buyer_id'),
-        Index('ix_trasacctions_seller_id', 'seller_id'),
-        Index('ix_trasacctions_created_at', 'created_at'),
+        Index('ix_transactions_buyer_id', 'buyer_id'),
+        Index('ix_transactions_seller_id', 'seller_id'),
+        Index('ix_transactions_created_at', 'created_at'),
     )
