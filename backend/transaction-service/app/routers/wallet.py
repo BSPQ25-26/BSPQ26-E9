@@ -59,7 +59,7 @@ def top_up_wallet(
     ledger_entry = WalletLedger(
         user_id=user_id,
         amount=amount,
-        transaction_type="TOP_UP",
+        transaction_type="deposit",
         balance_after=balance_after,
         created_at=datetime.now(timezone.utc)
     )
