@@ -7,7 +7,9 @@ from jose import jwt
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+service_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if service_root not in sys.path:
+    sys.path.insert(0, service_root)
 
 from app.auth import ALGORITHM, SECRET_KEY
 from app.db.base import Base

@@ -270,7 +270,8 @@ def test_purchase_creates_transaction_record(client, product, buyer_with_funds, 
     SessionLocal = sessionmaker(bind=test_db)
     headers = {"Authorization": f"Bearer valid-token-{buyer_with_funds}"}
     
-    #response = client.post(f"/products/{product}/buy", headers=headers)
+    response = client.post(f"/products/{product}/buy", headers=headers)
+    assert response.status_code == 201
     
     db = SessionLocal()
     txn = db.query(Transaction).filter(

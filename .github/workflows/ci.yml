@@ -207,7 +207,10 @@ jobs:
           TAVILY_API_KEY: "ci-mock-key"
           OPENAI_API_KEY: "ci-mock-key"
         run: |
-          pytest backend/auth-service/tests backend/inventory-service/tests backend/transaction-service/tests backend/agentic-service/test -q
+          (cd backend/auth-service && pytest tests -q)
+          (cd backend/inventory-service && pytest tests -q)
+          (cd backend/transaction-service && pytest test tests -q)
+          (cd backend/agentic-service && pytest test -q)
 
   # ─────────────────────────────────────────────
 
