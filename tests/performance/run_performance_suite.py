@@ -46,7 +46,8 @@ def run_locust(*, run_id: str, users: int, hatch_rate: int, run_time: str, html_
     ]
 
     html_out.parent.mkdir(parents=True, exist_ok=True)
-    logging.getLogger("mini_wallabot.perf.suite").info("Running Locust: %s", " ".join(cmd))
+    logger = logging.getLogger("mini_wallapop.perf.suite")
+    logger.info("Running Locust: %s", " ".join(cmd))
     subprocess.run(cmd, cwd=str(PROJECT_ROOT), env=env, check=True)
 
 
@@ -55,6 +56,7 @@ def main() -> None:
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s - %(message)s",
     )
+    logger = logging.getLogger("mini_wallapop.perf.suite")
     parser = argparse.ArgumentParser(description="Run performance suite (two Locust executions).")
     parser.add_argument("--success-users", type=int, default=20)
     parser.add_argument("--success-hatch-rate", type=int, default=4)
@@ -67,8 +69,10 @@ def main() -> None:
     success_run_id = uuid.uuid4().hex[:8]
     fail_run_id = uuid.uuid4().hex[:8]
 
-    success_html = REPORTS_DIR / "contiperf-report-success.html"
-    fail_html = REPORTS_DIR / "contiperf-report-failed.html"
+    # Keep the Locust-native HTML report filenames distinct to avoid overwrites.
+    # The Locust harness also writes ContiPerf-like summaries in on_test_stop().
+    success_html = REPORTS_DIR / f"locust-report-success-{success_run_id}.html"
+    fail_html = REPORTS_DIR / f"locust-report-failed-{fail_run_id}.html"
 
     run_locust(
         run_id=success_run_id,
@@ -85,7 +89,7 @@ def main() -> None:
         html_out=fail_html,
     )
 
-    logging.getLogger("mini_wallabot.perf.suite").info("Performance suite finished.")
+    logger.info("Performance suite finished.")
 
 
 if __name__ == "__main__":

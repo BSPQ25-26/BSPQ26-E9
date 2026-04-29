@@ -17,7 +17,7 @@ SERVICE_ROOT = PROJECT_ROOT / "backend" / "transaction-service"
 if str(SERVICE_ROOT) not in sys.path:
     sys.path.insert(0, str(SERVICE_ROOT))
 
-from app.main import app  # noqa: E402
+from app.main import app  # noqa: E402  # type: ignore[reportMissingImports]
 
 
 def configure_logging() -> None:
@@ -91,11 +91,11 @@ def main() -> None:
         try:
             visualvm_alias_html.write_text(profiler.output_html(), encoding="utf-8")
         except Exception:
-            pass
+            logger.exception("Failed to write VisualVM HTML alias report to %s", visualvm_alias_html)
         try:
             visualvm_alias_txt.write_text(profiler.output_text(unicode=True, color=False), encoding="utf-8")
         except Exception:
-            pass
+            logger.exception("Failed to write VisualVM text alias report to %s", visualvm_alias_txt)
         logger.info("Wrote profiling report to %s", output_path)
 
 

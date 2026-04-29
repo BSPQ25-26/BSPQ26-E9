@@ -1,13 +1,21 @@
 import { describe, expect, it } from 'vitest'
 
-const RUN_INTEGRATION = process.env.RUN_FRONTEND_API_INTEGRATION === '1'
+const RUN_INTEGRATION = globalThis.process?.env?.RUN_FRONTEND_API_INTEGRATION === '1'
 
-const AUTH_BASE_URL = process.env.FRONTEND_AUTH_BASE_URL || 'http://127.0.0.1:8001'
-const INVENTORY_BASE_URL = process.env.FRONTEND_INVENTORY_BASE_URL || 'http://127.0.0.1:8002'
+const AUTH_BASE_URL = globalThis.process?.env?.FRONTEND_AUTH_BASE_URL || 'http://127.0.0.1:8001'
+const INVENTORY_BASE_URL = globalThis.process?.env?.FRONTEND_INVENTORY_BASE_URL || 'http://127.0.0.1:8002'
+
+const FETCH_TIMEOUT_MS = 10000
 
 const maybeDescribe = RUN_INTEGRATION ? describe : describe.skip
 
 async function postJson(url, body, { headers = {} } = {}) {
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => {
+    controller.abort()
+  }, FETCH_TIMEOUT_MS)
+
+  try {
   const res = await fetch(url, {
     method: 'POST',
     headers: {
@@ -15,8 +23,12 @@ async function postJson(url, body, { headers = {} } = {}) {
       ...headers,
     },
     body: JSON.stringify(body),
+    signal: controller.signal,
   })
   return res
+  } finally {
+    clearTimeout(timeoutId)
+  }
 }
 
 maybeDescribe('frontend client -> server integration', () => {

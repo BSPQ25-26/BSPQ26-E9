@@ -368,11 +368,25 @@ def on_test_stop(environment, **kwargs) -> None:  # type: ignore[override]
     stats = environment.stats.total
     duration_s = (time.time() - RUN_START_TS) if RUN_START_TS else None
 
+    def _first_not_none(obj, *names):
+        for name in names:
+            value = getattr(obj, name, None)
+            if value is not None:
+                return value
+        return None
+
     # Best-effort capture of CLI options (Locust versions differ in attribute names).
     options = getattr(environment, "parsed_options", None)
-    users_opt = getattr(options, "users", None) or getattr(options, "user_count", None)
-    hatch_rate_opt = getattr(options, "hatch_rate", None) or getattr(options, "hatch_rate_per_sec", None)
-    run_time_opt = getattr(options, "run_time", None) or getattr(options, "run_time_s", None)
+    runner = getattr(environment, "runner", None)
+    users_opt = _first_not_none(options, "users", "num_users", "user_count")
+    if users_opt is None:
+        users_opt = _first_not_none(runner, "user_count", "num_users")
+    hatch_rate_opt = _first_not_none(options, "hatch_rate", "spawn_rate", "hatch_rate_per_sec")
+    if hatch_rate_opt is None:
+        hatch_rate_opt = _first_not_none(runner, "spawn_rate")
+    run_time_opt = _first_not_none(options, "run_time", "run_time_s", "run_time_limit")
+    if run_time_opt is None:
+        run_time_opt = _first_not_none(runner, "run_time", "run_time_limit")
 
     logger.info(
         "Perf test finished requests=%s failures=%s avg_ms=%.2f p95_ms=%.2f rps=%.2f failure_rate=%.2f%%",
@@ -470,5 +484,8 @@ def on_test_stop(environment, **kwargs) -> None:  # type: ignore[override]
     try:
         kpi_alias_html_path.write_text(html, encoding="utf-8")
     except Exception:
-        pass
+        logger.exception(
+            "Failed to write ContiPerf-like HTML report alias to %s",
+            kpi_alias_html_path,
+        )
     logger.info("Wrote ContiPerf-like HTML report to %s", kpi_html_path)
