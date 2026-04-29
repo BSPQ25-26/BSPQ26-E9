@@ -2,7 +2,7 @@
 Wallet router: Top-up, balance check, and wallet history endpoints.
 Ensures all wallet mutations go through the ledger for integrity.
 """
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, status, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 from datetime import datetime, timezone

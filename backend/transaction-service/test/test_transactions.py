@@ -10,8 +10,8 @@ Tests:
 """
 
 import pytest
-import threading
-from datetime import datetime, timedelta
+#import threading
+from datetime import datetime
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -19,7 +19,7 @@ from sqlalchemy.pool import StaticPool
 
 from app.main import app
 from app.database import get_db
-from app.models import Base, Product, WalletLedger, Transaction, ProductStateHistory
+from app.models import Base, Product, WalletLedger, Transaction
 from app.services.state_machine import ProductState
 
 
@@ -270,7 +270,7 @@ def test_purchase_creates_transaction_record(client, product, buyer_with_funds, 
     SessionLocal = sessionmaker(bind=test_db)
     headers = {"Authorization": f"Bearer valid-token-{buyer_with_funds}"}
     
-    response = client.post(f"/products/{product}/buy", headers=headers)
+    #response = client.post(f"/products/{product}/buy", headers=headers)
     
     db = SessionLocal()
     txn = db.query(Transaction).filter(
@@ -426,7 +426,7 @@ def test_timeout_release_expired_reservation(client, test_db, mock_verify_token)
     db.add(product)
     db.commit()
     db.refresh(product)
-    product_id = product.id
+    #product_id = product.id
     
     product.state = ProductState.RESERVED
     product.reserved_at = datetime.now() - timedelta(seconds=RESERVATION_TIMEOUT_SECONDS + 60)

@@ -1,7 +1,7 @@
 """
 Application settings loaded from environment variables.
 """
-import os
+#import os
 from pathlib import Path
 from pydantic_settings import BaseSettings
 

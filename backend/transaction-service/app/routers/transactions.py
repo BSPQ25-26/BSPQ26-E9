@@ -5,7 +5,7 @@ Handles wallet-based purchases with atomic transactions and state transitions.
 
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import and_, desc
+from sqlalchemy import desc
 from datetime import datetime, timezone
 from decimal import Decimal
 
@@ -13,11 +13,11 @@ from app.database import get_db
 from app.models import Product, WalletLedger, Transaction, ProductStateHistory
 from app.schemas import (
     ProductResponse,
-    TransactionRequest, TransactionResponse,
+    TransactionResponse,
     TransactionHistoryResponse, TransactionHistoryListResponse,
-    StateTransitionResponse
+    
 )
-from app.services.state_machine import ProductState, validate_transition, is_valid_transition
+from app.services.state_machine import ProductState, is_valid_transition
 from app.api.deps import get_current_user_id
 
 router = APIRouter(prefix="/products", tags=["transactions"])
