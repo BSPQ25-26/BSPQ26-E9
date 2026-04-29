@@ -1,0 +1,26 @@
+{
+  "run_id": "cafc9fd1",
+  "base_urls": {
+    "auth": "http://localhost:8001",
+    "inventory": "http://localhost:8002",
+    "transaction": "http://localhost:8003",
+    "wallabot": "http://localhost:8004"
+  },
+  "load": {
+    "users": null,
+    "hatch_rate": null,
+    "run_time": 30
+  },
+  "results": {
+    "num_requests": 82,
+    "num_failures": 62,
+    "failure_rate": 0.7560975609756098,
+    "duration_seconds": 29.5211284160614,
+    "throughput_ops_per_second": 2.777671599957768,
+    "threads": null,
+    "avg_response_time_ms": 872.9769414625835,
+    "p95_response_time_ms": 2500,
+    "max_response_time_ms_estimate": 2500,
+    "current_rps": 1.9
+  }
+}

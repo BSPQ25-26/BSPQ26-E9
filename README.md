@@ -184,6 +184,55 @@ The project uses **GitHub Actions** to automate quality assurance. The pipeline:
 
 2. Blocks merges if builds fail, ensuring continuous delivery of stable code.
 
+### **Coverage Evidence (>50%)**
+
+The course requirement asks for **unit test coverage >= 50%**.
+In this repository coverage is measured with `pytest-cov` (see `.github/workflows/ci.yml`), using commands like:
+
+`pytest --cov=app --cov-report=term-missing -q`
+
+If you need explicit evidence that coverage is above the threshold, run the same tests locally but enforce the minimum with `--cov-fail-under=50`
+(the command will fail if coverage is below 50%).
+
+Examples (same idea as CI, using local SQLite DBs):
+
+1. `auth-service`
+```powershell
+cd backend\auth-service
+$env:DATABASE_URL="sqlite:///./test_auth.db"
+$env:JWT_SECRET="ci-test-secret"
+$env:JWT_EXPIRY_MINUTES="30"
+python -m pytest --cov=app --cov-report=term-missing --cov-fail-under=50 -q
+```
+
+2. `inventory-service`
+```powershell
+cd backend\inventory-service
+$env:DATABASE_URL="sqlite:///./test_inventory.db"
+$env:SECRET_KEY="ci-test-secret"
+$env:ALGORITHM="HS256"
+python -m pytest --cov=app --cov-report=term-missing --cov-fail-under=50 -q
+```
+
+Note: if FastAPI complains about multipart uploads, install missing dependency in the venv:
+`pip install python-multipart`
+
+3. `transaction-service`
+```powershell
+cd backend\transaction-service
+$env:DATABASE_URL="sqlite:///./transactions.db"
+python -m pytest --cov=app --cov-report=term-missing --cov-fail-under=50 -q
+```
+
+4. `agentic-service`
+```powershell
+cd backend\agentic-service
+$env:DATABASE_URL="sqlite:///./test_wallabot.db"
+$env:TAVILY_API_KEY="ci-mock-key"
+$env:OPENAI_API_KEY="ci-mock-key"
+python -m pytest --cov=app --cov-report=term-missing --cov-fail-under=50 -q
+```
+
 
 
 ---

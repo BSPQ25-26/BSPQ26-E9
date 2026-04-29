@@ -1,0 +1,26 @@
+{
+  "run_id": "279a0e28",
+  "base_urls": {
+    "auth": "http://localhost:8001",
+    "inventory": "http://localhost:8002",
+    "transaction": "http://localhost:8003",
+    "wallabot": "http://localhost:8004"
+  },
+  "load": {
+    "users": null,
+    "hatch_rate": null,
+    "run_time": 30
+  },
+  "results": {
+    "num_requests": 119,
+    "num_failures": 0,
+    "failure_rate": 0.0,
+    "duration_seconds": 29.806894779205322,
+    "throughput_ops_per_second": 3.9923648834101275,
+    "threads": null,
+    "avg_response_time_ms": 582.4067840348253,
+    "p95_response_time_ms": 2500,
+    "max_response_time_ms_estimate": 2500,
+    "current_rps": 3.8
+  }
+}

@@ -2,7 +2,7 @@
 
 This folder contains the Python replacements for the Java course tools:
 
-- `logging` instead of `print()` for diagnostics.
+- `logging` instead of stdout prints for diagnostics.
 - `pyinstrument` instead of VisualVM.
 - `Locust` instead of ContiPerf.
 
@@ -59,6 +59,12 @@ Start the transaction service under `pyinstrument` in one terminal, then run Loc
 
 When you stop the server, the script writes the profiling snapshot to the path above. The report shows where the backend spent most of its time while the load test was running.
 
+For a self-contained profiling run (no manual CTRL+C), you can set a duration:
+
+```powershell
+.\.venv\Scripts\python.exe tests/performance/profile_transaction_service.py --host 127.0.0.1 --port 8003 --duration-seconds 15 --output tests/performance/reports/transaction-service-profile.html
+```
+
 ## Interpreting The Results
 
 - If P95 grows much faster than the average, the service is queuing under load.
@@ -75,3 +81,15 @@ When you stop the server, the script writes the profiling snapshot to the path a
 - `locust-report-docker-more-users.html`: Failing performance run  
   - Config: 50 users, higher spawn rate.  
   - P95 latency grows too high and/or failures increase, showing the system limit.
+
+To generate submission-friendly “ContiPerf-like” artifacts automatically (2 runs: success + failed),
+use the suite script:
+
+```powershell
+.\.venv\Scripts\python.exe tests/performance/run_performance_suite.py
+```
+
+It writes:
+- `tests/performance/reports/contiperf-report-success.html`
+- `tests/performance/reports/contiperf-report-failed.html`
+- `tests/performance/reports/contiperf-report-summary-<run_id>.json`
