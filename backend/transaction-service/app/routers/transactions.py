@@ -227,6 +227,7 @@ def purchase_product(
         db.query(WalletLedger)
         .filter(WalletLedger.user_id == user_id)
         .order_by(desc(WalletLedger.id))
+        .with_for_update()
         .first()
     )
     
