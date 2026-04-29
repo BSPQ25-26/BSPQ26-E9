@@ -26,6 +26,11 @@ const router = createRouter({
       },
     },
     {
+      path: '/auth/callback',
+      name: 'social-auth-callback',
+      component: () => import('@/views/SocialAuthCallbackView.vue'),
+    },
+    {
       path: '/products',
       name: 'products',
       component: () => import('@/views/ProductsView.vue'),
@@ -50,6 +55,22 @@ const router = createRouter({
         requiresAuth: true,
       },
     },
+    {
+      path: '/products/:id/edit',
+      name: 'product-edit',
+      component: () => import('@/views/ProductCreateView.vue'),
+      meta: {
+        requiresAuth: true,
+      },
+    },
+    {
+      path: '/products/:id',
+      name: 'product-detail',
+      component: () => import('@/views/ProductDetailView.vue'),
+      meta: {
+        requiresAuth: true,
+      },
+    },
   ],
 })
 
@@ -57,8 +78,10 @@ router.beforeEach((to) => {
   const authStore = useAuthStore(pinia)
   const token = authStore.syncTokenFromStorage()
   const isAuthenticated = Boolean(token)
+  const requiresAuth = to.matched.some((route) => route.meta.requiresAuth)
+  const publicOnly = to.matched.some((route) => route.meta.publicOnly)
 
-  if (to.meta.requiresAuth && !isAuthenticated) {
+  if (requiresAuth && !isAuthenticated) {
     return {
       path: '/login',
       query: {
@@ -67,7 +90,7 @@ router.beforeEach((to) => {
     }
   }
 
-  if (to.meta.publicOnly && isAuthenticated) {
+  if (publicOnly && isAuthenticated) {
     return {
       path: '/products',
     }

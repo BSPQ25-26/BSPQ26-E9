@@ -110,6 +110,7 @@ jobs:
           SECRET_KEY: "ci-test-secret"
           ALGORITHM: "HS256"
         run: pytest --cov=app --cov-report=term-missing -q
+
   # ─────────────────────────────────────────────
 
   test-transactions:
@@ -133,6 +134,7 @@ jobs:
         env:
           DATABASE_URL: "sqlite:///./test_transactions.db"
         run: pytest --cov=app --cov-report=term-missing -q
+
   # ─────────────────────────────────────────────
 
   test-wallabot:
@@ -155,7 +157,6 @@ jobs:
       - name: Run tests
         env:
           DATABASE_URL: "sqlite:///./test_wallabot.db"
-          # Use a dummy key in CI — unit tests should mock the LLM calls
           TAVILY_API_KEY: "ci-mock-key"
           OPENAI_API_KEY: "ci-mock-key"
         run: pytest --cov=app --cov-report=term-missing -q
@@ -209,6 +210,29 @@ jobs:
 
   # ─────────────────────────────────────────────
 
+  lint-frontend:
+    name: "Lint · frontend"
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+  # ─────────────────────────────────────────────
+
   # Docker smoke test — only runs after ALL service
   # tests pass. Builds the full stack and hits /health
   # on each container to confirm startup is clean.
@@ -216,25 +240,74 @@ jobs:
     name: "Smoke · docker compose"
     runs-on: ubuntu-latest
     #TODO add lint-frontend as a dependency once it's implemented, to ensure we don't push images with lint errors
-    needs: [test-auth, test-inventory, test-transactions, test-wallabot, test-backend-docker, lint-backend]
+    needs: [test-auth, test-inventory, test-transactions, test-wallabot, test-backend-docker, lint-backend, lint-frontend]
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
 
-      - name: Create .env from example
-        run: cp .env.example .env
+      - name: Write CI variables from secrets
+        env:
+          AUTH_DATABASE_URL: ${{ secrets.AUTH_DATABASE_URL }}
+          INVENTORY_DATABASE_URL: ${{ secrets.INVENTORY_DATABASE_URL }}
+          TRANSACTION_DATABASE_URL: ${{ secrets.TRANSACTION_DATABASE_URL }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          TAVILY_API_KEY: ${{ secrets.TAVILY_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          for var in AUTH_DATABASE_URL INVENTORY_DATABASE_URL TRANSACTION_DATABASE_URL; do
+            if [ -z "${!var}" ]; then
+              echo "::error::$var must be configured in GitHub Actions secrets."
+              exit 1
+            fi
+          done
+
+          {
+            printf '%s\n' \
+              "SUPABASE_URL=${SUPABASE_URL}" \
+              "SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}" \
+              "SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}" \
+              "AUTH_DATABASE_URL=${AUTH_DATABASE_URL}" \
+              "INVENTORY_DATABASE_URL=${INVENTORY_DATABASE_URL}" \
+              "TRANSACTION_DATABASE_URL=${TRANSACTION_DATABASE_URL}" \
+              "TAVILY_API_KEY=${TAVILY_API_KEY}" \
+              "OPENAI_API_KEY=${OPENAI_API_KEY}" \
+              "LANGCHAIN_TRACING_V2=false"
+          } > .env
 
       - name: Build and start stack
         run: docker compose up --build -d
 
       - name: Wait for services to be healthy
         run: |
-          for i in $(seq 1 30); do
-            curl -sf http://localhost:8001/health && \
-            curl -sf http://localhost:8003/health && exit 0
-            echo "Attempt $i — retrying in 3s..."
-            sleep 3
+          urls=(
+            http://localhost:8001/health
+            http://localhost:8002/health
+            http://localhost:8003/health
+            http://localhost:8004/health
+          )
+
+          for i in $(seq 1 60); do
+            all_healthy=true
+
+            for url in "${urls[@]}"; do
+              if ! curl -sf "$url" >/dev/null; then
+                all_healthy=false
+                break
+              fi
+            done
+
+            if [ "$all_healthy" = true ]; then
+              exit 0
+            fi
+
+            echo "Attempt $i — retrying in 5s..."
+            sleep 5
           done
+
+          docker compose ps
+          docker compose logs --no-color
           echo "Service never became healthy" && exit 1
 
       - name: Health checks
@@ -243,7 +316,7 @@ jobs:
           curl -f http://localhost:8003/health || (docker compose logs transaction-service && exit 1)
 
           curl -f http://localhost:8002/health || (docker compose logs inventory-service && exit 1)
-          curl -f http://localhost:8004/health || (docker compose logs wallabot-service && exit 1)
+          curl -f http://localhost:8004/health || (docker compose logs agentic-service && exit 1)
    
       - name: Tear down
         if: always()

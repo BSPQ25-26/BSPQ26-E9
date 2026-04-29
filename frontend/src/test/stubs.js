@@ -2,8 +2,23 @@ import { defineComponent, h } from 'vue'
 
 export const BaseCardStub = defineComponent({
   name: 'BaseCard',
-  setup(_, { slots }) {
-    return () => h('section', { class: 'base-card-stub' }, slots.default?.())
+  props: {
+    description: {
+      type: String,
+      default: '',
+    },
+    title: {
+      type: String,
+      default: '',
+    },
+  },
+  setup(props, { slots }) {
+    return () =>
+      h('section', { class: 'base-card-stub' }, [
+        props.title ? h('h2', props.title) : null,
+        props.description ? h('p', props.description) : null,
+        slots.default?.(),
+      ])
   },
 })
 
@@ -17,6 +32,14 @@ export const BaseButtonStub = defineComponent({
     type: {
       type: String,
       default: 'button',
+    },
+    to: {
+      type: [String, Object],
+      default: '',
+    },
+    variant: {
+      type: String,
+      default: 'primary',
     },
   },
   emits: ['click'],

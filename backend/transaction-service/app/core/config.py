@@ -1,14 +1,29 @@
+"""
+Application settings loaded from environment variables.
+"""
 import os
+from pathlib import Path
 from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    DATABASE_URL: str = "sqlite:///./transactions.db"
-    SECRET_KEY: str   = "mi_clave_secreta"  # must be the same as in auth-service 
-    ALGORITHM: str    = "HS256"
+    DATABASE_URL: str             = "sqlite:///./transactions.db"
+    TRANSACTION_DATABASE_URL: str = ""
+    SECRET_KEY: str               = "mi_clave_secreta"
+    ALGORITHM: str                = "HS256"
 
     class Config:
-        env_file = ".env"
+        # Use relative path to .env from project root
+        env_file = Path(__file__).parent.parent.parent.parent.parent / ".env"
+        extra = "ignore"
 
 
 settings = Settings()
+
+# Use Supabase if available, otherwise fallback to SQLite
+if settings.TRANSACTION_DATABASE_URL:
+    settings.DATABASE_URL = settings.TRANSACTION_DATABASE_URL
+    # debug: using Supabase (DATABASE_URL)
+else:
+    # debug: using SQLite fallback (DATABASE_URL)
+    pass

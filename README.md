@@ -126,34 +126,54 @@ BSPQ26-E9/
 
 Each microservice is containerized using optimized **Dockerfiles**. You can spin up the entire local environment, including the database and services, using **Docker Compose**.
 
-### **Quick Start (Run the App Locally)**
+### **Local Deployment**
 
-Use these steps to run the full project and open the main page in the browser.
+The local stack uses fixed ports. Do not run the Docker frontend and a separate
+`npm run dev` frontend at the same time, because both use port `5173`.
 
-1. From repository root, start backend services:
-
-```bash
-docker compose up --build
-```
-
-2. In a second terminal, start the frontend:
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-3. Open the frontend URL shown by Vite (usually `http://localhost:5173`).
-
-4. Go to the app root (`/`). The router redirects to `/products`.
-	If you are not authenticated, it will redirect automatically to `/login`.
-
-Useful local URLs:
+Port map:
 - Frontend: `http://localhost:5173`
 - Auth service: `http://localhost:8001/health`
 - Inventory service: `http://localhost:8002/health`
 - Transaction service: `http://localhost:8003/health`
+- Wallabot agentic service: `http://localhost:8004/health`
+
+Before a clean restart, stop old project containers and any local Vite process:
+
+```bash
+docker-compose down
+pkill -f "$PWD/frontend/node_modules/.bin/vite" || true
+```
+
+Run the full app with Docker:
+
+```bash
+docker-compose up --build -d
+```
+
+Then open `http://localhost:5173`. The app root (`/`) redirects to `/products`;
+if you are not authenticated, it redirects to `/login`.
+
+For backend-in-Docker plus frontend-on-host development, start only the backend
+services:
+
+```bash
+docker-compose up --build -d auth-service inventory-service transaction-service agentic-service
+cd frontend
+npm install
+npm run dev -- --host 127.0.0.1 --port 5173
+```
+
+Local environment files:
+- Root `.env`: backend secrets and optional external database URLs. If
+  `AUTH_DATABASE_URL`, `INVENTORY_DATABASE_URL`, or `TRANSACTION_DATABASE_URL`
+  are not set, Docker Compose falls back to SQLite databases in the
+  `wallabot-data` Docker volume.
+- `frontend/.env`: only `VITE_*` frontend overrides. See
+  `frontend/.env.example`.
+
+If your Docker installation has Compose v2, `docker compose` is equivalent to
+`docker-compose`; this machine currently provides `docker-compose`.
 
 ### **CI/CD Pipeline**
 
@@ -163,6 +183,55 @@ The project uses **GitHub Actions** to automate quality assurance. The pipeline:
 
 
 2. Blocks merges if builds fail, ensuring continuous delivery of stable code.
+
+### **Coverage Evidence (>50%)**
+
+The course requirement asks for **unit test coverage >= 50%**.
+In this repository coverage is measured with `pytest-cov` (see `.github/workflows/ci.yml`), using commands like:
+
+`pytest --cov=app --cov-report=term-missing -q`
+
+If you need explicit evidence that coverage is above the threshold, run the same tests locally but enforce the minimum with `--cov-fail-under=50`
+(the command will fail if coverage is below 50%).
+
+Examples (same idea as CI, using local SQLite DBs):
+
+1. `auth-service`
+```powershell
+cd backend\auth-service
+$env:DATABASE_URL="sqlite:///./test_auth.db"
+$env:JWT_SECRET="ci-test-secret"
+$env:JWT_EXPIRY_MINUTES="30"
+python -m pytest --cov=app --cov-report=term-missing --cov-fail-under=50 -q
+```
+
+2. `inventory-service`
+```powershell
+cd backend\inventory-service
+$env:DATABASE_URL="sqlite:///./test_inventory.db"
+$env:SECRET_KEY="ci-test-secret"
+$env:ALGORITHM="HS256"
+python -m pytest --cov=app --cov-report=term-missing --cov-fail-under=50 -q
+```
+
+Note: if FastAPI complains about multipart uploads, install missing dependency in the venv:
+`pip install python-multipart`
+
+3. `transaction-service`
+```powershell
+cd backend\transaction-service
+$env:DATABASE_URL="sqlite:///./transactions.db"
+python -m pytest --cov=app --cov-report=term-missing --cov-fail-under=50 -q
+```
+
+4. `agentic-service`
+```powershell
+cd backend\agentic-service
+$env:DATABASE_URL="sqlite:///./test_wallabot.db"
+$env:TAVILY_API_KEY="ci-mock-key"
+$env:OPENAI_API_KEY="ci-mock-key"
+python -m pytest --cov=app --cov-report=term-missing --cov-fail-under=50 -q
+```
 
 
 

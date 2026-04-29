@@ -1,11 +1,21 @@
 from dataclasses import dataclass
 from pathlib import Path
 import sys
+import logging
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app.agent.category_agent import DEFAULT_CATEGORIES, suggest_category
 from app.schemas.category import CategoryRequest
+
+logger = logging.getLogger("mini_wallabot.prompt_eval")
+
+
+def configure_logging() -> None:
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s - %(message)s",
+    )
 
 
 @dataclass(frozen=True)
@@ -223,8 +233,8 @@ def _run_case_set(name: str, cases: list[PromptEvalCase]) -> tuple[int, int, lis
     passed = 0
     confidences: list[float] = []
 
-    print(name)
-    print("=" * 80)
+    logger.info("%s", name)
+    logger.info("%s", "=" * 80)
 
     for index, case in enumerate(cases, start=1):
         req = CategoryRequest(
@@ -246,21 +256,26 @@ def _run_case_set(name: str, cases: list[PromptEvalCase]) -> tuple[int, int, lis
             if expected_is_existing
             else "'new category (out-of-taxonomy)'"
         )
-        print(
-            f"[{index:02d}] {status}"
-            f" | expected={expected_label}"
-            f" | got={result.suggested_category!r}"
-            f" | confidence={result.confidence:.2f}"
-            f" | is_new_category={result.is_new_category}"
+        logger.info(
+            "[%02d] %s | expected=%s | got=%r | confidence=%.2f | is_new_category=%s",
+            index,
+            status,
+            expected_label,
+            result.suggested_category,
+            result.confidence,
+            result.is_new_category,
         )
 
     total = len(cases)
     accuracy = passed / total
     unique_confidences = sorted(set(round(value, 2) for value in confidences))
-    print("-" * 80)
-    print(f"Accuracy: {passed}/{total} ({accuracy:.2%})")
-    print(f"Confidence values used: {', '.join(f'{value:.2f}' for value in unique_confidences)}")
-    print()
+    logger.info("%s", "-" * 80)
+    logger.info("Accuracy: %s/%s (%.2%%)", passed, total, accuracy * 100)
+    logger.info(
+        "Confidence values used: %s",
+        ", ".join(f"{value:.2f}" for value in unique_confidences),
+    )
+    logger.info("")
 
     return passed, total, confidences
 
@@ -279,22 +294,27 @@ def main() -> None:
     all_confidences = baseline_conf + holdout_conf
     all_unique_confidences = sorted(set(round(value, 2) for value in all_confidences))
 
-    print("Combined Summary")
-    print("=" * 80)
-    print(
-        f"Baseline Accuracy: {baseline_passed}/{baseline_total} "
-        f"({baseline_passed / baseline_total:.2%})"
+    logger.info("Combined Summary")
+    logger.info("%s", "=" * 80)
+    logger.info(
+        "Baseline Accuracy: %s/%s (%.2%%)",
+        baseline_passed,
+        baseline_total,
+        (baseline_passed / baseline_total) * 100,
     )
-    print(
-        f"Holdout Accuracy: {holdout_passed}/{holdout_total} "
-        f"({holdout_passed / holdout_total:.2%})"
+    logger.info(
+        "Holdout Accuracy: %s/%s (%.2%%)",
+        holdout_passed,
+        holdout_total,
+        (holdout_passed / holdout_total) * 100,
     )
-    print(f"Overall Accuracy: {all_passed}/{all_total} ({all_accuracy:.2%})")
-    print(
-        "Overall confidence values used: "
-        + ", ".join(f"{value:.2f}" for value in all_unique_confidences)
+    logger.info("Overall Accuracy: %s/%s (%.2%%)", all_passed, all_total, all_accuracy * 100)
+    logger.info(
+        "Overall confidence values used: %s",
+        ", ".join(f"{value:.2f}" for value in all_unique_confidences),
     )
 
 
 if __name__ == "__main__":
+    configure_logging()
     main()

@@ -40,6 +40,18 @@ def override_get_db():
 
 
 @pytest.fixture()
+def db():
+    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
+    session = TestingSessionLocal()
+    try:
+        yield session
+    finally:
+        session.close()
+        Base.metadata.drop_all(bind=engine)
+
+
+@pytest.fixture()
 def client():
     # Crear tablas limpias antes de cada test
     Base.metadata.drop_all(bind=engine)

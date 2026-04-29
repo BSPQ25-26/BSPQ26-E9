@@ -1,8 +1,6 @@
-version: '3.8'
-
 # ─────────────────────────────────────────────
-#  Wallabot — Local Dev Stack (SQLite 4 now, Supabase later)
-#  Usage: docker compose up --build
+#  Wallabot — Local Dev Stack (SQLite locally, Supabase optional)
+#  Usage: docker-compose up --build
 # ─────────────────────────────────────────────
 
 services:
@@ -18,12 +16,19 @@ services:
     env_file:
       - .env
     environment:
-      - DATABASE_URL=sqlite:////app/data/auth.db
+      - AUTH_DATABASE_URL=${AUTH_DATABASE_URL:-sqlite:////app/data/auth.db}
       - AUTH_SEED_SAMPLE_DATA=true
       - SERVICE_NAME=auth-service
+      - DB_SCHEMA=${DB_SCHEMA:-}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+      - GOOGLE_REDIRECT_URI=${GOOGLE_REDIRECT_URI:-http://localhost:8001/auth/google/callback}
+      - FACEBOOK_CLIENT_ID=${FACEBOOK_CLIENT_ID:-}
+      - FACEBOOK_CLIENT_SECRET=${FACEBOOK_CLIENT_SECRET:-}
+      - FACEBOOK_REDIRECT_URI=${FACEBOOK_REDIRECT_URI:-http://localhost:8001/auth/facebook/callback}
+      - FRONTEND_AUTH_CALLBACK_URL=${FRONTEND_AUTH_CALLBACK_URL:-http://localhost:5173/#/auth/callback}
     volumes:
-      - ./data:/app/data        # shared SQLite directory
-      - ./backend/auth-service:/app  # hot-reload in dev
+      - wallabot-data:/app/data
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -45,11 +50,11 @@ services:
     env_file:
       - .env
     environment:
-      - DATABASE_URL=sqlite:////app/data/inventory.db
+      - DATABASE_URL=${INVENTORY_DATABASE_URL:-sqlite:////app/data/inventory.db}
+      - INVENTORY_UPLOAD_DIR=/app/data/uploads
       - SERVICE_NAME=inventory-service
     volumes:
-      - ./data:/app/data
-      - ./backend/inventory-service:/app
+      - wallabot-data:/app/data
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -71,11 +76,10 @@ services:
     env_file:
       - .env
     environment:
-      - DATABASE_URL=sqlite:////app/data/transactions.db
+      - DATABASE_URL=${TRANSACTION_DATABASE_URL:-sqlite:////app/data/transactions.db}
       - SERVICE_NAME=transaction-service
     volumes:
-      - ./data:/app/data
-      - ./backend/transaction-service:/app
+      - wallabot-data:/app/data
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -97,15 +101,16 @@ services:
     env_file:
       - .env
     environment:
-      - DATABASE_URL=sqlite:////app/data/test-database.db
       - SERVICE_NAME=agentic-service
-      # LangChain / Tavily keys come from .env
-      # - LANGCHAIN_API_KEY=${LANGCHAIN_API_KEY}
-      # - TAVILY_API_KEY=${TAVILY_API_KEY}
-      # - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - TAVILY_API_KEY=${TAVILY_API_KEY:-}
+      - LANGCHAIN_TRACING_V2=${LANGCHAIN_TRACING_V2:-false}
+      - LANGSMITH_TRACING=${LANGSMITH_TRACING:-false}
+      - LANGSMITH_ENDPOINT=${LANGSMITH_ENDPOINT:-}
+      - LANGSMITH_API_KEY=${LANGSMITH_API_KEY:-}
+      - LANGSMITH_PROJECT=${LANGSMITH_PROJECT:-wallabot}
     volumes:
-      - ./data:/app/data
-      - ./backend/agentic-service:/app
+      - wallabot-data:/app/data
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -123,16 +128,22 @@ services:
     container_name: wallabot-frontend
     ports:
       - "5173:5173"
-    env_file:
-      - .env
+    depends_on:
+      - auth-service
+      - inventory-service
+      - transaction-service
+      - agentic-service
     environment:
+      - WALLABOT_FRONTEND_DOCKER=true
+      - VITE_APP_NAME=${VITE_APP_NAME:-Wallabot}
+      - VITE_API_BASE_URL=${VITE_API_BASE_URL:-}
       - VITE_API_AUTH_URL=http://localhost:8001
       - VITE_API_INVENTORY_URL=http://localhost:8002
       - VITE_API_TRANSACTION_URL=http://localhost:8003
       - VITE_API_WALLABOT_URL=http://localhost:8004
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules          # prevent host node_modules override
+      - VITE_API_TIMEOUT_MS=${VITE_API_TIMEOUT_MS:-10000}
+      - VITE_AUTH_TOKEN_STORAGE_KEY=${VITE_AUTH_TOKEN_STORAGE_KEY:-wallabot_auth_token}
+      - VITE_WALLABOT_PRICE_ENABLED=${VITE_WALLABOT_PRICE_ENABLED:-true}
     networks:
       - wallabot-net
     restart: unless-stopped
@@ -143,11 +154,14 @@ networks:
   wallabot-net:
     driver: bridge
 
+volumes:
+  wallabot-data:
+
 # ─────────────────────────────────────────────
-#  NOTE: Supabase migration (Sprint 2)
+#  NOTE: Supabase migration
 #  When ready, replace DATABASE_URL with:
 #    - DATABASE_URL=${SUPABASE_DB_URL}
-#  and remove the ./data volume mounts.
+#  and remove the local SQLite volume if it is no longer needed.
 #  A docker-compose.prod.yml will override
 #  these values without modifying this file.
 # ─────────────────────────────────────────────
