@@ -8,11 +8,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from app.agent.category_agent import DEFAULT_CATEGORIES, suggest_category
 from app.schemas.category import CategoryRequest
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s %(levelname)s %(name)s - %(message)s",
-)
 logger = logging.getLogger("mini_wallabot.prompt_eval")
+
+
+def configure_logging() -> None:
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s - %(message)s",
+    )
 
 
 @dataclass(frozen=True)
@@ -313,4 +316,5 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    configure_logging()
     main()
