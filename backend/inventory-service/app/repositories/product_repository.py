@@ -11,7 +11,8 @@ class ProductRepository:
             category=product_in.category,
             price=product_in.price,
             condition=product_in.condition,
-            seller_id=seller_id
+            seller_id=seller_id,
+            images=product_in.model_dump().get("images", [])
         )
         db.add(product)
         db.commit()

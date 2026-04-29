@@ -111,7 +111,7 @@ def buyer_with_funds(test_db, mock_verify_token):
     ledger = WalletLedger(
         user_id=buyer_id,
         amount=500.0,
-        transaction_type="TOP_UP",
+        transaction_type="deposit",
         description="Initial balance",
         balance_after=500.0
     )
@@ -133,7 +133,7 @@ def poor_buyer(test_db, mock_verify_token):
     ledger = WalletLedger(
         user_id=buyer_id,
         amount=10.0,
-        transaction_type="TOP_UP",
+        transaction_type="deposit",
         description="Low balance",
         balance_after=10.0
     )

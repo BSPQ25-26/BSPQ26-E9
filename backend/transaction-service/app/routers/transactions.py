@@ -244,7 +244,7 @@ def purchase_product(
         buyer_debit = WalletLedger(
             user_id=user_id,
             amount=-product_price,
-            transaction_type="PURCHASE",
+            transaction_type="purchase",
             description=f"Sale of product {product_id}",
             balance_after=buyer_new_balance,
             created_at=datetime.now(timezone.utc)
@@ -264,7 +264,7 @@ def purchase_product(
             user_id=product.owner_id,
             amount=product_price,
             description=f"Sale of product {product_id}",
-            transaction_type="SALE",
+            transaction_type="refund",
             balance_after=seller_new_balance,
             created_at=datetime.now(timezone.utc)
         )
