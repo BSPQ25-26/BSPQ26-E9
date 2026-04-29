@@ -54,7 +54,7 @@ async def google_callback(code: str, db: Session = Depends(get_db)):
         client_secret=GOOGLE_CLIENT_SECRET,
         redirect_uri=GOOGLE_REDIRECT_URI,
     ) as client:
-        token = await client.fetch_token(GOOGLE_TOKEN_URL, code=code)
+        #token = await client.fetch_token(GOOGLE_TOKEN_URL, code=code)
         resp = await client.get(GOOGLE_USERINFO_URL)
         user_info = resp.json()
 
@@ -87,7 +87,7 @@ async def facebook_callback(code: str, db: Session = Depends(get_db)):
         client_secret=FACEBOOK_CLIENT_SECRET,
         redirect_uri=FACEBOOK_REDIRECT_URI,
     ) as client:
-        token = await client.fetch_token(FACEBOOK_TOKEN_URL, code=code)
+        #token = await client.fetch_token(FACEBOOK_TOKEN_URL, code=code)
         resp = await client.get(FACEBOOK_USERINFO_URL)
         user_info = resp.json()
 

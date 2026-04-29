@@ -1,5 +1,5 @@
 import os
-from sqlalchemy import Column, String, DateTime, BigInteger, Integer, UniqueConstraint
+from sqlalchemy import Column, String, DateTime, Integer, UniqueConstraint
 from datetime import datetime
 from app.db.base import Base
 

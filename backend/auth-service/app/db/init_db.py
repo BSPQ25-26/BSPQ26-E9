@@ -4,7 +4,7 @@ from app.db.base import Base
 from app.db.session import SessionLocal, engine
 from app.core.security import hash_password
 from app.models.user import User
-from app.models.social_account import SocialAccount
+#from app.models.social_account import SocialAccount
 
 DATABASE_URL = str(engine.url)
 
