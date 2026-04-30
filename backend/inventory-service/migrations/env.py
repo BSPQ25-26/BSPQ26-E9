@@ -18,8 +18,8 @@ if config.config_file_name is not None:
 
 # Import your SQLAlchemy Base for autogenerate support
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-from app.db.base import Base
-from app.models.product import Product # Import models here
+from app.db.base import Base  # noqa: E402
+import app.models.product  # noqa: E402,F401
 target_metadata = Base.metadata
 
 # other values from the config, defined by the needs of env.py,

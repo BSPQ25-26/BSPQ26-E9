@@ -193,14 +193,6 @@ const getTransactionProductId = (productOrId) => {
   return null
 }
 
-const getInventoryProductId = (productOrId) => {
-  if (productOrId && typeof productOrId === 'object') {
-    return productOrId.id
-  }
-
-  return productOrId
-}
-
 const requireTransactionProductId = (productOrId) => {
   const transactionProductId = getTransactionProductId(productOrId)
 
@@ -221,7 +213,7 @@ const isAlreadyReservedTransitionError = (error) => {
   )
 }
 
-const updateStoredCheckoutState = (productOrId, state) => {
+const updateStoredCheckoutState = (_productOrId, _state) => {
   // We no longer use local storage for this
 }
 
