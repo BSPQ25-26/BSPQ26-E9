@@ -6,6 +6,7 @@ Tables are managed directly in Supabase via SQL scripts.
 
 from fastapi import FastAPI
 from threading import Lock
+from sqlalchemy import inspect, text
 from app.database import DATABASE_URL, engine
 from app.models import Base
 from app.routers import products, wallet, transactions
@@ -25,6 +26,13 @@ def on_startup():
     if DATABASE_URL.startswith("sqlite"):
         with startup_lock:
             Base.metadata.create_all(bind=engine)
+            with engine.begin() as conn:
+                inspector = inspect(conn)
+                existing_columns = {col["name"] for col in inspector.get_columns("transaction_products")}
+                if "reserved_by" not in existing_columns:
+                    conn.execute(
+                        text("ALTER TABLE transaction_products ADD COLUMN reserved_by VARCHAR(255)")
+                    )
 
 
 # ── Routers ──────────────────────────────────

@@ -89,6 +89,7 @@ def reserve_product(
     
     old_state = product.state
     product.state = ProductState.RESERVED
+    product.reserved_by = user_id
     product.reserved_at = datetime.now(timezone.utc)
     product.updated_at = datetime.now(timezone.utc)
     
@@ -150,6 +151,7 @@ def cancel_reservation(
 
     old_state = product.state
     product.state = ProductState.AVAILABLE
+    product.reserved_by = None
     product.reserved_at = None
     product.updated_at = datetime.now(timezone.utc)
 
@@ -223,6 +225,12 @@ def purchase_product(
             detail=f"Product is {product.state} and cannot be purchased"
         )
     
+    if product.state == ProductState.RESERVED and product.reserved_by != user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This product is reserved by another user"
+        )
+    
     buyer_ledger = (
         db.query(WalletLedger)
         .filter(WalletLedger.user_id == user_id)
@@ -273,6 +281,7 @@ def purchase_product(
         
         old_state = product.state
         product.state = ProductState.SOLD
+        product.reserved_by = None
         product.reserved_at = None
         product.updated_at = datetime.now(timezone.utc)
         
@@ -494,6 +503,7 @@ def release_expired_reservations(db: Session, timeout_seconds: int = RESERVATION
             if age_seconds > timeout_seconds:
                 old_state = product.state
                 product.state = ProductState.AVAILABLE
+                product.reserved_by = None
                 product.reserved_at = None
                 product.updated_at = now
                 

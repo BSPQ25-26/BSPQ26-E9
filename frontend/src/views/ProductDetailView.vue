@@ -86,10 +86,22 @@ const canReserve = computed(() =>
   Boolean(product.value && hasCheckoutProduct.value && !isSeller.value && normalizedState.value === 'available'),
 )
 const canBuy = computed(() =>
-  Boolean(product.value && hasCheckoutProduct.value && !isSeller.value && normalizedState.value === 'reserved'),
+  Boolean(
+    product.value &&
+      hasCheckoutProduct.value &&
+      !isSeller.value &&
+      normalizedState.value === 'reserved' &&
+      product.value.reserved_by === currentUserId.value,
+  ),
 )
 const canCancelReservation = computed(() =>
-  Boolean(product.value && hasCheckoutProduct.value && !isSeller.value && normalizedState.value === 'reserved'),
+  Boolean(
+    product.value &&
+      hasCheckoutProduct.value &&
+      !isSeller.value &&
+      normalizedState.value === 'reserved' &&
+      product.value.reserved_by === currentUserId.value,
+  ),
 )
 const inactiveActionLabel = computed(() => {
   if (!hasCheckoutProduct.value && !isSeller.value && normalizedState.value !== 'sold') {
@@ -139,6 +151,7 @@ const handleReserve = async () => {
     product.value = {
       ...product.value,
       state: normalizeProductState(result?.state || 'Reserved'),
+      reserved_by: result?.reserved_by ?? currentUserId.value ?? product.value.reserved_by ?? null,
     }
     toastStore.success('Item reserved.')
   } catch (error) {
@@ -162,6 +175,7 @@ const handleCancelReservation = async () => {
     product.value = {
       ...product.value,
       state: normalizeProductState(result?.state || 'Available'),
+      reserved_by: null,
     }
     isBuyDialogOpen.value = false
     toastStore.success('Reservation cancelled.')

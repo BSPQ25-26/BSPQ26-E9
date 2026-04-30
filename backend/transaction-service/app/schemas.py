@@ -26,6 +26,7 @@ class ProductResponse(BaseModel):
     price:       float
     state:       str
     owner_id:    str
+    reserved_by: Optional[str]
     created_at:  datetime
     updated_at:  datetime
 
