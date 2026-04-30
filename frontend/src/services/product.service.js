@@ -151,20 +151,46 @@ export const resolveProductImageUrl = (imageUrl) => {
 }
 
 export const createProduct = async (payload) => {
-  const { data } = await inventoryApiClient.post('/products', payload)
+  let inventoryProduct = null
+  let transactionProduct = null
 
-  const { data: transactionProduct } = await transactionApiClient.post('/products/', {
-    title: payload.title,
-    description: payload.description,
-    category: payload.category,
-    price: payload.price,
-  })
+  try {
+    const { data } = await inventoryApiClient.post('/products', payload)
+    inventoryProduct = data
 
-  const { data: updatedData } = await inventoryApiClient.put(`/products/${data.id}`, {
-    transaction_product_id: transactionProduct?.id,
-  })
+    const { data: createdTransactionProduct } = await transactionApiClient.post('/products/', {
+      title: payload.title,
+      description: payload.description,
+      category: payload.category,
+      price: payload.price,
+    })
+    transactionProduct = createdTransactionProduct
 
-  return normalizeProduct(updatedData)
+    const linkPayload = {
+      transaction_product_id: transactionProduct?.id,
+    }
+
+    try {
+      const { data: updatedData } = await inventoryApiClient.put(`/products/${inventoryProduct.id}`, linkPayload)
+      return normalizeProduct(updatedData)
+    } catch (_error) {
+      // Small retry for transient errors
+      const { data: updatedData } = await inventoryApiClient.put(`/products/${inventoryProduct.id}`, linkPayload)
+      return normalizeProduct(updatedData)
+    }
+  } catch (error) {
+    if (inventoryProduct?.id) {
+      await inventoryApiClient.delete(`/products/${inventoryProduct.id}`).catch(() => {})
+    }
+
+    const enrichedError = new Error(
+      'We could not create this product completely. Please try again.'
+    )
+    enrichedError.cause = error
+    enrichedError.inventory_product_id = inventoryProduct?.id ?? null
+    enrichedError.transaction_product_id = transactionProduct?.id ?? null
+    throw enrichedError
+  }
 }
 
 export const updateProduct = async (productId, payload) => {

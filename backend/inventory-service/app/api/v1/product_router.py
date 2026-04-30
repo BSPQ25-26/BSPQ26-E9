@@ -158,7 +158,14 @@ def upload_product_image(
     if len(contents) > MAX_FILE_SIZE:
         raise HTTPException(status_code=422, detail="File too large")
 
-    file_ext = (file.filename or "image").split(".")[-1].lower() or "jpg"
+    content_type_to_ext = {
+        "image/jpeg": "jpg",
+        "image/jpg": "jpg",
+        "image/png": "png",
+        "image/webp": "webp",
+        "image/gif": "gif",
+    }
+    file_ext = content_type_to_ext.get(file.content_type, "jpg")
     filename = f"{uuid.uuid4()}.{file_ext}"
 
     # Try Supabase Storage first; fall back to local disk

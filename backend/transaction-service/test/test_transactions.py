@@ -237,6 +237,19 @@ def test_purchase_ownership_guard(client, product, auth_headers, mock_verify_tok
     assert response.status_code == 403
     assert "Cannot purchase your own product" in response.json()["detail"]
 
+def test_purchase_reserved_product_guard_blocks_other_user(client, product, buyer_with_funds, mock_verify_token):
+    """Test that a reserved product can only be purchased by the reservation owner."""
+    reserver_id = "reserve-user-id"
+    reserve_headers = {"Authorization": f"Bearer valid-token-{reserver_id}"}
+    buyer_headers = {"Authorization": f"Bearer valid-token-{buyer_with_funds}"}
+
+    reserve_response = client.post(f"/products/{product}/reserve", headers=reserve_headers)
+    purchase_response = client.post(f"/products/{product}/buy", headers=buyer_headers)
+
+    assert reserve_response.status_code == 200
+    assert purchase_response.status_code == 403
+    assert "reserved by another user" in purchase_response.json()["detail"]
+
 def test_purchase_atomic_transaction(client, product, buyer_with_funds, test_db, mock_verify_token):
     """Test that purchase is atomic: all operations succeed or none."""
     SessionLocal = sessionmaker(bind=test_db)

@@ -13,7 +13,7 @@ class ProductRepository:
             condition=product_in.condition,
             seller_id=seller_id,
             images=product_in.model_dump().get("images", []),
-            transaction_product_id=product_in.transaction_product_id
+            transaction_product_id=None,
         )
         db.add(product)
         db.commit()

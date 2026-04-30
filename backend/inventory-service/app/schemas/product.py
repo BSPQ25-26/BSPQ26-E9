@@ -22,7 +22,6 @@ class ProductCreate(BaseModel):
     category: str = Field(..., min_length=1)
     price: float = Field(..., gt=0)
     condition: ProductCondition = Field(default=ProductCondition.NEW)
-    transaction_product_id: Optional[int] = Field(default=None)
 
     model_config = ConfigDict(extra="allow")
 

@@ -151,6 +151,7 @@ const handleReserve = async () => {
     product.value = {
       ...product.value,
       state: normalizeProductState(result?.state || 'Reserved'),
+      reserved_by: result?.reserved_by ?? currentUserId.value ?? product.value.reserved_by ?? null,
     }
     toastStore.success('Item reserved.')
   } catch (error) {
@@ -174,6 +175,7 @@ const handleCancelReservation = async () => {
     product.value = {
       ...product.value,
       state: normalizeProductState(result?.state || 'Available'),
+      reserved_by: null,
     }
     isBuyDialogOpen.value = false
     toastStore.success('Reservation cancelled.')
