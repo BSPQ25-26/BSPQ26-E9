@@ -2,7 +2,6 @@ from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
-from db.base import Base
 from alembic import context
 import sys
 import os
@@ -18,9 +17,9 @@ if config.config_file_name is not None:
 
 
 # Import your SQLAlchemy Base for autogenerate support
-
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'app'))
-
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+from app.db.base import Base
+from app.models.product import Product # Import models here
 target_metadata = Base.metadata
 
 # other values from the config, defined by the needs of env.py,

@@ -10,7 +10,7 @@ import { useWalletStore } from '@/stores/wallet'
 
 const route = useRoute()
 const router = useRouter()
-const { isAuthenticated, logout, user } = useAuth()
+const { isAuthenticated, logout, refreshSession, token, user } = useAuth()
 const walletStore = useWalletStore()
 const toastStore = useToastStore()
 const {
@@ -30,6 +30,28 @@ const topUpForm = reactive({
   amount: '',
 })
 const topUpError = ref('')
+
+const decodeTokenSubject = (jwt) => {
+  const [, payload] = String(jwt || '').split('.')
+
+  if (!payload || typeof window === 'undefined' || typeof window.atob !== 'function') {
+    return ''
+  }
+
+  try {
+    const normalizedPayload = payload.replace(/-/g, '+').replace(/_/g, '/')
+    const paddedPayload = normalizedPayload.padEnd(
+      Math.ceil(normalizedPayload.length / 4) * 4,
+      '=',
+    )
+    const parsedPayload = JSON.parse(window.atob(paddedPayload))
+    return parsedPayload.sub || parsedPayload.email || parsedPayload.user || ''
+  } catch {
+    return ''
+  }
+}
+
+const currentUserId = computed(() => user.value?.email || decodeTokenSubject(token.value) || 'User')
 
 const links = computed(() =>
   isAuthenticated.value
@@ -158,6 +180,7 @@ watch(
     }
 
     walletStore.fetchBalance().catch(() => {})
+    refreshSession().catch(() => {})
   },
   {
     immediate: true,
@@ -206,9 +229,10 @@ watch(
           <span class="wallet-indicator__balance">{{ formattedBalance }}</span>
         </button>
 
-        <p v-if="isAuthenticated && user?.email" class="header-user muted">
-          {{ user.email }}
-        </p>
+        <div v-if="isAuthenticated && currentUserId" class="header-user">
+          <div class="user-avatar">{{ currentUserId.charAt(0).toUpperCase() }}</div>
+          <span class="user-email">{{ currentUserId }}</span>
+        </div>
 
         <BaseButton
           v-if="isAuthenticated"
@@ -429,16 +453,40 @@ watch(
 }
 
 .header-user {
-  max-width: 100%;
-  padding: 0.65rem 0.95rem;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0.35rem 0.75rem 0.35rem 0.35rem;
   border: 1px solid rgba(17, 17, 17, 0.08);
-  border-radius: 1rem;
-  background: rgba(255, 255, 255, 0.65);
-  font-size: 1rem;
+  border-radius: 2rem;
+  background: rgba(255, 255, 255, 0.8);
+  max-width: 15rem;
+  transition: transform 0.24s ease;
+}
+
+.header-user:hover {
+  transform: translateY(-1px);
+}
+
+.user-avatar {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: #111111;
+  color: #ffffff;
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.user-email {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  overflow-wrap: anywhere;
 }
 
 .wallet-modal-backdrop {
@@ -586,6 +634,9 @@ watch(
   }
 
   .header-user {
+    padding: 0.25rem;
+  }
+  .user-email {
     display: none;
   }
 

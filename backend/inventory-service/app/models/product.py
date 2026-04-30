@@ -46,5 +46,6 @@ class Product(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     images = Column(JSON(String), nullable=False, default=list)
+    transaction_product_id = Column(Integer, nullable=True)
 
     # seller = relationship("User", back_populates="products")

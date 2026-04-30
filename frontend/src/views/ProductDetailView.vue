@@ -86,10 +86,22 @@ const canReserve = computed(() =>
   Boolean(product.value && hasCheckoutProduct.value && !isSeller.value && normalizedState.value === 'available'),
 )
 const canBuy = computed(() =>
-  Boolean(product.value && hasCheckoutProduct.value && !isSeller.value && normalizedState.value === 'reserved'),
+  Boolean(
+    product.value &&
+      hasCheckoutProduct.value &&
+      !isSeller.value &&
+      normalizedState.value === 'reserved' &&
+      product.value.reserved_by === currentUserId.value,
+  ),
 )
 const canCancelReservation = computed(() =>
-  Boolean(product.value && hasCheckoutProduct.value && !isSeller.value && normalizedState.value === 'reserved'),
+  Boolean(
+    product.value &&
+      hasCheckoutProduct.value &&
+      !isSeller.value &&
+      normalizedState.value === 'reserved' &&
+      product.value.reserved_by === currentUserId.value,
+  ),
 )
 const inactiveActionLabel = computed(() => {
   if (!hasCheckoutProduct.value && !isSeller.value && normalizedState.value !== 'sold') {

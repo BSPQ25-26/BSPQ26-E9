@@ -53,6 +53,9 @@ services:
       - DATABASE_URL=${INVENTORY_DATABASE_URL:-sqlite:////app/data/inventory.db}
       - INVENTORY_UPLOAD_DIR=/app/data/uploads
       - SERVICE_NAME=inventory-service
+      - SUPABASE_URL=${SUPABASE_URL:-}
+      - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY:-}
+      - SUPABASE_STORAGE_BUCKET=${SUPABASE_STORAGE_BUCKET:-product-images}
     volumes:
       - wallabot-data:/app/data
     healthcheck:

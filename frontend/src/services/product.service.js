@@ -1,95 +1,11 @@
 import { inventoryApiClient, transactionApiClient } from '@/services/api'
 
-const TRANSACTION_PRODUCT_MAP_STORAGE_KEY = 'wallabot_transaction_product_map'
-const CHECKOUT_STATE_STORAGE_KEY = 'wallabot_checkout_state_map'
+const trimTrailingSlashes = (value = '') => value.replace(/\/+$/, '')
 
 const stateLabelByKey = {
   available: 'Available',
   reserved: 'Reserved',
   sold: 'Sold',
-}
-
-const trimTrailingSlashes = (value = '') => value.replace(/\/+$/, '')
-
-const hasStorage = () => typeof window !== 'undefined' && Boolean(window.localStorage)
-
-const readStorageMap = (storageKey) => {
-  if (!hasStorage()) {
-    return {}
-  }
-
-  try {
-    const parsed = JSON.parse(window.localStorage.getItem(storageKey) || '{}')
-    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {}
-  } catch {
-    return {}
-  }
-}
-
-const writeStorageMap = (storageKey, mapping) => {
-  if (!hasStorage()) {
-    return
-  }
-
-  window.localStorage.setItem(storageKey, JSON.stringify(mapping))
-}
-
-const readTransactionProductMap = () => readStorageMap(TRANSACTION_PRODUCT_MAP_STORAGE_KEY)
-
-const writeTransactionProductMap = (mapping) =>
-  writeStorageMap(TRANSACTION_PRODUCT_MAP_STORAGE_KEY, mapping)
-
-const readCheckoutStateMap = () => readStorageMap(CHECKOUT_STATE_STORAGE_KEY)
-
-const writeCheckoutStateMap = (mapping) => writeStorageMap(CHECKOUT_STATE_STORAGE_KEY, mapping)
-
-const getMappedTransactionProductId = (inventoryProductId) => {
-  const normalizedId = String(inventoryProductId ?? '')
-
-  if (!normalizedId) {
-    return null
-  }
-
-  return readTransactionProductMap()[normalizedId] || null
-}
-
-const rememberTransactionProductId = (inventoryProductId, transactionProductId) => {
-  const normalizedInventoryId = String(inventoryProductId ?? '')
-  const normalizedTransactionId = transactionProductId ?? null
-
-  if (!normalizedInventoryId || !normalizedTransactionId) {
-    return
-  }
-
-  writeTransactionProductMap({
-    ...readTransactionProductMap(),
-    [normalizedInventoryId]: normalizedTransactionId,
-  })
-}
-
-const getStoredCheckoutState = (inventoryProductId) => {
-  const normalizedId = String(inventoryProductId ?? '')
-
-  if (!normalizedId) {
-    return null
-  }
-
-  const state = readCheckoutStateMap()[normalizedId]
-  return state ? normalizeProductState(state) : null
-}
-
-const rememberCheckoutState = (inventoryProductId, state) => {
-  const normalizedInventoryId = String(inventoryProductId ?? '')
-  const normalizedState = normalizeProductState(state)
-
-  if (!normalizedInventoryId || !normalizedState) {
-    return
-  }
-
-  writeCheckoutStateMap({
-    ...readCheckoutStateMap(),
-    [normalizedInventoryId]: normalizedState,
-  })
 }
 
 const isLocalDevApi = (baseURL) => {
@@ -119,8 +35,6 @@ export const normalizeProduct = (product) => {
     return null
   }
 
-  const storedCheckoutState = getStoredCheckoutState(product.id)
-
   return {
     id: product.id ?? null,
     title: product.title ?? '',
@@ -128,12 +42,12 @@ export const normalizeProduct = (product) => {
     category: product.category ?? '',
     price: typeof product.price === 'number' ? product.price : Number(product.price) || 0,
     condition: product.condition ?? '',
-    state: normalizeProductState(product.checkout_state ?? storedCheckoutState ?? product.state),
+    state: normalizeProductState(product.checkout_state ?? product.state),
     seller_id: product.seller_id ?? product.owner_id ?? '',
+    reserved_by: product.reserved_by ?? null,
     transaction_product_id:
       product.transaction_product_id ??
-      product.transactionProductId ??
-      getMappedTransactionProductId(product.id),
+      product.transactionProductId ?? null,
     created_at: product.created_at ?? null,
     updated_at: product.updated_at ?? null,
     images: normalizeImages(product.images, product.image_url || product.image),
@@ -246,13 +160,11 @@ export const createProduct = async (payload) => {
     price: payload.price,
   })
 
-  rememberTransactionProductId(data?.id, transactionProduct?.id)
-  rememberCheckoutState(data?.id, transactionProduct?.state || 'Available')
-
-  return normalizeProduct({
-    ...data,
+  const { data: updatedData } = await inventoryApiClient.put(`/products/${data.id}`, {
     transaction_product_id: transactionProduct?.id,
   })
+
+  return normalizeProduct(updatedData)
 }
 
 export const updateProduct = async (productId, payload) => {
@@ -275,10 +187,10 @@ export const uploadProductImage = async (productId, file) => {
 
 const getTransactionProductId = (productOrId) => {
   if (productOrId && typeof productOrId === 'object') {
-    return productOrId.transaction_product_id || getMappedTransactionProductId(productOrId.id)
+    return productOrId.transaction_product_id
   }
 
-  return getMappedTransactionProductId(productOrId)
+  return null
 }
 
 const getInventoryProductId = (productOrId) => {
@@ -310,7 +222,7 @@ const isAlreadyReservedTransitionError = (error) => {
 }
 
 const updateStoredCheckoutState = (productOrId, state) => {
-  rememberCheckoutState(getInventoryProductId(productOrId), state)
+  // We no longer use local storage for this
 }
 
 export const syncProductCheckoutState = async (product) => {
@@ -322,11 +234,10 @@ export const syncProductCheckoutState = async (product) => {
     const { data } = await transactionApiClient.get(`/products/${product.transaction_product_id}`)
     const state = normalizeProductState(data?.state)
 
-    rememberCheckoutState(product.id, state)
-
     return {
       ...product,
       state,
+      reserved_by: data?.reserved_by ?? null,
       transaction_product_id: data?.id ?? product.transaction_product_id,
     }
   } catch (error) {
