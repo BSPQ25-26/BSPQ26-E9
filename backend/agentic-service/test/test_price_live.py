@@ -6,7 +6,6 @@ Run with:
     RUN_LIVE_TESTS=true pytest test/test_price_live.py -v
 """
 
-import importlib
 import os
 
 import pytest
