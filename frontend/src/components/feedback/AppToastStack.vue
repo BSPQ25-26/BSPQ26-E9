@@ -1,11 +1,13 @@
 <script setup>
 import { storeToRefs } from 'pinia'
+import { useI18n } from 'vue-i18n'
 import { useToastStore } from '@/stores/toast'
 
+const { t } = useI18n()
 const toastStore = useToastStore()
 const { toasts } = storeToRefs(toastStore)
 
-const getToastLabel = (type) => (type === 'error' ? 'Please check' : 'Done')
+const getToastLabel = (type) => (type === 'error' ? t('toast.errorLabel') : t('toast.successLabel'))
 </script>
 
 <template>
@@ -14,7 +16,7 @@ const getToastLabel = (type) => (type === 'error' ? 'Please check' : 'Done')
       class="toast-stack"
       name="toast"
       tag="aside"
-      aria-label="Messages"
+      :aria-label="$t('toast.ariaMessages')"
     >
       <section
         v-for="toast in toasts"
@@ -33,10 +35,10 @@ const getToastLabel = (type) => (type === 'error' ? 'Please check' : 'Done')
         <button
           class="toast-close"
           type="button"
-          aria-label="Close message"
+          :aria-label="$t('toast.closeAria')"
           @click="toastStore.dismiss(toast.id)"
         >
-          Close
+          {{ $t('toast.close') }}
         </button>
       </section>
     </TransitionGroup>

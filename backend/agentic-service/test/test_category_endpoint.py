@@ -23,7 +23,7 @@ class MockChainFromLlmText:
         self._llm_text = llm_text
         self.last_payload = None
 
-    def invoke(self, payload):
+    def invoke(self, payload, **kwargs):
         self.last_payload = payload
         return self._parser.parse(self._llm_text)
 
@@ -36,7 +36,7 @@ class MockFailingChain:
         self.call_count = 0
         self.last_payload = None
 
-    def invoke(self, payload):
+    def invoke(self, payload, **kwargs):
         self.call_count += 1
         self.last_payload = payload
         raise self.error
@@ -49,7 +49,7 @@ class MockProviderFailingChain:
         self.error = error
         self.call_count = 0
 
-    def invoke(self, payload):
+    def invoke(self, payload, **kwargs):
         self.call_count += 1
         raise self.error
 
@@ -213,6 +213,8 @@ def test_price_endpoint_returns_recommendation(price_agent_module, wallabot_app,
         ),
     )
     monkeypatch.setattr(price_agent_module, "_chain", mock_chain)
+    # Provide market data so the agent preserves the LLM's data_source unchanged
+    monkeypatch.setattr(price_agent_module, "_search_tavily", lambda q: "iPhone 13 128GB used: €90-€110")
     client = TestClient(wallabot_app)
 
     response = client.post(

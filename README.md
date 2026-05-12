@@ -42,10 +42,10 @@ Wallabot is a multi-tier, distributed **RESTful microservice architecture** desi
 **Smart Categorization**: Automatically suggests product categories in structured JSON format.
 
 
-* **Price Recommendations**: Provides competitive pricing data utilizing the **TO BE DEFINED**.
+* **Price Recommendations**: Provides competitive pricing data using **Tavily** real-time web search grounded by **OpenAI GPT-4o-mini** structured output.
 
 
-* **Observability**: Uses **TO BE DEFINED** to trace AI reasoning, monitor decisions, and alert on invalid responses.
+* **Observability**: Uses **LangSmith** to trace every AI chain invocation, monitor latency, and alert on validation failures or slow responses.
 
 
 
@@ -76,10 +76,10 @@ Wallabot is a multi-tier, distributed **RESTful microservice architecture** desi
 | **Database** | TO BE DEFINED 
 
  |
-| **AI Monitoring** | TO BE DEFINED 
+| **AI Monitoring** | LangSmith 
 
  |
-| **External AI API** | TO BE DEFINED
+| **External AI API** | OpenAI (GPT-4o-mini) + Tavily Search
 
  |
 | **Containerization** | Docker & Docker Compose 
@@ -148,7 +148,7 @@ pkill -f "$PWD/frontend/node_modules/.bin/vite" || true
 Run the full app with Docker:
 
 ```bash
-docker-compose up --build -d
+docker-compose up --build
 ```
 
 Then open `http://localhost:5173`. The app root (`/`) redirects to `/products`;
@@ -234,6 +234,70 @@ python -m pytest --cov=app --cov-report=term-missing --cov-fail-under=50 -q
 ```
 
 
+
+---
+
+## Wallabot — LangSmith Monitoring
+
+All Wallabot LCEL chains (category suggestion and price recommendation) are
+auto-instrumented by LangSmith when tracing is enabled. No code changes are
+needed beyond setting the environment variables.
+
+### Enable tracing
+
+In `backend/agentic-service/.env` (or the root `.env`):
+
+```
+LANGCHAIN_TRACING_V2=true
+LANGCHAIN_API_KEY=<your key from smith.langchain.com>
+LANGCHAIN_PROJECT=wallabot
+```
+
+The service logs `Wallabot LangSmith tracing ENABLED project='wallabot'` at
+startup when tracing is active.
+
+### Accessing the dashboard
+
+1. Open [smith.langchain.com](https://smith.langchain.com) and sign in.
+2. Select the project named `wallabot` (or whatever `LANGCHAIN_PROJECT` is set to).
+3. The **Traces** tab shows every chain invocation with inputs, outputs, and
+   per-step latency.
+
+### Run names and tags
+
+| Run name | What it represents |
+|----------|-------------------|
+| `wallabot_category_suggest` | One category classification request (full chain) |
+| `wallabot_price_recommendation` | One price recommendation request (full chain) |
+| `wallabot_category_agent_validation_failure` | Parser/schema error logged during a category retry |
+| `wallabot_price_agent_validation_failure` | Parser/schema error logged during a price retry |
+| `wallabot_category_agent_latency_exceeded` | Category call exceeded 15 s threshold |
+| `wallabot_price_agent_latency_exceeded` | Price call exceeded 30 s threshold |
+
+All Wallabot runs are tagged `wallabot` plus the component tag (`category_agent`
+or `price_agent`), making it easy to filter by agent in the dashboard.
+
+### Setting up alert rules
+
+In LangSmith → **Automations** → **Add Rule**:
+
+1. **Validation-failure alert**
+   - Filter: Run name contains `validation_failure`
+   - Condition: count > 0 in a 5-minute window
+   - Action: email / Slack webhook
+
+2. **Latency alert**
+   - Filter: Run name contains `latency_exceeded`
+   - Condition: count > 0 in any window
+   - Action: email / Slack webhook
+
+### Interpreting and responding to alerts
+
+| Alert | Likely cause | Response |
+|-------|-------------|----------|
+| `validation_failure` fires repeatedly | Prompt drift — LLM output stopped conforming to the JSON schema | Open the failing run in LangSmith, inspect `llm_output` in the error field, update the prompt in `prompts.py` |
+| `latency_exceeded` for price agent | Tavily rate-limit or slow OpenAI response | Check Tavily dashboard for quota; consider caching frequent queries |
+| `latency_exceeded` for category agent | OpenAI latency spike | Monitor OpenAI status page; the fallback path returns immediately if the provider is down |
 
 ---
 
