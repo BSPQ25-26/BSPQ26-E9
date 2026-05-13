@@ -4,18 +4,20 @@ Application settings loaded from environment variables.
 #import os
 from pathlib import Path
 from pydantic_settings import BaseSettings
-
+from pydantic import ConfigDict
 
 class Settings(BaseSettings):
     DATABASE_URL: str             = "sqlite:///./transactions.db"
     TRANSACTION_DATABASE_URL: str = ""
     SECRET_KEY: str               = "mi_clave_secreta"
     ALGORITHM: str                = "HS256"
-
-    class Config:
-        # Use relative path to .env from project root
-        env_file = Path(__file__).parent.parent.parent.parent.parent / ".env"
-        extra = "ignore"
+    #SPRINT 3: Reservation Timeout Tuning
+    RESERVATION_TIMEOUT_SECONDS: int = 900  
+    
+    model_config = ConfigDict(
+        env_file=Path(__file__).parent.parent.parent.parent.parent / ".env",
+        extra="ignore"
+    )
 
 
 settings = Settings()

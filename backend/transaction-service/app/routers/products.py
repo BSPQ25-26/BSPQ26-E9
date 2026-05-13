@@ -1,7 +1,7 @@
 """
 Product router handling product creation, state transitions, and state history retrieval.
 """
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
 from datetime import datetime, timezone
 
@@ -14,6 +14,17 @@ from app.schemas import (
 )
 from app.services.state_machine import validate_transition, ProductState
 from app.api.deps import get_current_user_id
+# Sprint 3: Error handling audit 
+from app.core.exceptions import (
+    ProductNotFoundException,
+    ProductForbiddenException,
+    InvalidStateTransitionException
+)
+
+#Sprint 3: Structured logging
+from app.core.logging import get_logger, log_request, log_result, log_error  
+
+logger = get_logger(__name__)
 
 router = APIRouter(prefix="/products", tags=["products"])
 
@@ -24,6 +35,9 @@ def create_product(
     db: Session = Depends(get_db),
     user_id: str = Depends(get_current_user_id)
 ):
+    #Sprint 3: Structured logging - Creates a new product with initial state available 
+    log_request(logger, "POST /products", user_id, title=payload.title, price=payload.price)
+
     product = Product(
         title=payload.title,
         description=payload.description,
@@ -45,6 +59,8 @@ def create_product(
     db.add(history)
     db.commit()
     db.refresh(product)
+
+    log_result(logger, "POST /products", user_id, product_id=product.id)
     return product
 
 #Changes the state of a product following valid transitions only (Available → Reserved → Sold).
@@ -55,23 +71,25 @@ def change_product_state(
     db: Session = Depends(get_db),
     user_id: str = Depends(get_current_user_id)
 ):
-
+    #Sprint 3: Structured logging - Changes the state of a product following valid transitions only (Available → Reserved → Sold)
+    log_request(logger, f"PATCH /products/{product_id}/state", user_id, target_state=str(payload.target_state))
     # Lock the row to prevent race conditions (Tarea 2: atomic transitions)
     product = db.query(Product).filter(
         Product.id == product_id
     ).with_for_update().first()
 
+    
     if product is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Product {product_id} not found"
-        )
+        #Sprint 3: Sructured logging
+        log_error(logger, f"PATCH /products/{product_id}/state", user_id, error="Product not found")
+        #Sprint 3: Error handlig audit - replace generic HTTPException with specific exceptions
+        raise ProductNotFoundException(product_id)
 
     if product.owner_id != user_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You are not the owner of this product"
-        )
+        #Sprint 3: Structured logging
+        log_error(logger, f"PATCH /products/{product_id}/state", user_id, error="Forbidden: Not the owner")
+        #Sprint 3: Error handling audit - replace generic HTTPException with specific exceptions
+        raise ProductForbiddenException("You are not the owner of this product")
 
     # Validate transition via state machine
     try:
@@ -79,11 +97,11 @@ def change_product_state(
             current=ProductState(product.state),
             target=payload.target_state
         )
-    except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail=str(e)
-        )
+    except ValueError:
+        #Sprint 3: Structured logging
+        log_error(logger, f"PATCH /products/{product_id}/state", user_id, error=f"Invalid transition {product.state} → {payload.target_state}")
+        #Sprint 3: Error handling audit - replace generic HTTPException with specific exceptions
+        raise InvalidStateTransitionException(product.state, payload.target_state) 
 
     from_state = product.state
     product.state = payload.target_state
@@ -100,6 +118,8 @@ def change_product_state(
     db.commit()
     db.refresh(product)
 
+    #Sprint 3: Structured logging
+    log_result(logger, f"PATCH /products/{product_id}/state", user_id, from_state=from_state, to_state=str(product.state))
     return StateTransitionResponse(
         product_id=product.id,
         from_state=from_state,
@@ -114,13 +134,16 @@ def get_state_history(
     db: Session = Depends(get_db),
     user_id: str = Depends(get_current_user_id)
 ):
+    #Sprint 3: Structured logging - Returns the full state transition history of a product
+    log_request(logger, f"GET /products/{product_id}/history", user_id)
+
     """Returns the full state transition history of a product."""
     product = db.query(Product).filter(Product.id == product_id).first()
 
+    #Sprint 3: Error handling audit - replace generic HTTPException with specific exceptions
     if product is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Product {product_id} not found"
-        )
+        raise ProductNotFoundException(product_id)
 
+    #Sprint 3: Structured logging
+    log_result(logger, f"GET /products/{product_id}/history", user_id, entries=len(product.state_history))  # ← SPRINT 3 LOG
     return product.state_history

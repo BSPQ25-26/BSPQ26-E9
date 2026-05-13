@@ -16,6 +16,13 @@ from app.schemas import (
 )
 from app.api.deps import get_current_user_id
 
+#Sprint 3: Error handling audit 
+from app.core.exceptions import InvalidAmountException, AtomicOperationException
+
+#Sprint 3: Structured logging 
+from app.core.logging import get_logger, log_request, log_result, log_error
+logger= get_logger(__name__)
+
 router = APIRouter(prefix="/wallet", tags=["wallet"])
 
 
@@ -43,6 +50,13 @@ def top_up_wallet(
     Returns:
         BalanceResponse with updated balance
     """
+    #SPRINT 3: Structured logging 
+    log_request(logger, "POST /wallet/topup", user_id, amount=payload.amount)  # ← SPRINT 3 LOG
+
+    if payload.amount <= 0:
+        log_error(logger, "POST /wallet/topup", user_id, error="Invalid amount")  # ← SPRINT 3 LOG
+        raise InvalidAmountException("Top-up amount must be positive")
+    
     # Get current balance from LAST ledger entry
     current_balance = (
         db.query(WalletLedger)
@@ -55,19 +69,26 @@ def top_up_wallet(
     amount = Decimal(str(payload.amount))
     balance_after = balance_before + amount
 
-    # CREATE new entry (NEVER UPDATE balance directly)
-    ledger_entry = WalletLedger(
-        user_id=user_id,
-        amount=amount,
-        transaction_type="deposit",
-        balance_after=balance_after,
-        created_at=datetime.now(timezone.utc)
-    )
-    
-    db.add(ledger_entry)
-    db.commit()
-    db.refresh(ledger_entry)
+    #Sprint 3: Error handling audit
+    try: 
+        # CREATE new entry (NEVER UPDATE balance directly)
+        ledger_entry = WalletLedger(
+            user_id=user_id,
+            amount=amount,
+            transaction_type="deposit",
+            description=f"Top-up of {amount}",
+            balance_after=balance_after,
+            created_at=datetime.now(timezone.utc)
+        )
+        
+        db.add(ledger_entry)
+        db.commit()
+        db.refresh(ledger_entry)
+    except Exception as e:
+        db.rollback()
+        raise AtomicOperationException(str(e))
 
+    log_result(logger, "POST /wallet/topup", user_id, balance_after=float(balance_after))
     return BalanceResponse(
         user_id=user_id,
         balance=float(balance_after),
@@ -93,6 +114,9 @@ def get_balance(
     Returns:
         BalanceResponse with current balance from ledger
     """
+
+    #SPRINT 3: Structured logging
+    log_request(logger, "GET /wallet/balance", user_id) 
     latest_entry = (
         db.query(WalletLedger)
         .filter(WalletLedger.user_id == user_id)
@@ -101,6 +125,8 @@ def get_balance(
     )
 
     if not latest_entry:
+        #SPRINT 3: Structured logging
+        log_result(logger, "GET /wallet/balance", user_id, balance=0.0) 
         # User has no balance history yet
         return BalanceResponse(
             user_id=user_id,
@@ -108,6 +134,8 @@ def get_balance(
             last_update=datetime.now(timezone.utc)
         )
 
+    #SPRINT 3: Structured logging
+    log_result(logger, "GET /wallet/balance", user_id, balance=float(latest_entry.balance_after))  
     return BalanceResponse(
         user_id=user_id,
         balance=float(latest_entry.balance_after),
@@ -131,6 +159,8 @@ def get_wallet_history(
     - Supports pagination
     - Used for auditing wallet integrity
     """
+    #SPRINT 3: Structured logging
+    log_request(logger, "GET /wallet/history", user_id, page=page, per_page=per_page)
     # Get total count
     total = db.query(WalletLedger).filter(WalletLedger.user_id == user_id).count()
 
@@ -148,7 +178,7 @@ def get_wallet_history(
     )
 
     entries_schema = [
-        WalletLedgerEntry.from_orm(entry) for entry in entries
+        WalletLedgerEntry.model_validate(entry) for entry in entries
     ]
 
     # Get current balance
@@ -156,6 +186,8 @@ def get_wallet_history(
     if entries:
         current_balance = float(entries[0].balance_after)
 
+    #Sprint 3: Structured logging
+    log_result(logger, "GET /wallet/history", user_id, total_entries=total, page=page)
     return WalletHistoryResponse(
         user_id=user_id,
         balance=current_balance,
