@@ -19,11 +19,24 @@ from app.schemas import (
 from app.services.state_machine import ProductState, validate_transition, is_valid_transition
 from app.api.deps import get_current_user_id
 
+#Sprint 3: Error handling audit 
+from app.core.exceptions import (
+    ProductNotFoundException,
+    ProductForbiddenException,
+    InvalidStateTransitionException,
+    InsufficientFundsException,
+    AtomicOperationException
+)
+# Sprint 3: Structured logging
+from app.core.logging import get_logger, log_request, log_result, log_error
+logger = get_logger(__name__)
+#SPRINT 3: Reservation Timeout Tuning
+from app.core.config import settings
+RESERVATION_TIMEOUT_SECONDS = settings.RESERVATION_TIMEOUT_SECONDS
 router = APIRouter(prefix="/products", tags=["transactions"])
 
 
 # Sprint 2: Product Reservation Endpoint
-
 @router.post("/{product_id}/reserve", status_code=status.HTTP_200_OK)
 def reserve_product(
     product_id: int,
@@ -38,28 +51,22 @@ def reserve_product(
     - Returns updated product state
     - Prevents self-reservation (ownership guard)
     """
+    #SPRINT 3:Structured logging
+    log_request(logger, "POST /products/{product_id}/reserve", user_id, product_id=product_id)  # ← SPRINT 3 LOG
     # Get product and validate existence
     product = db.query(Product).filter(Product.id == product_id).first()
+    #Sprint 3: Error handlig audit 
     if not product:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Product {product_id} not found"
-        )
+        raise ProductNotFoundException(product_id)
     
     # Sprint 2: Ownership Guard: A user cannot reserve their own product
     if product.owner_id == user_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Cannot reserve your own product"
-        )
-    
+        raise ProductForbiddenException("Cannot reserve your own product")
+
     # Validate state transition (Available → Reserved)
     if not is_valid_transition(product.state, ProductState.RESERVED):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Cannot transition from {product.state} to {ProductState.RESERVED}"
-        )
-    
+        raise InvalidStateTransitionException(product.state, ProductState.RESERVED)
+
     # Update product state
     old_state = product.state
     product.state = ProductState.RESERVED
@@ -78,6 +85,8 @@ def reserve_product(
     db.commit()
     db.refresh(product)
     
+    #SPRINT3: STRUCTURED LOGGING 
+    log_result(logger, f"POST /products/{product_id}/reserve", user_id, product_id=product_id)
     #return confirmation
     return {
         "product_id": product.id,
@@ -120,28 +129,28 @@ def purchase_product(
        - This ensures buyer and seller balances are always consistent
     
     """
+    #Sprint 3: Structured logging
+    log_request(logger, f"POST /products/{product_id}/buy", user_id)
+
     # Get product
     product = db.query(Product).filter(Product.id == product_id).first()
     
+    
     if not product:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Product {product_id} not found"
-        )
+        #SPRINT 3: Structured logging
+        log_error(logger, f"POST /products/{product_id}/buy", user_id, error="Product not found")
+        #Sprint 3: Error handling audit
+        raise ProductNotFoundException(product_id)
     
     # Ownership Guard: cannot buy own product
     if product.owner_id == user_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Cannot purchase your own product"
-        )
+        log_error(logger, f"POST /products/{product_id}/buy", user_id, error="Cannot purchase your own product")
+        raise ProductForbiddenException("Cannot purchase your own product")
     
     # State validation: product must be Available or Reserved
     if product.state not in [ProductState.AVAILABLE, ProductState.RESERVED]:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Product is {product.state} and cannot be purchased"
-        )
+        log_error(logger, f"POST /products/{product_id}/buy", user_id, error=f"Invalid product state: {product.state}")
+        raise InvalidStateTransitionException(product.state, ProductState.SOLD)
     
     # Fund Validation: check buyer's wallet balance
     buyer_ledger = (
@@ -156,10 +165,10 @@ def purchase_product(
     
     #Fund validation: check if buyer has enough money
     if buyer_balance < product_price:
-        raise HTTPException(
-            status_code=status.HTTP_402_PAYMENT_REQUIRED,
-            detail=f"Insufficient funds: balance {buyer_balance}, needed {product_price}"
-        )
+        #Sprint 3: Strutured logging 
+        log_error(logger, f"POST /products/{product_id}/buy", user_id, error=f"Insufficient funds: {buyer_balance} < {product_price}")
+        #Sprint 3: Error handling audit
+        raise InsufficientFundsException(float(buyer_balance), float(product_price))
     
     # String 2: Atomic purchase flow
     #Atomic: If any of the steps fails all changes are rolled back to maintain balance integrity
@@ -229,13 +238,17 @@ def purchase_product(
         db.refresh(transaction)
 
     #In case of error rollback     
+    #Sprint 3: Error handling audit
+    except HTTPException:
+        raise  
     except Exception as e:
         db.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Purchase failed: {str(e)}"
-        )
+        #Sprint 3: Structured logging for errors
+        log_error(logger, f"POST /products/{product_id}/buy", user_id, error=str(e))
+        raise AtomicOperationException(str(e)) 
     
+    #Sprint 3: Structured logging 
+    log_result(logger, f"POST /products/{product_id}/buy", user_id, transaction_id=transaction.id, amount=float(product_price))
     return TransactionResponse(
         id=transaction.id,
         buyer_id=transaction.buyer_id,
@@ -254,7 +267,7 @@ def purchase_product(
 def get_transaction_history(
     page: int = Query(1, ge=1, description="Page number"),
     per_page: int = Query(20, ge=1, le=100, description="Items per page"),
-    role: str = Query("all", regex="^(buyer|seller|all)$", description="Filter by role"),
+    role: str = Query("all", pattern="^(buyer|seller|all)$", description="Filter by role"),
     db: Session = Depends(get_db),
     user_id: str = Depends(get_current_user_id)
 ):
@@ -262,6 +275,8 @@ def get_transaction_history(
     Get transaction history for authenticated user.
     Returns transaction history with product information.
     """
+    #Sprint 3: Structured logging
+    log_request(logger, "GET /products/history", user_id, page=page, role=role)
     # Build filter based on role
     if role == "buyer":
         filter_clause = Transaction.buyer_id == user_id
@@ -307,6 +322,8 @@ def get_transaction_history(
             completed_at=txn.completed_at
         ))
     
+    #Sprint 3: Structured logging
+    log_result(logger, "GET /products/history", user_id, total=total, page=page, per_page=per_page)
     #Return paginated response
     return TransactionHistoryListResponse(
         transactions=transaction_responses,
@@ -325,6 +342,9 @@ def get_purchase_history(
     user_id: str = Depends(get_current_user_id)
 ):
     """Get all products purchased by authenticated user."""
+    #Sprint 3: Structured logging
+    log_request(logger, "GET /products/purchases", user_id, page=page)
+    
     total = db.query(Transaction).filter(Transaction.buyer_id == user_id).count()
     offset = (page - 1) * per_page
     
@@ -352,6 +372,8 @@ def get_purchase_history(
             completed_at=txn.completed_at
         ))
     
+    #Sprint 3: Structured logging
+    log_result(logger, "GET /products/purchases", user_id, total=total)
     return TransactionHistoryListResponse(
         transactions=transaction_responses,
         total=total,
@@ -369,6 +391,9 @@ def get_sales_history(
     user_id: str = Depends(get_current_user_id)
 ):
     """Get all products sold by authenticated user."""
+    #Sprint 3: Structured logging
+    log_request(logger, "GET /products/sales", user_id, page=page)
+    
     total = db.query(Transaction).filter(Transaction.seller_id == user_id).count()
     offset = (page - 1) * per_page
     
@@ -396,6 +421,9 @@ def get_sales_history(
             completed_at=txn.completed_at
         ))
     
+    #Sprint 3: Structured logging
+    log_result(logger, "GET /products/sales", user_id, total=total)
+
     return TransactionHistoryListResponse(
         transactions=transaction_responses,
         total=total,
@@ -406,7 +434,6 @@ def get_sales_history(
 
 # Sprint 2: TIMEOUT RELEASE
 
-RESERVATION_TIMEOUT_SECONDS = 900  # 15 minutes
 
 def release_expired_reservations(db: Session, timeout_seconds: int = RESERVATION_TIMEOUT_SECONDS) -> int:
     """

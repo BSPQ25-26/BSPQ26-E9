@@ -1,7 +1,7 @@
 """
 Define how the data entering and leaving your API is validated. 
 """
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from datetime import datetime
 from typing import Optional
 from app.services.state_machine import ProductState
@@ -29,8 +29,7 @@ class ProductResponse(BaseModel):
     created_at:  datetime
     updated_at:  datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # State Transition Schemas 
@@ -48,8 +47,7 @@ class StateTransitionResponse(BaseModel):
     to_state:    str
     changed_at:  datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # State History Schemas 
@@ -64,8 +62,7 @@ class StateHistoryResponse(BaseModel):
     changed_at: datetime
     changed_by: Optional[str]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # ── Sprint 2: Wallet Schemas ───────────────────────────────────────────────
@@ -93,8 +90,8 @@ class WalletLedgerEntry(BaseModel):
     description:       Optional[str]           # Human-readable description
     balance_after:     float                   # Balance AFTER this operation (immutable)
     created_at:        datetime
-    class Config:
-        from_attributes = True
+    
+    model_config = ConfigDict(from_attributes=True)
 
 
 
@@ -126,8 +123,7 @@ class TransactionResponse(BaseModel):
     created_at:    datetime
     completed_at:  Optional[datetime]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 #String 2: New schema for trasaction history response with product details included
 class TransactionHistoryResponse(BaseModel):
@@ -142,8 +138,7 @@ class TransactionHistoryResponse(BaseModel):
     created_at:     datetime
     completed_at:   Optional[datetime]
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 #String 2:  list of transactions for history endpoints
 class TransactionHistoryListResponse(BaseModel):
