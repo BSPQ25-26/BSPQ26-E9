@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseCard from '@/components/base/BaseCard.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
@@ -14,6 +15,8 @@ import {
 } from '@/services/product.service'
 import { recommendProductPrice, suggestProductCategory } from '@/services/wallabot.service'
 import { createFieldErrors, normalizeApiFormError } from '@/utils/api-errors'
+
+const { t } = useI18n()
 
 const PRODUCT_FIELDS = ['title', 'description', 'category', 'price', 'condition']
 const PRICE_RECOMMENDATION_FIELDS = ['title', 'description', 'condition']
@@ -69,31 +72,29 @@ const productId = computed(() => String(route.params.id || 'new'))
 const isEditMode = computed(() => route.name === 'product-edit')
 const selectedImageTotal = computed(() => existingImageCount.value + selectedImages.value.length)
 const selectedImageCountLabel = computed(
-  () => `${selectedImageTotal.value}/${MAX_PRODUCT_IMAGES} images`,
+  () => t('create.imageCount', { current: selectedImageTotal.value, max: MAX_PRODUCT_IMAGES }),
 )
 const heroTitle = computed(() =>
-  isEditMode.value ? 'Edit this listing.' : 'Create a simple listing.',
+  isEditMode.value ? t('create.heroTitleEdit') : t('create.heroTitleCreate'),
 )
 const heroDescription = computed(() =>
-  isEditMode.value
-    ? 'Update the details buyers see before they decide.'
-    : 'Add the essentials below. Clear details help people decide faster.',
+  isEditMode.value ? t('create.heroDescEdit') : t('create.heroDescCreate'),
 )
-const cardTitle = computed(() => (isEditMode.value ? 'Listing details' : 'What are you selling?'))
+const cardTitle = computed(() => (isEditMode.value ? t('create.cardTitleEdit') : t('create.cardTitleCreate')))
 const cardDescription = computed(() =>
-  isEditMode.value ? 'Keep the item accurate and current.' : 'Keep it short, clear, and factual.',
+  isEditMode.value ? t('create.cardDescEdit') : t('create.cardDescCreate'),
 )
 const submitLabel = computed(() => {
   if (isSubmitting.value) {
-    return isEditMode.value ? 'Saving item...' : 'Posting item...'
+    return isEditMode.value ? t('create.savingItem') : t('create.postingItem')
   }
 
-  return isEditMode.value ? 'Save changes' : 'Post item'
+  return isEditMode.value ? t('create.saveChanges') : t('create.postItem')
 })
 const categorySuggestionLabel = computed(() =>
-  isSuggestingCategory.value ? 'Suggesting...' : 'Suggest with Wallabot',
+  isSuggestingCategory.value ? t('create.suggesting') : t('create.suggestWithWallabot'),
 )
-const deleteLabel = computed(() => (isDeleting.value ? 'Deleting product...' : 'Delete product'))
+const deleteLabel = computed(() => (isDeleting.value ? t('create.deleting') : t('create.deleteProduct')))
 const categoryOptions = computed(() => {
   const options = new Map()
 
@@ -125,16 +126,17 @@ const hasPriceRecommendationRange = computed(() => {
 })
 const priceRecommendationHelper = computed(() => {
   if (isRecommendingPrice.value) {
-    return 'Checking recommended price range...'
+    return t('create.checkingPrice')
   }
 
   if (!hasPriceRecommendationRange.value) {
     return ''
   }
 
-  return `Recommended range: ${priceFormatter.format(
-    priceRecommendation.value.priceRangeMin,
-  )} - ${priceFormatter.format(priceRecommendation.value.priceRangeMax)}`
+  return t('create.recommendedRange', {
+    min: priceFormatter.format(priceRecommendation.value.priceRangeMin),
+    max: priceFormatter.format(priceRecommendation.value.priceRangeMax),
+  })
 })
 const backRoute = computed(() =>
   isEditMode.value
@@ -209,12 +211,12 @@ const getRemainingImageSlots = () =>
 
 const validateImageFile = (file) => {
   if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
-    imageError.value = 'Upload JPEG or PNG images.'
+    imageError.value = t('create.errorImageType')
     return false
   }
 
   if (file.size > MAX_IMAGE_SIZE) {
-    imageError.value = 'Each image must be 5 MB or less.'
+    imageError.value = t('create.errorImageSize')
     return false
   }
 
@@ -234,7 +236,7 @@ const addImageFiles = (fileList) => {
   const remainingSlots = getRemainingImageSlots()
 
   if (remainingSlots <= 0) {
-    imageError.value = `You can add up to ${MAX_PRODUCT_IMAGES} images.`
+    imageError.value = t('create.errorImageMax', { max: MAX_PRODUCT_IMAGES })
     return
   }
 
@@ -242,7 +244,7 @@ const addImageFiles = (fileList) => {
 
   files.some((file) => {
     if (acceptedFiles.length >= remainingSlots) {
-      imageError.value = `You can add up to ${MAX_PRODUCT_IMAGES} images.`
+      imageError.value = t('create.errorImageMax', { max: MAX_PRODUCT_IMAGES })
       return true
     }
 
@@ -293,7 +295,7 @@ const uploadSelectedImages = async (savedProduct, savedProductId) => {
   }
 
   if (!savedProductId) {
-    throw new Error('We could not upload images for this item.')
+    throw new Error(t('create.errorUpload'))
   }
 
   try {
@@ -309,7 +311,7 @@ const uploadSelectedImages = async (savedProduct, savedProductId) => {
     )
   } catch (error) {
     imageError.value =
-      error?.response?.data?.detail || 'Your item was saved, but the images did not upload.'
+      error?.response?.data?.detail || t('create.errorUploadPartial')
     throw error
   }
 }
@@ -358,7 +360,7 @@ const loadProductForEdit = async () => {
     const normalizedError = normalizeApiFormError(
       error,
       PRODUCT_FIELDS,
-      'We could not load this item. Please try again.',
+      t('create.errorLoad'),
     )
 
     formError.value = normalizedError.formError
@@ -398,12 +400,12 @@ const validateField = (field) => {
 
   if (field === 'price') {
     if (value === '' || value === null || value === undefined) {
-      fieldErrors.price = 'Enter a price.'
+      fieldErrors.price = t('create.errorPrice')
       return false
     }
 
     if (Number.isNaN(Number(value)) || Number(value) <= 0) {
-      fieldErrors.price = 'Enter a price above 0.'
+      fieldErrors.price = t('create.errorPriceAboveZero')
       return false
     }
 
@@ -412,14 +414,14 @@ const validateField = (field) => {
   }
 
   if (!value) {
-    const labels = {
-      title: 'item name',
-      description: 'details',
-      category: 'category',
-      condition: 'condition',
+    const errorKeys = {
+      title: 'create.errorTitle',
+      description: 'create.errorDescription',
+      category: 'create.errorCategory',
+      condition: 'create.errorCondition',
     }
 
-    fieldErrors[field] = `Enter the ${labels[field] || field}.`
+    fieldErrors[field] = t(errorKeys[field] || 'create.errorTitle')
     return false
   }
 
@@ -432,7 +434,7 @@ const validateForm = () =>
 
 const validateImages = () => {
   if (selectedImageTotal.value > MAX_PRODUCT_IMAGES) {
-    imageError.value = `You can add up to ${MAX_PRODUCT_IMAGES} images.`
+    imageError.value = t('create.errorImageMax', { max: MAX_PRODUCT_IMAGES })
     return false
   }
 
@@ -490,7 +492,7 @@ const handleSuggestCategory = async () => {
     const suggestedCategory = suggestion?.suggestedCategory?.trim()
 
     if (!suggestedCategory) {
-      fieldErrors.category = 'Wallabot did not return a category. Please enter one.'
+      fieldErrors.category = t('create.errorWallabotCategory')
       return
     }
 
@@ -501,7 +503,7 @@ const handleSuggestCategory = async () => {
     const normalizedError = normalizeApiFormError(
       error,
       PRODUCT_FIELDS,
-      'Wallabot could not suggest a category. Please try again.',
+      t('create.errorWallabotFailed'),
     )
 
     Object.entries(normalizedError.fieldErrors).forEach(([field, message]) => {
@@ -522,7 +524,7 @@ const handleDeleteProduct = async () => {
 
   const confirmed =
     typeof window === 'undefined' ||
-    window.confirm('Delete this product? This action cannot be undone.')
+    window.confirm(t('create.confirmDelete'))
 
   if (!confirmed) {
     return
@@ -533,13 +535,13 @@ const handleDeleteProduct = async () => {
 
   try {
     await deleteProduct(productId.value)
-    toastStore.success('Your item was deleted.')
+    toastStore.success(t('create.itemDeleted'))
     await router.push('/products')
   } catch (error) {
     const normalizedError = normalizeApiFormError(
       error,
       PRODUCT_FIELDS,
-      'We could not delete your item. Please try again.',
+      t('create.errorDelete'),
     )
 
     formError.value = normalizedError.formError
@@ -577,7 +579,7 @@ const handleSubmit = async () => {
 
     await uploadSelectedImages(savedProduct, savedProductId)
 
-    toastStore.success(isEditMode.value ? 'Your item was updated.' : 'Your item is live.')
+    toastStore.success(isEditMode.value ? t('create.itemUpdated') : t('create.itemLive'))
     await router.push(
       isEditMode.value
         ? {
@@ -603,7 +605,7 @@ const handleSubmit = async () => {
     const normalizedError = normalizeApiFormError(
       error,
       PRODUCT_FIELDS,
-      'We could not save your item. Please try again.',
+      t('create.errorSave'),
     )
 
     Object.assign(fieldErrors, normalizedError.fieldErrors)
@@ -630,16 +632,16 @@ const handleSubmit = async () => {
     >
       <form class="responsive-form responsive-form--desktop-two" novalidate @submit.prevent="handleSubmit">
         <p v-if="isLoadingProduct" class="status-message">
-          Loading item details...
+          {{ $t('create.loading') }}
         </p>
 
         <BaseInput
           class="form-field form-field--full"
           :model-value="form.title"
           :error="fieldErrors.title"
-          label="Item name"
+          :label="$t('create.nameLabel')"
           name="title"
-          placeholder="Wooden side table"
+          :placeholder="$t('create.namePlaceholder')"
           required
           @blur="validateField('title')"
           @update:model-value="setFieldValue('title', $event)"
@@ -649,10 +651,10 @@ const handleSubmit = async () => {
           class="form-field form-field--full"
           :model-value="form.description"
           :error="fieldErrors.description"
-          label="Details"
+          :label="$t('create.detailsLabel')"
           multiline
           name="description"
-          placeholder="Size, condition, and what is included."
+          :placeholder="$t('create.detailsPlaceholder')"
           required
           @blur="validateField('description')"
           @update:model-value="setFieldValue('description', $event)"
@@ -661,7 +663,7 @@ const handleSubmit = async () => {
         <div class="form-field form-field--full image-field">
           <div class="image-field__header">
             <span class="input-label">
-              Images
+              {{ $t('create.imagesLabel') }}
             </span>
             <span class="image-field__count">
               {{ selectedImageCountLabel }}
@@ -687,10 +689,10 @@ const handleSubmit = async () => {
               @change="handleImageInputChange"
             />
             <span class="image-dropzone__title">
-              Drop images here or choose files
+              {{ $t('create.dropTitle') }}
             </span>
             <span class="image-dropzone__meta">
-              JPEG or PNG, 5 MB max
+              {{ $t('create.dropMeta') }}
             </span>
           </label>
 
@@ -699,10 +701,10 @@ const handleSubmit = async () => {
           </p>
 
           <p v-else-if="existingImageCount" class="form-hint">
-            {{ existingImageCount }} existing image{{ existingImageCount === 1 ? '' : 's' }} attached.
+            {{ $t('create.existingImages', { count: existingImageCount }) }}
           </p>
 
-          <ul v-if="selectedImages.length" class="image-preview-list" aria-label="Selected images">
+          <ul v-if="selectedImages.length" class="image-preview-list" :aria-label="$t('create.selectedImagesAria')">
             <li v-for="image in selectedImages" :key="image.id" class="image-preview">
               <img
                 v-if="image.previewUrl"
@@ -726,10 +728,10 @@ const handleSubmit = async () => {
               <button
                 class="image-preview__remove"
                 type="button"
-                :aria-label="`Remove ${image.name}`"
+                :aria-label="$t('create.removeImageAria', { name: image.name })"
                 @click="removeSelectedImage(image.id)"
               >
-                Remove
+                {{ $t('create.remove') }}
               </button>
             </li>
           </ul>
@@ -738,7 +740,7 @@ const handleSubmit = async () => {
         <div class="form-field category-suggestion-field">
           <label class="select-wrapper" :class="{ 'has-error': fieldErrors.category }" for="category">
             <span class="input-label">
-              Category
+              {{ $t('create.categoryLabel') }}
             </span>
             <select
               id="category"
@@ -752,7 +754,7 @@ const handleSubmit = async () => {
               @change="setFieldValue('category', $event.target.value)"
             >
               <option disabled value="">
-                Select category
+                {{ $t('create.selectCategory') }}
               </option>
               <option v-for="category in categoryOptions" :key="category" :value="category">
                 {{ category }}
@@ -777,7 +779,7 @@ const handleSubmit = async () => {
 
         <label class="form-field select-wrapper" :class="{ 'has-error': fieldErrors.condition }" for="condition">
           <span class="input-label">
-            Condition
+            {{ $t('create.conditionLabel') }}
           </span>
           <select
             id="condition"
@@ -791,7 +793,7 @@ const handleSubmit = async () => {
             @change="setFieldValue('condition', $event.target.value)"
           >
             <option disabled value="">
-              Select condition
+              {{ $t('create.selectCondition') }}
             </option>
             <option v-for="condition in CONDITION_OPTIONS" :key="condition" :value="condition">
               {{ condition }}
@@ -806,7 +808,7 @@ const handleSubmit = async () => {
           <BaseInput
             :model-value="form.price"
             :error="fieldErrors.price"
-            label="Price"
+            :label="$t('create.priceLabel')"
             min="0.01"
             name="price"
             placeholder="149.99"
@@ -851,7 +853,7 @@ const handleSubmit = async () => {
           </BaseButton>
 
           <BaseButton :to="backRoute" variant="ghost">
-            Back
+            {{ $t('create.back') }}
           </BaseButton>
         </div>
       </form>

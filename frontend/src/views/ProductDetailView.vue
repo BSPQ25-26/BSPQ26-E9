@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref } from 'vue'
 import { useRoute } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseCard from '@/components/base/BaseCard.vue'
 import { useAuth } from '@/composables/useAuth'
@@ -14,6 +15,7 @@ import {
 import { useToastStore } from '@/stores/toast'
 import { useWalletStore } from '@/stores/wallet'
 
+const { t } = useI18n()
 const route = useRoute()
 const { token, user } = useAuth()
 const toastStore = useToastStore()
@@ -105,14 +107,14 @@ const canCancelReservation = computed(() =>
 )
 const inactiveActionLabel = computed(() => {
   if (!hasCheckoutProduct.value && !isSeller.value && normalizedState.value !== 'sold') {
-    return 'Checkout unavailable'
+    return t('detail.checkoutUnavailable')
   }
 
-  return normalizedState.value === 'sold' ? 'Sold' : 'Unavailable'
+  return normalizedState.value === 'sold' ? t('detail.sold') : t('detail.unavailable')
 })
 const formattedProductPrice = computed(() => currencyFormatter.format(product.value?.price || 0))
-const imageCountLabel = computed(
-  () => `${productImages.value.length} ${productImages.value.length === 1 ? 'image' : 'images'}`,
+const imageCountLabel = computed(() =>
+  t('detail.imageCount', { count: productImages.value.length }),
 )
 const editRoute = computed(() => ({
   name: 'product-edit',
@@ -132,7 +134,7 @@ const loadProduct = async () => {
     product.value = await getProductById(productId.value)
   } catch {
     product.value = null
-    loadError.value = 'We could not load this product. Please try again.'
+    loadError.value = t('detail.errorLoad')
   } finally {
     isLoading.value = false
   }
@@ -153,10 +155,10 @@ const handleReserve = async () => {
       state: normalizeProductState(result?.state || 'Reserved'),
       reserved_by: result?.reserved_by ?? currentUserId.value ?? product.value.reserved_by ?? null,
     }
-    toastStore.success('Item reserved.')
+    toastStore.success(t('detail.reserved'))
   } catch (error) {
     actionError.value =
-      error?.response?.data?.detail || 'We could not reserve this product. Please try again.'
+      error?.response?.data?.detail || t('detail.errorReserve')
   } finally {
     isUpdating.value = false
   }
@@ -178,10 +180,10 @@ const handleCancelReservation = async () => {
       reserved_by: null,
     }
     isBuyDialogOpen.value = false
-    toastStore.success('Reservation cancelled.')
+    toastStore.success(t('detail.reservationCancelled'))
   } catch (error) {
     actionError.value =
-      error?.response?.data?.detail || 'We could not cancel this reservation. Please try again.'
+      error?.response?.data?.detail || t('detail.errorCancelReservation')
   } finally {
     isUpdating.value = false
   }
@@ -220,10 +222,10 @@ const confirmBuy = async () => {
       state: 'Sold',
     }
     isBuyDialogOpen.value = false
-    toastStore.success('Purchase completed.')
+    toastStore.success(t('detail.purchaseCompleted'))
   } catch (error) {
     actionError.value =
-      error?.response?.data?.detail || 'We could not buy this product. Please try again.'
+      error?.response?.data?.detail || t('detail.errorBuy')
   } finally {
     isUpdating.value = false
   }
@@ -250,11 +252,11 @@ loadProduct()
 <template>
   <section class="page-shell detail-shell">
     <BaseButton to="/products" variant="ghost">
-      Back to products
+      {{ $t('detail.back') }}
     </BaseButton>
 
     <p v-if="isLoading" class="status-message">
-      Loading product...
+      {{ $t('detail.loading') }}
     </p>
 
     <p v-else-if="loadError" class="status-message error">
@@ -267,7 +269,7 @@ loadProduct()
           <div class="gallery">
             <img
               v-if="selectedImage"
-              :alt="`${product.title || 'Product'} image ${selectedImageIndex + 1}`"
+              :alt="`${product.title || $t('detail.untitled')} image ${selectedImageIndex + 1}`"
               :src="selectedImage"
               @error="handleImageError(selectedImage)"
             />
@@ -283,11 +285,11 @@ loadProduct()
               class="gallery-thumbnail"
               :class="{ 'is-selected': selectedImageIndex === index }"
               type="button"
-              :aria-label="`Show product image ${index + 1}`"
+              :aria-label="$t('detail.showImageAria', { n: index + 1 })"
               @click="selectImage(index)"
             >
               <img
-                :alt="`${product.title || 'Product'} thumbnail ${index + 1}`"
+                :alt="`${product.title || $t('detail.untitled')} thumbnail ${index + 1}`"
                 :src="image"
                 @error="handleImageError(image)"
               />
@@ -297,7 +299,7 @@ loadProduct()
 
         <div class="detail-copy">
           <div class="detail-heading">
-            <h1>{{ product.title || 'Untitled product' }}</h1>
+            <h1>{{ product.title || $t('detail.untitled') }}</h1>
             <p class="detail-price">
               {{ formattedProductPrice }}
             </p>
@@ -309,52 +311,52 @@ loadProduct()
 
           <dl class="detail-meta">
             <div>
-              <dt>Category</dt>
-              <dd>{{ product.category || 'Unspecified' }}</dd>
+              <dt>{{ $t('detail.category') }}</dt>
+              <dd>{{ product.category || $t('detail.unspecified') }}</dd>
             </div>
             <div>
-              <dt>Condition</dt>
-              <dd>{{ product.condition || 'Unspecified' }}</dd>
+              <dt>{{ $t('detail.condition') }}</dt>
+              <dd>{{ product.condition || $t('detail.unspecified') }}</dd>
             </div>
             <div>
-              <dt>State</dt>
-              <dd>{{ productState }}</dd>
+              <dt>{{ $t('detail.state') }}</dt>
+              <dd>{{ $t(`products.states.${normalizedState}`) }}</dd>
             </div>
             <div>
-              <dt>Seller</dt>
-              <dd>{{ sellerEmail || 'Unknown seller' }}</dd>
+              <dt>{{ $t('detail.seller') }}</dt>
+              <dd>{{ sellerEmail || $t('detail.unknownSeller') }}</dd>
             </div>
             <div>
-              <dt>Product ID</dt>
+              <dt>{{ $t('detail.productId') }}</dt>
               <dd>{{ product.id }}</dd>
             </div>
             <div>
-              <dt>Images</dt>
+              <dt>{{ $t('detail.images') }}</dt>
               <dd>{{ imageCountLabel }}</dd>
             </div>
             <div>
-              <dt>Listed</dt>
-              <dd>{{ product.created_at ? new Date(product.created_at).toLocaleDateString() : 'Unknown' }}</dd>
+              <dt>{{ $t('detail.listed') }}</dt>
+              <dd>{{ product.created_at ? new Date(product.created_at).toLocaleDateString() : $t('detail.unknownDate') }}</dd>
             </div>
           </dl>
 
-          <section class="seller-panel" aria-label="Seller information">
+          <section class="seller-panel" :aria-label="$t('detail.seller')">
             <div class="seller-avatar" aria-hidden="true">
               {{ sellerInitial }}
             </div>
             <div class="seller-copy">
               <p class="seller-title">
-                {{ sellerEmail || 'Unknown seller' }}
+                {{ sellerEmail || $t('detail.unknownSeller') }}
               </p>
               <p class="muted">
-                {{ isSeller ? 'You are the seller of this listing.' : 'Marketplace seller' }}
+                {{ isSeller ? $t('detail.youAreSeller') : $t('detail.marketplaceSeller') }}
               </p>
             </div>
           </section>
 
           <div class="detail-actions">
             <BaseButton v-if="isSeller" :to="editRoute" variant="secondary">
-              Edit listing
+              {{ $t('detail.editListing') }}
             </BaseButton>
             <template v-else>
               <BaseButton
@@ -363,7 +365,7 @@ loadProduct()
                 type="button"
                 @click="handleReserve"
               >
-                Reserve
+                {{ $t('detail.reserve') }}
               </BaseButton>
               <BaseButton
                 v-if="canBuy"
@@ -371,7 +373,7 @@ loadProduct()
                 type="button"
                 @click="openBuyDialog"
               >
-                Buy
+                {{ $t('detail.buy') }}
               </BaseButton>
               <BaseButton
                 v-if="canCancelReservation"
@@ -380,7 +382,7 @@ loadProduct()
                 variant="secondary"
                 @click="handleCancelReservation"
               >
-                Cancel reservation
+                {{ $t('detail.cancelReservation') }}
               </BaseButton>
               <BaseButton
                 v-if="!canReserve && !canBuy && !canCancelReservation"
@@ -414,20 +416,18 @@ loadProduct()
       >
         <div class="dialog-copy">
           <p class="dialog-eyebrow">
-            Wallet purchase
+            {{ $t('detail.dialogEyebrow') }}
           </p>
           <h2 id="buy-confirmation-title">
-            Confirm purchase
+            {{ $t('detail.dialogTitle') }}
           </h2>
           <p id="buy-confirmation-description" class="muted">
-            Buying this reserved product will deduct
-            <strong>{{ formattedProductPrice }}</strong>
-            from your wallet.
+            {{ $t('detail.dialogDesc', { price: formattedProductPrice }) }}
           </p>
         </div>
 
-        <div class="wallet-deduction" aria-label="Wallet deduction">
-          <span>Wallet deduction</span>
+        <div class="wallet-deduction" :aria-label="$t('detail.walletDeduction')">
+          <span>{{ $t('detail.walletDeduction') }}</span>
           <strong>{{ formattedProductPrice }}</strong>
         </div>
 
@@ -442,14 +442,14 @@ loadProduct()
             variant="secondary"
             @click="closeBuyDialog"
           >
-            Cancel
+            {{ $t('detail.cancel') }}
           </BaseButton>
           <BaseButton
             :disabled="isUpdating"
             type="button"
             @click="confirmBuy"
           >
-            Confirm purchase
+            {{ $t('detail.confirmPurchase') }}
           </BaseButton>
         </div>
       </section>

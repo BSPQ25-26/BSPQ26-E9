@@ -1,6 +1,7 @@
 <script setup>
 import { computed, reactive, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseCard from '@/components/base/BaseCard.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
@@ -8,6 +9,8 @@ import { useAuth } from '@/composables/useAuth'
 import { beginSocialLogin } from '@/services/auth.service'
 import { useToastStore } from '@/stores/toast'
 import { createFieldErrors, normalizeApiFormError } from '@/utils/api-errors'
+
+const { t } = useI18n()
 
 const form = reactive({
   email: '',
@@ -53,12 +56,12 @@ const validateField = (field) => {
 
   if (field === 'email') {
     if (!value) {
-      fieldErrors.email = 'Enter your email.'
+      fieldErrors.email = t('login.errorEmail')
       return false
     }
 
     if (!emailPattern.test(value)) {
-      fieldErrors.email = 'Enter a valid email.'
+      fieldErrors.email = t('login.errorEmailInvalid')
       return false
     }
 
@@ -67,7 +70,7 @@ const validateField = (field) => {
   }
 
   if (!value) {
-    fieldErrors.password = 'Enter your password.'
+    fieldErrors.password = t('login.errorPassword')
     return false
   }
 
@@ -85,14 +88,14 @@ const handleSocialLogin = (provider) => {
     beginSocialLogin(provider, redirectTarget.value)
   } catch {
     isRedirectingProvider.value = ''
-    formError.value = 'We could not start social sign in. Please try again.'
+    formError.value = t('login.errorSocial')
   }
 }
 
 const getSocialButtonLabel = (provider) =>
   isRedirectingProvider.value === provider.id
-    ? `Opening ${provider.label}...`
-    : `Continue with ${provider.label}`
+    ? t('login.openingProvider', { provider: provider.label })
+    : t('login.continueWith', { provider: provider.label })
 
 const handleSubmit = async () => {
   formError.value = ''
@@ -109,14 +112,14 @@ const handleSubmit = async () => {
       password: form.password,
     })
 
-    toastStore.success('You are signed in.')
+    toastStore.success(t('login.signedIn'))
 
     await router.push(redirectTarget.value)
   } catch (error) {
     const normalizedError = normalizeApiFormError(
       error,
       ['email', 'password'],
-      'We could not sign you in. Check your details and try again.',
+      t('login.errorSignIn'),
     )
 
     Object.assign(fieldErrors, normalizedError.fieldErrors)
@@ -130,16 +133,16 @@ const handleSubmit = async () => {
 <template>
   <section class="page-shell auth-shell">
     <div class="page-hero">
-      <h1>Sign in to keep browsing and selling.</h1>
+      <h1>{{ $t('login.heroTitle') }}</h1>
       <p class="muted">
-        Use the account you prefer to continue.
+        {{ $t('login.heroDesc') }}
       </p>
     </div>
 
     <BaseCard
       class="auth-card"
-      title="Good to see you again"
-      description="Enter your details below."
+      :title="$t('login.cardTitle')"
+      :description="$t('login.cardDesc')"
     >
       <form class="responsive-form responsive-form--desktop-two" novalidate @submit.prevent="handleSubmit">
         <BaseInput
@@ -147,7 +150,7 @@ const handleSubmit = async () => {
           :model-value="form.email"
           autocomplete="email"
           :error="fieldErrors.email"
-          label="Email"
+          :label="$t('login.email')"
           name="email"
           placeholder="you@example.com"
           required
@@ -161,9 +164,9 @@ const handleSubmit = async () => {
           :model-value="form.password"
           autocomplete="current-password"
           :error="fieldErrors.password"
-          label="Password"
+          :label="$t('login.password')"
           name="password"
-          placeholder="Your password"
+          :placeholder="$t('login.password')"
           required
           type="password"
           @blur="validateField('password')"
@@ -176,16 +179,16 @@ const handleSubmit = async () => {
 
         <div class="form-actions">
           <BaseButton :disabled="isSubmitting || isSocialLoginPending" block type="submit">
-            {{ isSubmitting ? 'Signing in...' : 'Sign in' }}
+            {{ isSubmitting ? $t('login.signingIn') : $t('login.signIn') }}
           </BaseButton>
         </div>
       </form>
 
       <div class="auth-divider" aria-hidden="true">
-        <span>or</span>
+        <span>{{ $t('login.or') }}</span>
       </div>
 
-      <div class="social-login" aria-label="Social sign in options">
+      <div class="social-login" :aria-label="$t('login.socialAria')">
         <BaseButton
           v-for="provider in socialProviders"
           :key="provider.id"

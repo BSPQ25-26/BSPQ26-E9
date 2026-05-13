@@ -1,6 +1,7 @@
-import os
 import logging
+import os
 import threading
+import time
 from typing import Any
 
 from dotenv import load_dotenv
@@ -10,11 +11,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_openai import ChatOpenAI
 from pydantic import ValidationError
 
-try:
-    from langsmith import Client as LangSmithClient
-except ImportError:  # pragma: no cover - langsmith is bundled via langchain in runtime envs
-    LangSmithClient = None
-
+from app.agent import tracing
 from app.schemas.category import CategoryRequest, CategorySuggestion
 
 # Local testing convenience only. Production requests must provide categories via
@@ -97,7 +94,12 @@ _prompt = ChatPromptTemplate.from_messages(
 )
 _chain: Any | None = None
 _chain_lock = threading.Lock()
-_langsmith_client: Any | None = None
+
+_RUN_CONFIG = {
+    "run_name": "wallabot_category_suggest",
+    "tags": ["category_agent", "wallabot"],
+    "metadata": {"service": "agentic-service", "component": "category_agent"},
+}
 
 
 def _build_safe_fallback(req: CategoryRequest) -> CategorySuggestion:
@@ -126,57 +128,6 @@ def _get_chain() -> Any:
                 )
                 _chain = _prompt | llm | _parser
     return _chain
-
-
-def _get_langsmith_client() -> Any | None:
-    global _langsmith_client
-    tracing_enabled = (
-        os.getenv("LANGSMITH_TRACING", "").lower() == "true"
-        or os.getenv("LANGCHAIN_TRACING_V2", "").lower() == "true"
-    )
-    if not tracing_enabled or LangSmithClient is None:
-        return None
-
-    if _langsmith_client is None:
-        _langsmith_client = LangSmithClient(
-            api_key=os.getenv("LANGSMITH_API_KEY"),
-            api_url=os.getenv("LANGSMITH_ENDPOINT"),
-        )
-    return _langsmith_client
-
-
-def _log_validation_event(req: CategoryRequest, attempt: int, error: Exception) -> None:
-    client = _get_langsmith_client()
-    if client is None:
-        return
-
-    try:
-        client.create_run(
-            project_name=os.getenv("LANGSMITH_PROJECT", "wallabot"),
-            name="wallabot_category_validation_failure",
-            run_type="tool",
-            inputs={
-                "title": req.title,
-                "attempt": attempt,
-                "max_attempts": 3,
-                "event": "validation_failure",
-            },
-            error=f"{error.__class__.__name__}: {error}",
-            extra={
-                "metadata": {
-                    "service": "agentic-service",
-                    "component": "category_agent",
-                    "error_type": error.__class__.__name__,
-                }
-            },
-        )
-    except Exception as telemetry_exc:  # noqa: BLE001 - telemetry must never break requests
-        logger.warning(
-            "Wallabot category agent could not emit LangSmith validation event title=%r error_type=%s telemetry_error_type=%s",
-            req.title,
-            error.__class__.__name__,
-            telemetry_exc.__class__.__name__,
-        )
 
 
 def _build_retry_feedback(error: Exception) -> str:
@@ -208,37 +159,45 @@ def suggest_category(req: CategoryRequest) -> CategorySuggestion:
         "retry_feedback": "",
     }
     last_error: Exception | None = None
+    _start = time.monotonic()
 
-    for attempt in range(3):
-        try:
-            chain = _chain if _chain is not None else _get_chain()
-            return chain.invoke(payload)
-        except (OutputParserException, ValidationError) as exc:
-            last_error = exc
-            attempt_number = attempt + 1
-            logger.warning(
-                "Wallabot category agent validation failure attempt=%d title=%r error_type=%s error=%s",
-                attempt_number,
-                req.title,
-                exc.__class__.__name__,
-                exc,
-            )
-            _log_validation_event(req, attempt_number, exc)
-            payload["retry_feedback"] = _build_retry_feedback(exc)
-        except Exception as exc:  # noqa: BLE001 - intentionally graceful for provider failures
-            logger.error(
-                "Wallabot category agent provider failure title=%r error_type=%s; returning fallback category",
-                req.title,
-                exc.__class__.__name__,
-            )
-            return _build_safe_fallback(req)
+    try:
+        for attempt in range(3):
+            try:
+                chain = _chain if _chain is not None else _get_chain()
+                return chain.invoke(payload, config=_RUN_CONFIG)
+            except (OutputParserException, ValidationError) as exc:
+                last_error = exc
+                attempt_number = attempt + 1
+                logger.warning(
+                    "Wallabot category agent validation failure attempt=%d title=%r error_type=%s error=%s",
+                    attempt_number,
+                    req.title,
+                    exc.__class__.__name__,
+                    exc,
+                )
+                tracing.log_validation_failure("category_agent", req.title, attempt_number, exc)
+                payload["retry_feedback"] = _build_retry_feedback(exc)
+            except Exception as exc:  # noqa: BLE001 - intentionally graceful for provider failures
+                logger.error(
+                    "Wallabot category agent provider failure title=%r error_type=%s; returning fallback category",
+                    req.title,
+                    exc.__class__.__name__,
+                )
+                return _build_safe_fallback(req)
 
-    logger.error(
-        "Wallabot category agent exhausted retries title=%r attempts=3 final_error_type=%s final_error=%s",
-        req.title,
-        last_error.__class__.__name__ if last_error is not None else "UnknownError",
-        last_error,
-    )
-    if last_error is not None:
-        raise last_error
-    raise RuntimeError("Wallabot category agent failed without capturing an error")
+        logger.error(
+            "Wallabot category agent exhausted retries title=%r attempts=3 final_error_type=%s final_error=%s",
+            req.title,
+            last_error.__class__.__name__ if last_error is not None else "UnknownError",
+            last_error,
+        )
+        if last_error is not None:
+            raise last_error
+        raise RuntimeError("Wallabot category agent failed without capturing an error")
+    finally:
+        elapsed = time.monotonic() - _start
+        if elapsed > tracing.CATEGORY_LATENCY_THRESHOLD_S:
+            tracing.log_latency_exceeded(
+                "category_agent", req.title, elapsed, tracing.CATEGORY_LATENCY_THRESHOLD_S
+            )
