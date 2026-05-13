@@ -2,7 +2,7 @@
 Wallet router: Top-up, balance check, and wallet history endpoints.
 Ensures all wallet mutations go through the ledger for integrity.
 """
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, status, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 from datetime import datetime, timezone
@@ -75,7 +75,7 @@ def top_up_wallet(
         ledger_entry = WalletLedger(
             user_id=user_id,
             amount=amount,
-            transaction_type="TOP_UP",
+            transaction_type="deposit",
             description=f"Top-up of {amount}",
             balance_after=balance_after,
             created_at=datetime.now(timezone.utc)

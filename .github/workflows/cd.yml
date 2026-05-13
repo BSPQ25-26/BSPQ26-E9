@@ -88,13 +88,7 @@ jobs:
           cache-to:   type=registry,ref=${{ steps.meta.outputs.image }}:buildcache,mode=max
 
   # ── Deploy ───────────────────────────────────
-  #
-  #  This job is intentionally minimal for Sprint 1.
-  #  It runs after all images are pushed and provides
-  #  a hook for your actual deploy step.
-  #
-  #  Common patterns to drop in here:
-  #    - SSH into a virtual machine in a VPS or a raspberry pi and run docker compose pull + up
+
 
 
   deploy:
@@ -108,18 +102,6 @@ jobs:
         with:
           ref: ${{ github.event.workflow_run.head_sha }}
 
-      # ── Option A: SSH deploy (uncomment when ready) ──────────
-      # - name: Deploy via SSH
-      #   uses: appleboy/ssh-action@v1
-      #   with:
-      #     host: ${{ secrets.DEPLOY_HOST }}
-      #     username: ${{ secrets.DEPLOY_USER }}
-      #     key: ${{ secrets.DEPLOY_SSH_KEY }}
-      #     script: |
-      #       cd /opt/wallabot
-      #       echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
-      #       docker compose -f docker-compose.prod.yml pull
-      #       docker compose -f docker-compose.prod.yml up -d --remove-orphans
 
       # ── Option B: Placeholder until we migrate to supabase ────────────────
       - name: Deploy placeholder

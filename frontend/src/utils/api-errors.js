@@ -37,6 +37,10 @@ export const normalizeApiFormError = (error, fields, fallbackMessage) => {
     formError = 'We cannot reach the service right now. Please try again in a moment.'
   }
 
+  if (!formError && [502, 503, 504].includes(error?.response?.status)) {
+    formError = 'We cannot reach the service right now. Please try again in a moment.'
+  }
+
   if (!formError && errorCode === 'ECONNABORTED') {
     formError = 'This is taking longer than expected. Please try again.'
   }

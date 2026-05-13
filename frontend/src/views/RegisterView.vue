@@ -1,6 +1,7 @@
 <script setup>
 import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseCard from '@/components/base/BaseCard.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
@@ -8,6 +9,7 @@ import { useAuth } from '@/composables/useAuth'
 import { useToastStore } from '@/stores/toast'
 import { createFieldErrors, normalizeApiFormError } from '@/utils/api-errors'
 
+const { t } = useI18n()
 const router = useRouter()
 const { register } = useAuth()
 const toastStore = useToastStore()
@@ -37,12 +39,12 @@ const validateField = (field) => {
 
   if (field === 'email') {
     if (!value) {
-      fieldErrors.email = 'Enter your email.'
+      fieldErrors.email = t('register.errorEmail')
       return false
     }
 
     if (!emailPattern.test(value)) {
-      fieldErrors.email = 'Enter a valid email.'
+      fieldErrors.email = t('register.errorEmailInvalid')
       return false
     }
 
@@ -52,23 +54,23 @@ const validateField = (field) => {
 
   if (field === 'password') {
     if (!value) {
-      fieldErrors.password = 'Create a password.'
+      fieldErrors.password = t('register.errorPassword')
       return false
     }
 
     if (value.length < passwordMinLength) {
-      fieldErrors.password = `Use at least ${passwordMinLength} characters.`
+      fieldErrors.password = t('register.errorPasswordShort', { n: passwordMinLength })
       return false
     }
 
     fieldErrors.password = ''
 
     if (form.confirmPassword && form.confirmPassword !== form.password) {
-      fieldErrors.confirmPassword = 'These passwords do not match.'
+      fieldErrors.confirmPassword = t('register.errorPasswordMatch')
       return false
     }
 
-    if (fieldErrors.confirmPassword === 'These passwords do not match.') {
+    if (fieldErrors.confirmPassword === t('register.errorPasswordMatch')) {
       fieldErrors.confirmPassword = ''
     }
 
@@ -76,12 +78,12 @@ const validateField = (field) => {
   }
 
   if (!value) {
-    fieldErrors.confirmPassword = 'Enter your password again.'
+    fieldErrors.confirmPassword = t('register.errorPasswordAgain')
     return false
   }
 
   if (form.confirmPassword !== form.password) {
-    fieldErrors.confirmPassword = 'These passwords do not match.'
+    fieldErrors.confirmPassword = t('register.errorPasswordMatch')
     return false
   }
 
@@ -107,13 +109,13 @@ const handleSubmit = async () => {
       password: form.password,
     })
 
-    toastStore.success('Your account is ready.')
+    toastStore.success(t('register.accountReady'))
     await router.push('/products')
   } catch (error) {
     const normalizedError = normalizeApiFormError(
       error,
       ['email', 'password'],
-      'We could not create your account right now. Please try again in a moment.',
+      t('register.errorGeneric'),
     )
 
     Object.assign(fieldErrors, normalizedError.fieldErrors)
@@ -127,16 +129,16 @@ const handleSubmit = async () => {
 <template>
   <section class="page-shell auth-shell">
     <div class="page-hero">
-      <h1>Create your account.</h1>
+      <h1>{{ $t('register.heroTitle') }}</h1>
       <p class="muted">
-        It only takes a minute.
+        {{ $t('register.heroDesc') }}
       </p>
     </div>
 
     <BaseCard
       class="auth-card"
-      title="Start selling in a few steps"
-      description="Add your email and choose a password."
+      :title="$t('register.cardTitle')"
+      :description="$t('register.cardDesc')"
     >
       <form class="responsive-form responsive-form--desktop-two" novalidate @submit.prevent="handleSubmit">
         <BaseInput
@@ -144,7 +146,7 @@ const handleSubmit = async () => {
           :model-value="form.email"
           autocomplete="email"
           :error="fieldErrors.email"
-          label="Email"
+          :label="$t('register.email')"
           name="email"
           placeholder="seller@example.com"
           required
@@ -158,9 +160,9 @@ const handleSubmit = async () => {
           :model-value="form.password"
           autocomplete="new-password"
           :error="fieldErrors.password"
-          label="Create password"
+          :label="$t('register.createPassword')"
           name="password"
-          placeholder="At least 8 characters"
+          :placeholder="$t('register.atLeast8')"
           required
           type="password"
           @blur="validateField('password')"
@@ -172,9 +174,9 @@ const handleSubmit = async () => {
           :model-value="form.confirmPassword"
           autocomplete="new-password"
           :error="fieldErrors.confirmPassword"
-          label="Repeat password"
+          :label="$t('register.repeatPassword')"
           name="confirm-password"
-          placeholder="Enter it again"
+          :placeholder="$t('register.enterAgain')"
           required
           type="password"
           @blur="validateField('confirmPassword')"
@@ -182,7 +184,7 @@ const handleSubmit = async () => {
         />
 
         <p class="muted form-hint">
-          Use at least {{ passwordMinLength }} characters.
+          {{ $t('register.minCharsHint', { n: passwordMinLength }) }}
         </p>
 
         <p v-if="formError" class="status-message error">
@@ -191,7 +193,7 @@ const handleSubmit = async () => {
 
         <div class="form-actions">
           <BaseButton :disabled="isSubmitting" block type="submit">
-            {{ isSubmitting ? 'Creating account...' : 'Create account' }}
+            {{ isSubmitting ? $t('register.creating') : $t('register.create') }}
           </BaseButton>
         </div>
       </form>

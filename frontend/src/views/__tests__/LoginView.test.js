@@ -14,6 +14,10 @@ const authState = vi.hoisted(() => ({
   login: vi.fn(),
 }))
 
+const socialAuthState = vi.hoisted(() => ({
+  beginSocialLogin: vi.fn(),
+}))
+
 const toastState = vi.hoisted(() => ({
   success: vi.fn(),
 }))
@@ -29,6 +33,10 @@ vi.mock('@/composables/useAuth', () => ({
   useAuth: () => ({
     login: authState.login,
   }),
+}))
+
+vi.mock('@/services/auth.service', () => ({
+  beginSocialLogin: socialAuthState.beginSocialLogin,
 }))
 
 vi.mock('@/stores/toast', () => ({
@@ -49,6 +57,10 @@ const mountView = () =>
 describe('LoginView', () => {
   beforeEach(() => {
     routerState.route.query = {}
+    routerState.push.mockReset()
+    authState.login.mockReset()
+    socialAuthState.beginSocialLogin.mockReset()
+    toastState.success.mockReset()
   })
 
   it('renders the responsive two-column form shell', () => {
@@ -71,6 +83,37 @@ describe('LoginView', () => {
     expect(authState.login).not.toHaveBeenCalled()
   })
 
+  it('renders Google and Facebook social login actions', () => {
+    const wrapper = mountView()
+
+    expect(wrapper.find('[data-testid="social-login-google"]').text()).toContain('Continue with Google')
+    expect(wrapper.find('[data-testid="social-login-facebook"]').text()).toContain('Continue with Facebook')
+    expect(wrapper.find('[data-testid="social-login-google"] svg').exists()).toBe(true)
+    expect(wrapper.find('[data-testid="social-login-facebook"] svg').exists()).toBe(true)
+  })
+
+  it('renders email sign in before the social login section', () => {
+    const wrapper = mountView()
+    const form = wrapper.find('form').element
+    const divider = wrapper.find('.auth-divider').element
+    const googleButton = wrapper.find('[data-testid="social-login-google"]').element
+
+    expect(form.compareDocumentPosition(divider) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(divider.compareDocumentPosition(googleButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('starts social login with the requested redirect route', async () => {
+    routerState.route.query = {
+      redirect: '/products/42',
+    }
+
+    const wrapper = mountView()
+
+    await wrapper.find('[data-testid="social-login-google"]').trigger('click')
+
+    expect(socialAuthState.beginSocialLogin).toHaveBeenCalledWith('google', '/products/42')
+  })
+
   it('logs in, disables submit while pending, and redirects to the requested route', async () => {
     routerState.route.query = {
       redirect: '/products/new/create',
@@ -86,7 +129,7 @@ describe('LoginView', () => {
     await inputs[1].setValue('secret123')
     await wrapper.find('form').trigger('submit.prevent')
 
-    expect(wrapper.find('button[type=\"submit\"]').attributes('disabled')).toBeDefined()
+    expect(wrapper.find('button[type="submit"]').attributes('disabled')).toBeDefined()
     expect(authState.login).toHaveBeenCalledWith({
       email: 'seller@example.com',
       password: 'secret123',

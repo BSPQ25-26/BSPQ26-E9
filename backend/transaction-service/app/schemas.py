@@ -26,6 +26,7 @@ class ProductResponse(BaseModel):
     price:       float
     state:       str
     owner_id:    str
+    reserved_by: Optional[str]
     created_at:  datetime
     updated_at:  datetime
 
@@ -86,8 +87,8 @@ class WalletLedgerEntry(BaseModel):
     id:                int
     user_id:           str
     amount:            float                   # Signed: +credit, -debit
-    transaction_type:  str                     # TOP_UP, PURCHASE, SALE, REFUND, etc
-    description:       Optional[str]           # Human-readable description
+    transaction_type:  str                     # deposit, purchase, refund, etc
+    description:       Optional[str] = None    # Human-readable description
     balance_after:     float                   # Balance AFTER this operation (immutable)
     created_at:        datetime
     

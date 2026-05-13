@@ -11,7 +11,9 @@ class ProductRepository:
             category=product_in.category,
             price=product_in.price,
             condition=product_in.condition,
-            seller_id=seller_id
+            seller_id=seller_id,
+            images=product_in.model_dump().get("images", []),
+            transaction_product_id=None,
         )
         db.add(product)
         db.commit()
@@ -20,7 +22,7 @@ class ProductRepository:
 
     @staticmethod
     def update_product(db: Session, product: Product, updates: dict) -> Product:
-        allowed_fields = {"title", "name", "description", "category", "price", "condition"}
+        allowed_fields = {"title", "name", "description", "category", "price", "condition", "transaction_product_id"}
         for key, value in updates.items():
             if key == "name":
                 setattr(product, "title", value)

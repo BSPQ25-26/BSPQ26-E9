@@ -1,25 +1,32 @@
+# ruff: noqa: E402
 import os
 import sys
 
-import pytest
+service_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+if service_root not in sys.path:
+    sys.path.insert(0, service_root)
+
+import pytest  # noqa: E402
 from fastapi.testclient import TestClient
 from jose import jwt
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from app.auth import ALGORITHM, SECRET_KEY
 from app.db.base import Base
 from app.db.session import get_db
 from app.main import app
 
-TEST_DATABASE_URL = "sqlite:///./test_inventory.db"
-
-engine = create_engine(
-    TEST_DATABASE_URL,
-    connect_args={"check_same_thread": False},
+TEST_DATABASE_URL = os.getenv(
+    "TEST_DATABASE_URL",
+    os.getenv("DATABASE_URL", "sqlite:///./test_inventory.db"),
 )
+
+engine_kwargs = {}
+if TEST_DATABASE_URL.startswith("sqlite"):
+    engine_kwargs["connect_args"] = {"check_same_thread": False}
+
+engine = create_engine(TEST_DATABASE_URL, **engine_kwargs)
 
 TestingSessionLocal = sessionmaker(
     autocommit=False,

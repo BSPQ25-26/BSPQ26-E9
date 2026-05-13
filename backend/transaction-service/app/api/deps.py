@@ -4,9 +4,9 @@ Dependency functions for FastAPI routes, including authentication and database s
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from sqlalchemy.orm import Session
+#from sqlalchemy.orm import Session
 
-from app.database import get_db
+#from app.database import get_db
 from app.core.security import verify_token
 
 security = HTTPBearer()

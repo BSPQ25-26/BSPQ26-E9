@@ -1,7 +1,7 @@
 """
 Application settings loaded from environment variables.
 """
-import os
+#import os
 from pathlib import Path
 from pydantic_settings import BaseSettings
 from pydantic import ConfigDict
@@ -25,7 +25,7 @@ settings = Settings()
 # Use Supabase if available, otherwise fallback to SQLite
 if settings.TRANSACTION_DATABASE_URL:
     settings.DATABASE_URL = settings.TRANSACTION_DATABASE_URL
-    # print(f"✓ Using Supabase: {settings.DATABASE_URL[:50]}...")
+    # debug: using Supabase (DATABASE_URL)
 else:
-    # print(f"⚠ Using SQLite fallback: {settings.DATABASE_URL}")
+    # debug: using SQLite fallback (DATABASE_URL)
     pass

@@ -25,6 +25,8 @@ replay_pid*
 
 # Environment variables
 .env
+.env.*
+!.env.example
 
 # Compiled python
 __pycache__/
@@ -73,6 +75,12 @@ htmlcov/
 *.sqlite3
 test_auth.db
 .db
+
+# Local images
+*.jpg
+*.jpeg
+*.png
+!frontend/public/wallbot_icon.png
 
 # Logs
 *.log

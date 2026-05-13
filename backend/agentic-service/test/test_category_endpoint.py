@@ -23,7 +23,7 @@ class MockChainFromLlmText:
         self._llm_text = llm_text
         self.last_payload = None
 
-    def invoke(self, payload):
+    def invoke(self, payload, **kwargs):
         self.last_payload = payload
         return self._parser.parse(self._llm_text)
 
@@ -36,7 +36,7 @@ class MockFailingChain:
         self.call_count = 0
         self.last_payload = None
 
-    def invoke(self, payload):
+    def invoke(self, payload, **kwargs):
         self.call_count += 1
         self.last_payload = payload
         raise self.error
@@ -49,7 +49,7 @@ class MockProviderFailingChain:
         self.error = error
         self.call_count = 0
 
-    def invoke(self, payload):
+    def invoke(self, payload, **kwargs):
         self.call_count += 1
         raise self.error
 
@@ -58,6 +58,13 @@ class MockProviderFailingChain:
 def category_agent_module(monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", "test-key")
     module = importlib.import_module("app.agent.category_agent")
+    return importlib.reload(module)
+
+
+@pytest.fixture
+def price_agent_module(monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "test-key")
+    module = importlib.import_module("app.agent.price_agent")
     return importlib.reload(module)
 
 
@@ -197,7 +204,17 @@ def test_provider_failure_returns_fallback_other(
     assert failing_chain.call_count == 1
 
 
-def test_price_endpoint_returns_501(category_agent_module, wallabot_app):
+def test_price_endpoint_returns_recommendation(price_agent_module, wallabot_app, monkeypatch):
+    mock_chain = MockChainFromLlmText(
+        price_agent_module._parser,
+        (
+            '{"recommended_price":100.0,"price_range_min":80.0,'
+            '"price_range_max":120.0,"data_source":"LLM estimate from product details"}'
+        ),
+    )
+    monkeypatch.setattr(price_agent_module, "_chain", mock_chain)
+    # Provide market data so the agent preserves the LLM's data_source unchanged
+    monkeypatch.setattr(price_agent_module, "_search_tavily", lambda q: "iPhone 13 128GB used: €90-€110")
     client = TestClient(wallabot_app)
 
     response = client.post(
@@ -209,8 +226,13 @@ def test_price_endpoint_returns_501(category_agent_module, wallabot_app):
         },
     )
 
-    assert response.status_code == 501
-    assert response.json()["detail"] == "Not Implemented"
+    assert response.status_code == 200
+    assert response.json() == {
+        "recommended_price": 100.0,
+        "price_range_min": 80.0,
+        "price_range_max": 120.0,
+        "data_source": "LLM estimate from product details",
+    }
 
 
 @pytest.mark.live

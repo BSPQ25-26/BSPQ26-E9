@@ -9,10 +9,10 @@ Tests:
 """
 
 import pytest
-from decimal import Decimal
-from datetime import datetime, timezone
+#from decimal import Decimal
+#from datetime import datetime, timezone
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, event
+from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 

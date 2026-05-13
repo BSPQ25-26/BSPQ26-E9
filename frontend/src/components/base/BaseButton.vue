@@ -124,6 +124,18 @@ const componentProps = computed(() => {
   border-color: rgba(17, 17, 17, 0.24);
 }
 
+.base-button.is-danger {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+  border-color: rgba(125, 45, 36, 0.18);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.62);
+}
+
+.base-button.is-danger:hover {
+  border-color: rgba(125, 45, 36, 0.34);
+  background: #f0d2cc;
+}
+
 .base-button.is-ghost {
   background: transparent;
   color: var(--color-text);
