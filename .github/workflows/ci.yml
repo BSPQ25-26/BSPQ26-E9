@@ -85,7 +85,16 @@ jobs:
           DATABASE_URL: "sqlite:///./test_auth.db"
           JWT_SECRET: "ci-test-secret"
           JWT_EXPIRY_MINUTES: "30"
-        run: pytest --cov=app --cov-report=term-missing -q
+        run: pytest --cov=app --cov-report=term-missing --cov-report=xml:coverage.xml --cov-report=html:coverage-html -q
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-auth-service
+          path: |
+            backend/auth-service/coverage.xml
+            backend/auth-service/coverage-html/
 
   # ─────────────────────────────────────────────
   test-inventory:
@@ -110,7 +119,16 @@ jobs:
           DATABASE_URL: "sqlite:///./test_inventory.db"
           SECRET_KEY: "ci-test-secret"
           ALGORITHM: "HS256"
-        run: pytest --cov=app --cov-report=term-missing -q
+        run: pytest --cov=app --cov-report=term-missing --cov-report=xml:coverage.xml --cov-report=html:coverage-html -q
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-inventory-service
+          path: |
+            backend/inventory-service/coverage.xml
+            backend/inventory-service/coverage-html/
 
   # ─────────────────────────────────────────────
 
@@ -134,7 +152,16 @@ jobs:
       - name: Run tests
         env:
           DATABASE_URL: "sqlite:///./test_transactions.db"
-        run: pytest --cov=app --cov-report=term-missing -q
+        run: pytest --cov=app --cov-report=term-missing --cov-report=xml:coverage.xml --cov-report=html:coverage-html -q
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-transaction-service
+          path: |
+            backend/transaction-service/coverage.xml
+            backend/transaction-service/coverage-html/
 
   # ─────────────────────────────────────────────
 
@@ -160,7 +187,16 @@ jobs:
           DATABASE_URL: "sqlite:///./test_wallabot.db"
           TAVILY_API_KEY: "ci-mock-key"
           OPENAI_API_KEY: "ci-mock-key"
-        run: pytest --cov=app --cov-report=term-missing -q
+        run: pytest --cov=app --cov-report=term-missing --cov-report=xml:coverage.xml --cov-report=html:coverage-html -q
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-agentic-service
+          path: |
+            backend/agentic-service/coverage.xml
+            backend/agentic-service/coverage-html/
 
   test-backend-docker:
     name: "Test · backend (docker + live DB)"
@@ -207,10 +243,25 @@ jobs:
           TAVILY_API_KEY: "ci-mock-key"
           OPENAI_API_KEY: "ci-mock-key"
         run: |
-          (cd backend/auth-service && pytest tests -q)
-          (cd backend/inventory-service && pytest tests -q)
-          (cd backend/transaction-service && pytest test tests -q)
-          (cd backend/agentic-service && pytest test -q)
+          (cd backend/auth-service && pytest tests -q --cov=app --cov-report=term-missing --cov-report=xml:coverage.xml --cov-report=html:coverage-html)
+          (cd backend/inventory-service && pytest tests -q --cov=app --cov-report=term-missing --cov-report=xml:coverage.xml --cov-report=html:coverage-html)
+          (cd backend/transaction-service && pytest test tests -q --cov=app --cov-report=term-missing --cov-report=xml:coverage.xml --cov-report=html:coverage-html)
+          (cd backend/agentic-service && pytest test -q --cov=app --cov-report=term-missing --cov-report=xml:coverage.xml --cov-report=html:coverage-html)
+
+      - name: Upload coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-backend-docker
+          path: |
+            backend/auth-service/coverage.xml
+            backend/auth-service/coverage-html/
+            backend/inventory-service/coverage.xml
+            backend/inventory-service/coverage-html/
+            backend/transaction-service/coverage.xml
+            backend/transaction-service/coverage-html/
+            backend/agentic-service/coverage.xml
+            backend/agentic-service/coverage-html/
 
   # ─────────────────────────────────────────────
 
