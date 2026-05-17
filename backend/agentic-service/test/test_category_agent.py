@@ -14,7 +14,7 @@ class MockChainFromLlmText:
         self._llm_text = llm_text
         self.last_payload = None
 
-    def invoke(self, payload):
+    def invoke(self, payload, **kwargs):
         self.last_payload = payload
         return self._parser.parse(self._llm_text)
 
@@ -27,7 +27,7 @@ class MockFailingChain:
         self.call_count = 0
         self.last_payload = None
 
-    def invoke(self, payload):
+    def invoke(self, payload, **kwargs):
         self.call_count += 1
         self.last_payload = payload
         raise self.error
@@ -41,7 +41,7 @@ class MockFailThenSuccessChain:
         self.call_count = 0
         self.payloads = []
 
-    def invoke(self, payload):
+    def invoke(self, payload, **kwargs):
         self.call_count += 1
         self.payloads.append(dict(payload))
         if self.call_count == 1:
@@ -58,7 +58,7 @@ class MockProviderFailingChain:
         self.error = error
         self.call_count = 0
 
-    def invoke(self, payload):
+    def invoke(self, payload, **kwargs):
         self.call_count += 1
         raise self.error
 
@@ -183,7 +183,7 @@ def test_suggest_category_truncates_large_llm_output_in_retry_feedback(
     long_output = "x" * 1500
     failing_once = MockFailThenSuccessChain(category_agent_module._parser)
 
-    def invoke_with_large_output(payload):
+    def invoke_with_large_output(payload, **kwargs):
         failing_once.call_count += 1
         failing_once.payloads.append(dict(payload))
         if failing_once.call_count == 1:

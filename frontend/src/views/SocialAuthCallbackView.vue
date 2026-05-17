@@ -1,6 +1,7 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseCard from '@/components/base/BaseCard.vue'
 import {
@@ -10,12 +11,13 @@ import {
 import { useAuthStore } from '@/stores/auth'
 import { useToastStore } from '@/stores/toast'
 
+const { t } = useI18n()
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const toastStore = useToastStore()
 const hasError = ref(false)
-const statusMessage = ref('Completing sign in...')
+const statusMessage = ref(t('callback.completing'))
 
 const getFirstQueryValue = (value) => (Array.isArray(value) ? value[0] : value)
 
@@ -44,13 +46,13 @@ const completeSocialLogin = async () => {
     }
 
     authStore.setToken(token)
-    toastStore.success('You are signed in.')
+    toastStore.success(t('login.signedIn'))
 
     await router.replace(normalizeRedirectTarget(consumeSocialLoginRedirect()))
   } catch {
     authStore.logout()
     hasError.value = true
-    statusMessage.value = 'We could not finish social sign in.'
+    statusMessage.value = t('callback.errorFinish')
   }
 }
 
@@ -61,7 +63,7 @@ onMounted(completeSocialLogin)
   <section class="page-shell auth-shell callback-shell">
     <BaseCard
       class="auth-card callback-card"
-      title="Social sign in"
+      :title="$t('callback.cardTitle')"
       :description="statusMessage"
     >
       <BaseButton
@@ -69,7 +71,7 @@ onMounted(completeSocialLogin)
         to="/login"
         variant="secondary"
       >
-        Back to sign in
+        {{ $t('callback.back') }}
       </BaseButton>
     </BaseCard>
   </section>

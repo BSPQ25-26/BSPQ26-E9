@@ -1,10 +1,13 @@
 <script setup>
 import { computed, reactive, ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseCard from '@/components/base/BaseCard.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
 import { useDebouncedWatch } from '@/composables/useDebouncedWatch'
 import * as productService from '@/services/product.service'
+
+const { t } = useI18n()
 
 const FILTER_DEBOUNCE_MS = 300
 const PRODUCTS_PER_PAGE = 8
@@ -126,37 +129,48 @@ const pageNumbers = computed(() =>
   Array.from({ length: totalPages.value }, (_, index) => index + 1),
 )
 const productsLabel = computed(() =>
-  `${visibleProducts.value.length} ${visibleProducts.value.length === 1 ? 'listing' : 'listings'}`,
+  t('products.listingCount', { count: visibleProducts.value.length }),
 )
 const paginationSummary = computed(() => {
+  const n = visibleProducts.value.length
+
   if (!hasProducts.value) {
     return productsLabel.value
   }
 
   if (hasActiveFilters.value) {
-    return `Showing ${pageStartIndex.value + 1}-${pageEndIndex.value} of ${visibleProducts.value.length} matching ${visibleProducts.value.length === 1 ? 'listing' : 'listings'}`
+    return t('products.showingFiltered', {
+      start: pageStartIndex.value + 1,
+      end: pageEndIndex.value,
+      total: n,
+      listings: t('products.listingCount', { count: n }),
+    })
   }
 
-  return `Showing ${pageStartIndex.value + 1}-${pageEndIndex.value} of ${visibleProducts.value.length}`
+  return t('products.showing', {
+    start: pageStartIndex.value + 1,
+    end: pageEndIndex.value,
+    total: n,
+  })
 })
-const emptyStateTitle = computed(() => (hasActiveFilters.value ? 'No products found' : 'No products yet'))
+const emptyStateTitle = computed(() => (hasActiveFilters.value ? t('products.emptyTitleFiltered') : t('products.emptyTitle')))
 const emptyStateDescription = computed(() =>
   hasActiveFilters.value
-    ? 'Try changing or clearing the current filters.'
-    : 'Published products will appear here.',
+    ? t('products.emptyDescFiltered')
+    : t('products.emptyDesc'),
 )
 const filterDropdownLabel = computed(() =>
-  activeFilterCount.value > 0 ? `Filters (${activeFilterCount.value})` : 'Filters',
+  activeFilterCount.value > 0 ? t('products.filtersCount', { count: activeFilterCount.value }) : t('products.filters'),
 )
-const primaryActionCard = {
-  title: 'Create a new listing',
-  description: 'Add the basic details and publish your item in one short form.',
-  buttonLabel: 'New item',
+const primaryActionCard = computed(() => ({
+  title: t('products.actionTitle'),
+  description: t('products.actionDesc'),
+  buttonLabel: t('products.newItem'),
   toneClass: 'action-card',
-}
+}))
 
 const resolveProductListError = (error) =>
-  error?.response?.data?.detail || 'We could not load products. Please try again.'
+  error?.response?.data?.detail || t('products.errorLoad')
 
 const getProductImage = (product) => {
   return (product.images || [])
@@ -251,9 +265,9 @@ useDebouncedWatch(
 <template>
   <section class="page-shell">
     <div class="page-hero">
-      <h1>Sell without the noise.</h1>
+      <h1>{{ $t('products.heroTitle') }}</h1>
       <p class="muted">
-        Create a listing, browse the catalog, and skip the demo content.
+        {{ $t('products.heroDesc') }}
       </p>
     </div>
 
@@ -269,15 +283,15 @@ useDebouncedWatch(
       </BaseCard>
     </div>
 
-    <section class="catalog-layout" aria-label="Product catalog">
+    <section class="catalog-layout" :aria-label="$t('products.ariaLabel')">
       <BaseCard
         class="catalog-card"
-        title="Catalog"
-        description="Listings that match your current filters."
+        :title="$t('products.catalogTitle')"
+        :description="$t('products.catalogDesc')"
       >
         <div class="catalog-toolbar">
           <p class="muted">
-            {{ isLoadingProducts ? 'Refreshing catalog...' : paginationSummary }}
+            {{ isLoadingProducts ? $t('products.refreshing') : paginationSummary }}
           </p>
 
           <details class="filter-dropdown">
@@ -286,10 +300,10 @@ useDebouncedWatch(
               <span class="filter-dropdown__chevron" aria-hidden="true" />
             </summary>
 
-            <form class="filter-form filter-dropdown__content" role="search" aria-label="Product filters" @submit.prevent>
+            <form class="filter-form filter-dropdown__content" role="search" :aria-label="$t('products.ariaFilters')" @submit.prevent>
               <fieldset class="filter-field filter-field--state">
                 <legend class="filter-label">
-                  State
+                  {{ $t('products.stateFilterLabel') }}
                 </legend>
 
                 <div class="state-filter-options">
@@ -305,16 +319,16 @@ useDebouncedWatch(
                       type="checkbox"
                       :value="state"
                     />
-                    <span>{{ state }}</span>
+                    <span>{{ $t(`products.states.${state.toLowerCase()}`) }}</span>
                   </label>
                 </div>
               </fieldset>
 
               <label class="filter-field">
-                <span class="filter-label">Category</span>
+                <span class="filter-label">{{ $t('products.categoryLabel') }}</span>
                 <select v-model="productFilters.category" class="filter-control" name="category">
                   <option value="">
-                    Any category
+                    {{ $t('products.anyCategory') }}
                   </option>
                   <option v-for="category in categoryOptions" :key="category" :value="category">
                     {{ category }}
@@ -324,14 +338,14 @@ useDebouncedWatch(
 
               <fieldset class="filter-field">
                 <legend class="filter-label">
-                  Price range
+                  {{ $t('products.priceRangeLabel') }}
                 </legend>
 
                 <div class="price-range-fields">
                   <BaseInput
                     v-model="productFilters.minPrice"
                     class="filter-field"
-                    label="Min"
+                    :label="$t('products.minLabel')"
                     min="0"
                     name="min_price"
                     placeholder="0"
@@ -342,7 +356,7 @@ useDebouncedWatch(
                   <BaseInput
                     v-model="productFilters.maxPrice"
                     class="filter-field"
-                    label="Max"
+                    :label="$t('products.maxLabel')"
                     min="0"
                     name="max_price"
                     placeholder="500"
@@ -353,10 +367,10 @@ useDebouncedWatch(
               </fieldset>
 
               <label class="filter-field">
-                <span class="filter-label">Condition</span>
+                <span class="filter-label">{{ $t('products.conditionLabel') }}</span>
                 <select v-model="productFilters.condition" class="filter-control" name="condition">
                   <option value="">
-                    Any condition
+                    {{ $t('products.anyCondition') }}
                   </option>
                   <option v-for="condition in conditionOptions" :key="condition" :value="condition">
                     {{ condition }}
@@ -371,7 +385,7 @@ useDebouncedWatch(
                 variant="ghost"
                 @click="resetFilters"
               >
-                Clear filters
+                {{ $t('products.clearFilters') }}
               </BaseButton>
             </form>
           </details>
@@ -384,7 +398,7 @@ useDebouncedWatch(
         <ul
           v-else-if="isLoadingProducts"
           class="product-list skeleton-list"
-          aria-label="Loading products"
+          :aria-label="$t('products.ariaLoading')"
         >
           <li
             v-for="index in SKELETON_PRODUCT_COUNT"
@@ -415,7 +429,7 @@ useDebouncedWatch(
               <div class="product-card__image" aria-hidden="true">
                 <img
                   v-if="getProductImage(product)"
-                  :alt="`${product.title || 'Product'} thumbnail`"
+                  :alt="`${product.title || $t('products.untitled')} thumbnail`"
                   :src="getProductImage(product)"
                   @error="handleProductImageError(getProductImage(product))"
                 />
@@ -427,7 +441,7 @@ useDebouncedWatch(
               <div class="product-card__body">
                 <div class="product-card__heading">
                   <h3 class="product-card__title">
-                    {{ product.title || 'Untitled product' }}
+                    {{ product.title || $t('products.untitled') }}
                   </h3>
                   <p class="product-card__price">
                     {{ currencyFormatter.format(product.price) }}
@@ -436,7 +450,7 @@ useDebouncedWatch(
 
                 <div class="product-card__meta">
                   <span class="state-label" :class="getStateClass(product)">
-                    {{ getProductState(product) }}
+                    {{ $t(`products.states.${getProductState(product).toLowerCase()}`) }}
                   </span>
                 </div>
 
@@ -446,21 +460,21 @@ useDebouncedWatch(
                   :to="getProductDetailRoute(product)"
                   variant="ghost"
                 >
-                  View details
+                  {{ $t('products.viewDetails') }}
                 </BaseButton>
               </div>
             </article>
           </div>
 
-          <nav v-if="totalPages > 1" class="pagination" aria-label="Product pages">
+          <nav v-if="totalPages > 1" class="pagination" :aria-label="$t('products.ariaLabel')">
             <button
               class="pagination-button"
               type="button"
               :disabled="currentPage === 1"
-              aria-label="Go to previous products page"
+              :aria-label="$t('products.ariaPrevPage')"
               @click="goToPage(currentPage - 1)"
             >
-              Previous
+              {{ $t('products.prevPage') }}
             </button>
 
             <div class="pagination-pages">
@@ -481,10 +495,10 @@ useDebouncedWatch(
               class="pagination-button"
               type="button"
               :disabled="currentPage === totalPages"
-              aria-label="Go to next products page"
+              :aria-label="$t('products.ariaNextPage')"
               @click="goToPage(currentPage + 1)"
             >
-              Next
+              {{ $t('products.nextPage') }}
             </button>
           </nav>
         </div>
@@ -501,7 +515,7 @@ useDebouncedWatch(
             variant="secondary"
             @click="resetFilters"
           >
-            Clear filters
+            {{ $t('products.clearFilters') }}
           </BaseButton>
         </div>
       </BaseCard>

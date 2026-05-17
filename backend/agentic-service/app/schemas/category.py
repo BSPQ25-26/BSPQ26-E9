@@ -2,26 +2,60 @@ from pydantic import BaseModel, Field, field_validator
 
 
 class CategoryRequest(BaseModel):
-    title: str
-    description: str
+    """Product data sent by the seller to request a category suggestion."""
+
+    title: str = Field(
+        ...,
+        description="Product title as written by the seller.",
+        examples=["iPhone 13 Pro 128GB"],
+    )
+    description: str = Field(
+        ...,
+        description="Product description as written by the seller.",
+        examples=["Used for one year, minor screen scratches, battery at 87%."],
+    )
     available_categories: list[str] = Field(
         ...,
         min_length=1,
-        description="Category list provided by the caller and must not be empty.",
+        description=(
+            "Non-empty list of category names the agent must choose from. "
+            "The agent copies the chosen name exactly; it only proposes a new name "
+            "when none of the provided options is a good fit."
+        ),
+        examples=[["Electronics", "Clothing & Accessories", "Home & Garden", "Other"]],
     )
 
 
 class CategorySuggestion(BaseModel):
+    """Category classification returned by the Wallabot agent."""
+
     suggested_category: str = Field(
         ...,
-        description="Exact name from available_categories, or a new proposed name.",
+        description=(
+            "Chosen category name. Either an exact copy of one entry from "
+            "`available_categories` or a new name proposed by the agent when no "
+            "existing category fits."
+        ),
+        examples=["Electronics"],
     )
-    confidence: float = Field(..., ge=0.0, le=1.0)
+    confidence: float = Field(
+        ...,
+        ge=0.0,
+        le=1.0,
+        description=(
+            "Calibrated confidence score in [0.0, 1.0]. "
+            "Higher values indicate the agent is more certain of the classification. "
+            "A value of 0.0 is used for provider-failure fallback responses."
+        ),
+        examples=[0.92],
+    )
     is_new_category: bool = Field(
         ...,
         description=(
-            "True if the agent could not match any existing category and proposed a new one."
+            "True when the agent proposed a category name that is not present in "
+            "`available_categories`. False when an existing category was selected."
         ),
+        examples=[False],
     )
 
     @field_validator("suggested_category")

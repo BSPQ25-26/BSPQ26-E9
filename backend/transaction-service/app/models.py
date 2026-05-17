@@ -47,6 +47,7 @@ class Product(Base):
     price       = Column(Float, nullable=False)
     state       = Column(ProductStateType, nullable=False, default=ProductState.AVAILABLE)
     owner_id    = Column(String(255), nullable=False)
+    reserved_by = Column(String(255), nullable=True)  # Sprint 2: User who reserved the product
     reserved_at = Column(DateTime, nullable=True)  # Sprint 2: Timestamp when product was reserved 
     created_at  = Column(DateTime, default=lambda: datetime.now(timezone.utc))
     updated_at  = Column(DateTime, default=lambda: datetime.now(timezone.utc),

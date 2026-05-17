@@ -2,15 +2,18 @@
 import { computed, reactive, ref, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRoute, useRouter } from 'vue-router'
+import { useI18n } from 'vue-i18n'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
 import { useAuth } from '@/composables/useAuth'
 import { useToastStore } from '@/stores/toast'
 import { useWalletStore } from '@/stores/wallet'
+import { setLocale } from '@/i18n'
 
+const { t, locale } = useI18n()
 const route = useRoute()
 const router = useRouter()
-const { isAuthenticated, logout, user } = useAuth()
+const { isAuthenticated, logout, refreshSession, token, user } = useAuth()
 const walletStore = useWalletStore()
 const toastStore = useToastStore()
 const {
@@ -31,37 +34,59 @@ const topUpForm = reactive({
 })
 const topUpError = ref('')
 
+const decodeTokenSubject = (jwt) => {
+  const [, payload] = String(jwt || '').split('.')
+
+  if (!payload || typeof window === 'undefined' || typeof window.atob !== 'function') {
+    return ''
+  }
+
+  try {
+    const normalizedPayload = payload.replace(/-/g, '+').replace(/_/g, '/')
+    const paddedPayload = normalizedPayload.padEnd(
+      Math.ceil(normalizedPayload.length / 4) * 4,
+      '=',
+    )
+    const parsedPayload = JSON.parse(window.atob(paddedPayload))
+    return parsedPayload.sub || parsedPayload.email || parsedPayload.user || ''
+  } catch {
+    return ''
+  }
+}
+
+const currentUserId = computed(() => user.value?.email || decodeTokenSubject(token.value) || 'User')
+
 const links = computed(() =>
   isAuthenticated.value
     ? [
-        { label: 'Home', to: '/products', exact: true },
+        { label: t('nav.home'), to: '/products', exact: true },
       ]
     : [
-        { label: 'Sign in', to: '/login', exact: true },
-        { label: 'Create account', to: '/register', exact: true },
+        { label: t('nav.signIn'), to: '/login', exact: true },
+        { label: t('nav.createAccount'), to: '/register', exact: true },
       ],
 )
 const formattedBalance = computed(() => {
   if (walletError.value) {
-    return 'Unavailable'
+    return t('wallet.unavailable')
   }
 
   if (isWalletLoading.value) {
-    return 'Loading...'
+    return t('wallet.loading')
   }
 
   return currencyFormatter.format(balance.value)
 })
 const balanceButtonLabel = computed(() => {
   if (walletError.value) {
-    return 'Wallet balance unavailable. Top up wallet.'
+    return t('wallet.ariaUnavailable')
   }
 
   if (isWalletLoading.value) {
-    return 'Wallet balance loading. Top up wallet.'
+    return t('wallet.ariaLoading')
   }
 
-  return `Wallet balance ${currencyFormatter.format(balance.value)}. Top up wallet.`
+  return t('wallet.ariaBalance', { balance: currencyFormatter.format(balance.value) })
 })
 
 const visibleLinks = computed(() => links.value.filter((link) => !isLinkActive(link)))
@@ -79,7 +104,7 @@ const resolveTopUpError = (error) => {
 
   if (Array.isArray(detail)) {
     const amountIssue = detail.find((issue) => issue?.loc?.includes?.('amount'))
-    return amountIssue?.msg || detail[0]?.msg || 'Enter a valid amount.'
+    return amountIssue?.msg || detail[0]?.msg || t('wallet.errorAmount')
   }
 
   if (typeof detail === 'string') {
@@ -87,10 +112,10 @@ const resolveTopUpError = (error) => {
   }
 
   if (error?.message === 'Network Error') {
-    return 'We cannot reach the wallet service right now.'
+    return t('wallet.errorNetwork')
   }
 
-  return 'We could not top up your wallet. Please try again.'
+  return t('wallet.errorGeneric')
 }
 
 const openTopUpModal = () => {
@@ -117,7 +142,7 @@ const validateTopUpAmount = () => {
   const amount = Number(topUpForm.amount)
 
   if (!Number.isFinite(amount) || amount <= 0) {
-    topUpError.value = 'Enter an amount greater than 0.'
+    topUpError.value = t('wallet.errorAmount')
     return null
   }
 
@@ -133,7 +158,7 @@ const handleTopUp = async () => {
 
   try {
     await walletStore.topUp(amount)
-    toastStore.success('Wallet topped up.')
+    toastStore.success(t('wallet.topped'))
     closeTopUpModal()
   } catch (error) {
     topUpError.value = resolveTopUpError(error)
@@ -149,6 +174,11 @@ const handleLogout = async () => {
   }
 }
 
+const toggleLocale = () => {
+  const next = locale.value === 'en' ? 'es' : 'en'
+  setLocale(next)
+}
+
 watch(
   isAuthenticated,
   (nextIsAuthenticated) => {
@@ -158,6 +188,7 @@ watch(
     }
 
     walletStore.fetchBalance().catch(() => {})
+    refreshSession().catch(() => {})
   },
   {
     immediate: true,
@@ -202,13 +233,14 @@ watch(
           :aria-label="balanceButtonLabel"
           @click="openTopUpModal"
         >
-          <span class="wallet-indicator__label">Wallet</span>
+          <span class="wallet-indicator__label">{{ $t('wallet.label') }}</span>
           <span class="wallet-indicator__balance">{{ formattedBalance }}</span>
         </button>
 
-        <p v-if="isAuthenticated && user?.email" class="header-user muted">
-          {{ user.email }}
-        </p>
+        <div v-if="isAuthenticated && currentUserId" class="header-user">
+          <div class="user-avatar">{{ currentUserId.charAt(0).toUpperCase() }}</div>
+          <span class="user-email">{{ currentUserId }}</span>
+        </div>
 
         <BaseButton
           v-if="isAuthenticated"
@@ -216,8 +248,16 @@ watch(
           size="sm"
           @click="handleLogout"
         >
-          Sign out
+          {{ $t('nav.signOut') }}
         </BaseButton>
+
+        <button
+          class="lang-toggle"
+          type="button"
+          @click="toggleLocale"
+        >
+          {{ $t('lang.switchLabel') }}
+        </button>
       </div>
     </div>
 
@@ -236,14 +276,14 @@ watch(
         >
           <header class="wallet-modal__header">
             <div>
-              <p class="wallet-modal__eyebrow">Wallet balance</p>
-              <h2 id="wallet-topup-title">Top Up Wallet</h2>
+              <p class="wallet-modal__eyebrow">{{ $t('wallet.eyebrow') }}</p>
+              <h2 id="wallet-topup-title">{{ $t('wallet.title') }}</h2>
             </div>
 
             <button
               class="wallet-modal__close"
               type="button"
-              aria-label="Close top up wallet"
+              :aria-label="$t('wallet.closeAria')"
               :disabled="isTopUpLoading"
               @click="closeTopUpModal"
             >
@@ -252,7 +292,7 @@ watch(
           </header>
 
           <div class="wallet-modal__balance">
-            <span>Current balance</span>
+            <span>{{ $t('wallet.currentBalance') }}</span>
             <strong>{{ currencyFormatter.format(balance) }}</strong>
           </div>
 
@@ -262,7 +302,7 @@ watch(
               autocomplete="off"
               :error="topUpError"
               inputmode="decimal"
-              label="Amount"
+              :label="$t('wallet.amount')"
               min="0.01"
               name="wallet-topup-amount"
               placeholder="25.00"
@@ -279,11 +319,11 @@ watch(
                 variant="secondary"
                 @click="closeTopUpModal"
               >
-                Cancel
+                {{ $t('wallet.cancel') }}
               </BaseButton>
 
               <BaseButton :disabled="isTopUpLoading" type="submit">
-                {{ isTopUpLoading ? 'Adding funds...' : 'Top Up Wallet' }}
+                {{ isTopUpLoading ? $t('wallet.addingFunds') : $t('wallet.topUp') }}
               </BaseButton>
             </div>
           </form>
@@ -429,16 +469,65 @@ watch(
 }
 
 .header-user {
-  max-width: 100%;
-  padding: 0.65rem 0.95rem;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0.35rem 0.75rem 0.35rem 0.35rem;
   border: 1px solid rgba(17, 17, 17, 0.08);
-  border-radius: 1rem;
-  background: rgba(255, 255, 255, 0.65);
-  font-size: 1rem;
+  border-radius: 2rem;
+  background: rgba(255, 255, 255, 0.8);
+  max-width: 15rem;
+  transition: transform 0.24s ease;
+}
+
+.header-user:hover {
+  transform: translateY(-1px);
+}
+
+.user-avatar {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: #111111;
+  color: #ffffff;
+  font-size: 0.85rem;
+  font-weight: 800;
+}
+
+.user-email {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text-muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  overflow-wrap: anywhere;
+}
+
+.lang-toggle {
+  min-height: var(--tap-target-size);
+  min-width: var(--tap-target-size);
+  padding: 0 0.75rem;
+  border: 1px solid rgba(17, 17, 17, 0.12);
+  border-radius: 1rem;
+  background: transparent;
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    background-color 0.24s ease,
+    border-color 0.24s ease,
+    color 0.24s ease;
+}
+
+.lang-toggle:hover {
+  border-color: rgba(17, 17, 17, 0.3);
+  background: var(--color-surface-strong);
+  color: var(--color-text);
 }
 
 .wallet-modal-backdrop {
@@ -586,6 +675,9 @@ watch(
   }
 
   .header-user {
+    padding: 0.25rem;
+  }
+  .user-email {
     display: none;
   }
 

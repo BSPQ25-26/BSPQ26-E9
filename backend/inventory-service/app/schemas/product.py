@@ -43,6 +43,7 @@ class ProductUpdate(BaseModel):
     category: Optional[str] = Field(default=None, min_length=1)
     price: Optional[float] = Field(default=None, gt=0)
     condition: Optional[ProductCondition] = Field(default=None)
+    transaction_product_id: Optional[int] = Field(default=None)
 
     model_config = ConfigDict(extra="forbid")
 
@@ -71,5 +72,6 @@ class ProductOut(BaseModel):
     seller_id: str
     created_at: datetime
     images: List[str] = []
+    transaction_product_id: Optional[int] = None
 
     model_config = ConfigDict(from_attributes=True)

@@ -11,6 +11,34 @@ import uuid
 
 router = APIRouter()
 
+def _upload_to_supabase(contents: bytes, filename: str, content_type: str) -> str | None:
+    """Upload file bytes to Supabase Storage via REST API and return the public URL."""
+    supabase_url = os.getenv("SUPABASE_URL", "").strip().rstrip("/")
+    key = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "").strip()
+    bucket = os.getenv("SUPABASE_STORAGE_BUCKET", "product-images")
+
+    if not supabase_url or not key:
+        return None
+
+    try:
+        import httpx
+        upload_url = f"{supabase_url}/storage/v1/object/{bucket}/{filename}"
+        response = httpx.post(
+            upload_url,
+            content=contents,
+            headers={
+                "Authorization": f"Bearer {key}",
+                "Content-Type": content_type,
+                "x-upsert": "true",
+            },
+            timeout=30,
+        )
+        if response.status_code in (200, 201):
+            return f"{supabase_url}/storage/v1/object/public/{bucket}/{filename}"
+        return None
+    except Exception:
+        return None
+
 
 @router.get("/products", response_model=list[ProductOut])
 def list_products(
@@ -95,10 +123,11 @@ def delete_product(
     ProductRepository.delete_product(db, product)
     return None
 
-MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
+MAX_FILE_SIZE = 5 * 1024 * 1024  # 5 MB
 ALLOWED_TYPES = {"image/jpeg", "image/png"}
 MAX_IMAGES = 8
 
+# Local fallback (used only when Supabase Storage is not configured)
 DEFAULT_UPLOAD_DIR = "/app/data/uploads" if os.path.isdir("/app/data") else "uploads"
 UPLOAD_DIR = os.getenv("INVENTORY_UPLOAD_DIR", DEFAULT_UPLOAD_DIR)
 UPLOAD_URL_PREFIX = os.getenv("INVENTORY_UPLOAD_URL_PREFIX", "/uploads").rstrip("/")
@@ -129,16 +158,26 @@ def upload_product_image(
     if len(contents) > MAX_FILE_SIZE:
         raise HTTPException(status_code=422, detail="File too large")
 
-    os.makedirs(UPLOAD_DIR, exist_ok=True)
-
-    file_ext = file.filename.split(".")[-1]
+    content_type_to_ext = {
+        "image/jpeg": "jpg",
+        "image/jpg": "jpg",
+        "image/png": "png",
+        "image/webp": "webp",
+        "image/gif": "gif",
+    }
+    file_ext = content_type_to_ext.get(file.content_type, "jpg")
     filename = f"{uuid.uuid4()}.{file_ext}"
-    file_path = os.path.join(UPLOAD_DIR, filename)
 
-    with open(file_path, "wb") as f:
-        f.write(contents)
+    # Try Supabase Storage first; fall back to local disk
+    file_url = _upload_to_supabase(contents, filename, file.content_type)
 
-    file_url = f"{UPLOAD_URL_PREFIX}/{filename}"
+    if file_url is None:
+        # Local fallback
+        os.makedirs(UPLOAD_DIR, exist_ok=True)
+        file_path = os.path.join(UPLOAD_DIR, filename)
+        with open(file_path, "wb") as f:
+            f.write(contents)
+        file_url = f"{UPLOAD_URL_PREFIX}/{filename}"
 
     product.images = current_images + [file_url]
     db.commit()

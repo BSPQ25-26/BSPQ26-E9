@@ -146,6 +146,7 @@ def test_concurrent_balance_deduction_allows_only_one_purchase(client, mock_veri
             "SQLite in-memory does not enforce SELECT ... FOR UPDATE semantics; "
             "concurrent race outcomes are backend-dependent in this test setup."
         )
+        return
 
     buyer_history = client.get("/wallet/history", headers=_auth(buyer_id))
     assert buyer_history.status_code == 200, buyer_history.text
