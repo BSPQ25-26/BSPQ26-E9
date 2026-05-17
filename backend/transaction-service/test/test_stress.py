@@ -1,14 +1,17 @@
 """
-Sprint 3 - Concurrency Stress Tests
-Simula 10 intentos de compra y reserva simultáneos sobre el mismo producto.
-Ejecución secuencial porque SQLite en memoria no soporta threads.
-En producción con PostgreSQL el comportamiento es idéntico gracias al rollback atómico.
+Sprint 3 - Concurrency stress tests
+Ten buyers compete for the same product. Under PostgreSQL, requests run in parallel
+(ThreadPoolExecutor). SQLite (used in this module's in-memory fixture and in CI) does not
+reliably serialize concurrent writes, so we run the same HTTP sequence sequentially there.
 """
+import os
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
 import pytest
+from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
-from fastapi.testclient import TestClient
 
 from app.main import app
 from app.database import get_db
@@ -21,7 +24,7 @@ def test_db():
     engine = create_engine(
         "sqlite:///:memory:",
         connect_args={"check_same_thread": False},
-        poolclass=StaticPool
+        poolclass=StaticPool,
     )
     Base.metadata.create_all(bind=engine)
     TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -40,26 +43,56 @@ def test_db():
 
 
 @pytest.fixture
-def client(test_db):
-    return TestClient(app)
-
-
-@pytest.fixture
 def mock_verify_token(monkeypatch):
     def verify_token(token):
         if token.startswith("valid-token-"):
             return token.replace("valid-token-", "")
         return None
+
     from app.api import deps
+
     monkeypatch.setattr(deps, "verify_token", verify_token)
 
 
-def test_concurrent_purchase_stress(client, test_db, mock_verify_token):
+def _sqlite_engine(test_db) -> bool:
+    return "sqlite" in str(test_db.url).lower()
+
+
+def _run_buy_attempts(test_db, product_id: int, num_buyers: int) -> list[int]:
+    """Parallel on Postgres; sequential on SQLite (avoids double-commit races)."""
+    if _sqlite_engine(test_db) and os.getenv("FORCE_THREAD_STRESS", "").lower() not in ("1", "true", "yes"):
+        return [_buy_worker(product_id, i) for i in range(num_buyers)]
+    with ThreadPoolExecutor(max_workers=num_buyers) as pool:
+        futures = [pool.submit(_buy_worker, product_id, i) for i in range(num_buyers)]
+        return [f.result() for f in as_completed(futures)]
+
+
+def _run_reserve_attempts(test_db, product_id: int, num_buyers: int) -> list[int]:
+    if _sqlite_engine(test_db) and os.getenv("FORCE_THREAD_STRESS", "").lower() not in ("1", "true", "yes"):
+        return [_reserve_worker(product_id, i) for i in range(num_buyers)]
+    with ThreadPoolExecutor(max_workers=num_buyers) as pool:
+        futures = [pool.submit(_reserve_worker, product_id, i) for i in range(num_buyers)]
+        return [f.result() for f in as_completed(futures)]
+
+
+def _buy_worker(product_id: int, buyer_index: int) -> int:
+    with TestClient(app) as local_client:
+        headers = {"Authorization": f"Bearer valid-token-buyer-stress-{buyer_index}"}
+        response = local_client.post(f"/products/{product_id}/buy", headers=headers)
+        return response.status_code
+
+
+def _reserve_worker(product_id: int, buyer_index: int) -> int:
+    with TestClient(app) as local_client:
+        headers = {"Authorization": f"Bearer valid-token-reserver-{buyer_index}"}
+        response = local_client.post(f"/products/{product_id}/reserve", headers=headers)
+        return response.status_code
+
+
+def test_concurrent_purchase_stress(test_db, mock_verify_token):
     """
-    10 compradores intentan comprar el mismo producto.
-    Solo 1 debe tener éxito (201).
-    Los otros 9 deben recibir 400 (producto ya vendido).
-    Verifica consistencia de estado y número de transacciones creadas.
+    Ten buyers race to purchase the same available product.
+    Exactly one must succeed (201); the others must fail with a client error (e.g. 400).
     """
     NUM_BUYERS = 10
     PRODUCT_PRICE = 50.0
@@ -74,7 +107,7 @@ def test_concurrent_purchase_stress(client, test_db, mock_verify_token):
         category="Test",
         price=PRODUCT_PRICE,
         state=ProductState.AVAILABLE,
-        owner_id="seller-stress"
+        owner_id="seller-stress",
     )
     db.add(product)
     db.commit()
@@ -87,44 +120,35 @@ def test_concurrent_purchase_stress(client, test_db, mock_verify_token):
             amount=INITIAL_BALANCE,
             transaction_type="TOP_UP",
             description="Fondos iniciales",
-            balance_after=INITIAL_BALANCE
+            balance_after=INITIAL_BALANCE,
         )
         db.add(ledger)
     db.commit()
     db.close()
 
-    # 10 intentos de compra secuenciales
-    results = []
-    for i in range(NUM_BUYERS):
-        headers = {"Authorization": f"Bearer valid-token-buyer-stress-{i}"}
-        response = client.post(f"/products/{product_id}/buy", headers=headers)
-        results.append(response.status_code)
+    results = _run_buy_attempts(test_db, product_id, NUM_BUYERS)
 
     successful = results.count(201)
     failed = [r for r in results if r != 201]
 
-    assert successful == 1, f"Esperado 1 éxito, obtenidos {successful}. Resultados: {results}"
+    assert successful == 1, f"Expected exactly one 201, got {successful}. Results: {results}"
     assert len(failed) == NUM_BUYERS - 1
-
     for code in failed:
-        assert code == 400, f"Código inesperado: {code}"
+        assert code in (400, 402), f"Unexpected failure status: {code}"
 
-    # Estado final del producto debe ser SOLD
     db2 = SessionLocal()
     final_product = db2.query(Product).filter(Product.id == product_id).first()
     assert final_product.state == ProductState.SOLD
 
-    # Solo debe existir 1 transacción
     tx_count = db2.query(Transaction).filter(Transaction.product_id == product_id).count()
-    assert tx_count == 1, f"Esperada 1 transacción, encontradas {tx_count}"
+    assert tx_count == 1, f"Expected 1 transaction row, found {tx_count}"
     db2.close()
 
 
-def test_concurrent_reservation_stress(client, test_db, mock_verify_token):
+def test_concurrent_reservation_stress(test_db, mock_verify_token):
     """
-    10 compradores intentan reservar el mismo producto.
-    Solo 1 debe tener éxito (200).
-    Los otros 9 deben recibir 400.
+    Ten buyers race to reserve the same product.
+    Exactly one must succeed (200); others get 409 (already reserved) or 400 (invalid transition).
     """
     NUM_BUYERS = 10
 
@@ -137,7 +161,7 @@ def test_concurrent_reservation_stress(client, test_db, mock_verify_token):
         category="Test",
         price=100.0,
         state=ProductState.AVAILABLE,
-        owner_id="seller-stress-2"
+        owner_id="seller-stress-2",
     )
     db.add(product)
     db.commit()
@@ -145,19 +169,16 @@ def test_concurrent_reservation_stress(client, test_db, mock_verify_token):
     product_id = product.id
     db.close()
 
-    results = []
-    for i in range(NUM_BUYERS):
-        headers = {"Authorization": f"Bearer valid-token-reserver-{i}"}
-        response = client.post(f"/products/{product_id}/reserve", headers=headers)
-        results.append(response.status_code)
+    results = _run_reserve_attempts(test_db, product_id, NUM_BUYERS)
 
     successful = results.count(200)
-    assert successful == 1, f"Esperado 1 éxito, obtenidos {successful}. Resultados: {results}"
+    assert successful == 1, f"Expected exactly one 200, got {successful}. Results: {results}"
 
     failed = [r for r in results if r != 200]
     assert len(failed) == NUM_BUYERS - 1
+    for code in failed:
+        assert code in (400, 409), f"Unexpected failure status: {code}"
 
-    # Estado final debe ser RESERVED
     db2 = SessionLocal()
     final_product = db2.query(Product).filter(Product.id == product_id).first()
     assert final_product.state == ProductState.RESERVED

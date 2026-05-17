@@ -2,6 +2,8 @@
 Wallet router: Top-up, balance check, and wallet history endpoints.
 Ensures all wallet mutations go through the ledger for integrity.
 """
+import time
+
 from fastapi import APIRouter, Depends, status, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
@@ -50,11 +52,11 @@ def top_up_wallet(
     Returns:
         BalanceResponse with updated balance
     """
-    #SPRINT 3: Structured logging 
-    log_request(logger, "POST /wallet/topup", user_id, amount=payload.amount)  # ← SPRINT 3 LOG
+    t0 = time.perf_counter()
+    log_request(logger, "POST /wallet/topup", user_id, amount=payload.amount)
 
     if payload.amount <= 0:
-        log_error(logger, "POST /wallet/topup", user_id, error="Invalid amount")  # ← SPRINT 3 LOG
+        log_error(logger, "POST /wallet/topup", user_id, error="invalid_amount", t0=t0)
         raise InvalidAmountException("Top-up amount must be positive")
     
     # Get current balance from LAST ledger entry
@@ -86,9 +88,10 @@ def top_up_wallet(
         db.refresh(ledger_entry)
     except Exception as e:
         db.rollback()
-        raise AtomicOperationException(str(e))
+        log_error(logger, "POST /wallet/topup", user_id, error=str(e), t0=t0)
+        raise AtomicOperationException(str(e)) from e
 
-    log_result(logger, "POST /wallet/topup", user_id, balance_after=float(balance_after))
+    log_result(logger, "POST /wallet/topup", user_id, t0=t0, balance_after=float(balance_after))
     return BalanceResponse(
         user_id=user_id,
         balance=float(balance_after),
@@ -114,9 +117,8 @@ def get_balance(
     Returns:
         BalanceResponse with current balance from ledger
     """
-
-    #SPRINT 3: Structured logging
-    log_request(logger, "GET /wallet/balance", user_id) 
+    t0 = time.perf_counter()
+    log_request(logger, "GET /wallet/balance", user_id)
     latest_entry = (
         db.query(WalletLedger)
         .filter(WalletLedger.user_id == user_id)
@@ -125,17 +127,20 @@ def get_balance(
     )
 
     if not latest_entry:
-        #SPRINT 3: Structured logging
-        log_result(logger, "GET /wallet/balance", user_id, balance=0.0) 
-        # User has no balance history yet
+        log_result(logger, "GET /wallet/balance", user_id, t0=t0, balance=0.0)
         return BalanceResponse(
             user_id=user_id,
             balance=0.0,
             last_update=datetime.now(timezone.utc)
         )
 
-    #SPRINT 3: Structured logging
-    log_result(logger, "GET /wallet/balance", user_id, balance=float(latest_entry.balance_after))  
+    log_result(
+        logger,
+        "GET /wallet/balance",
+        user_id,
+        t0=t0,
+        balance=float(latest_entry.balance_after),
+    )
     return BalanceResponse(
         user_id=user_id,
         balance=float(latest_entry.balance_after),
@@ -159,7 +164,7 @@ def get_wallet_history(
     - Supports pagination
     - Used for auditing wallet integrity
     """
-    #SPRINT 3: Structured logging
+    t0 = time.perf_counter()
     log_request(logger, "GET /wallet/history", user_id, page=page, per_page=per_page)
     # Get total count
     total = db.query(WalletLedger).filter(WalletLedger.user_id == user_id).count()
@@ -186,8 +191,7 @@ def get_wallet_history(
     if entries:
         current_balance = float(entries[0].balance_after)
 
-    #Sprint 3: Structured logging
-    log_result(logger, "GET /wallet/history", user_id, total_entries=total, page=page)
+    log_result(logger, "GET /wallet/history", user_id, t0=t0, total_entries=total, page=page)
     return WalletHistoryResponse(
         user_id=user_id,
         balance=current_balance,

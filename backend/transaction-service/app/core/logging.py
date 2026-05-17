@@ -1,59 +1,76 @@
 """
-SPRINT 3: Structured Logging
-Structured JSON logging for the transaction service.
+Structured JSON logging via structlog (Sprint 3).
 """
+from __future__ import annotations
+
 import logging
-import json
-from datetime import datetime, timezone
+import sys
+import time
+from typing import Any
+
+import structlog
+
+_CONFIGURED = False
 
 
-class JSONFormatter(logging.Formatter):
-    """Formats log records as JSON for structured logging."""
-
-    def format(self, record: logging.LogRecord) -> str:
-        log_entry = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "level":     record.levelname,
-            "service":   "transaction-service",
-            "message":   record.getMessage(),
-        }
-        if hasattr(record, "extra"):
-            log_entry.update(record.extra)
-        if record.exc_info:
-            log_entry["exception"] = self.formatException(record.exc_info)
-        return json.dumps(log_entry)
+def _service_name_processor(_logger: Any, _method_name: str, event_dict: dict[str, Any]) -> dict[str, Any]:
+    event_dict.setdefault("service", "transaction-service")
+    return event_dict
 
 
-def get_logger(name: str) -> logging.Logger:
-    """Returns a logger configured with JSON structured output."""
-    logger = logging.getLogger(name)
-    if not logger.handlers:
-        handler = logging.StreamHandler()
-        handler.setFormatter(JSONFormatter())
-        logger.addHandler(handler)
-        logger.setLevel(logging.INFO)
-    return logger
-
-
-def log_request(logger: logging.Logger, endpoint: str, user_id: str, **kwargs) -> None:
-    """Logs an incoming request with sanitized input."""
-    logger.info(
-        f"Request: {endpoint}",
-        extra={"extra": {"endpoint": endpoint, "user_id": user_id, **kwargs}}
+def configure_logging() -> None:
+    """Idempotent setup: JSON logs on stdout, INFO level."""
+    global _CONFIGURED
+    if _CONFIGURED:
+        return
+    logging.basicConfig(format="%(message)s", stream=sys.stdout, level=logging.INFO)
+    structlog.configure(
+        processors=[
+            structlog.contextvars.merge_contextvars,
+            structlog.processors.add_log_level,
+            structlog.processors.TimeStamper(fmt="iso", utc=True, key="timestamp"),
+            _service_name_processor,
+            structlog.processors.StackInfoRenderer(),
+            structlog.processors.format_exc_info,
+            structlog.processors.JSONRenderer(),
+        ],
+        wrapper_class=structlog.make_filtering_bound_logger(logging.INFO),
+        context_class=dict,
+        logger_factory=structlog.PrintLoggerFactory(file=sys.stdout),
+        cache_logger_on_first_use=True,
     )
+    _CONFIGURED = True
 
 
-def log_result(logger: logging.Logger, endpoint: str, user_id: str, **kwargs) -> None:
-    """Logs a successful result."""
-    logger.info(
-        f"Success: {endpoint}",
-        extra={"extra": {"endpoint": endpoint, "user_id": user_id, **kwargs}}
-    )
+def get_logger(name: str) -> Any:
+    """Return a structlog bound logger (call configure_logging() once at app startup)."""
+    return structlog.get_logger(name)
 
 
-def log_error(logger: logging.Logger, endpoint: str, user_id: str, error: str, **kwargs) -> None:
-    """Logs an error with context."""
-    logger.error(
-        f"Error: {endpoint}",
-        extra={"extra": {"endpoint": endpoint, "user_id": user_id, "error": error, **kwargs}}
-    )
+def log_request(logger: Any, endpoint: str, user_id: str, **kwargs: Any) -> None:
+    """Log incoming request with sanitized context (no secrets)."""
+    logger.info("http_request", endpoint=endpoint, user_id=str(user_id), **kwargs)
+
+
+def log_result(logger: Any, endpoint: str, user_id: str, *, t0: float | None = None, **kwargs: Any) -> None:
+    """Log successful handler completion; include duration_ms when t0 is set."""
+    payload: dict[str, Any] = dict(kwargs)
+    if t0 is not None:
+        payload["duration_ms"] = round((time.perf_counter() - t0) * 1000, 2)
+    logger.info("http_success", endpoint=endpoint, user_id=str(user_id), **payload)
+
+
+def log_error(
+    logger: Any,
+    endpoint: str,
+    user_id: str,
+    *,
+    error: str,
+    t0: float | None = None,
+    **kwargs: Any,
+) -> None:
+    """Log handler error; include duration_ms when t0 is set."""
+    payload: dict[str, Any] = {"error": error, **kwargs}
+    if t0 is not None:
+        payload["duration_ms"] = round((time.perf_counter() - t0) * 1000, 2)
+    logger.error("http_error", endpoint=endpoint, user_id=str(user_id), **payload)
