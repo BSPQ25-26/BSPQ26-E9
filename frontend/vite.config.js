@@ -56,6 +56,7 @@ export default defineConfig(({ mode }) => {
       },
     },
     server: {
+      allowedHosts: ['.up.railway.app', '.railway.app', '.onrender.com'],
       proxy: {
         '/auth': {
           target: proxyTargets.auth,
