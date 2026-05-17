@@ -71,15 +71,19 @@ services:
         fromService:
           name: auth-service
           type: web
+          property: host
       - key: INVENTORY_SERVICE_URL
         fromService:
           name: inventory-service
           type: web
+          property: host
       - key: TRANSACTION_SERVICE_URL
         fromService:
           name: transaction-service
           type: web
+          property: host
       - key: AGENTIC_SERVICE_URL
         fromService:
           name: agentic-service
           type: web
+          property: host
