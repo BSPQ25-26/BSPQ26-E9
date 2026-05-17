@@ -1,161 +1,80 @@
 # BSPQ26-E9
-Repository for team BSPQ26-E9
 
-# Wallabot: AI-Powered Microservices Marketplace
+Wallabot is a multi-service marketplace built around a Vue frontend, four FastAPI backend services, and a Docker-based container
+ stack. The application covers authentication, product browsing and management, wallet and transaction flows, and AI-assisted category and pricing support.
 
-Wallabot is a multi-tier, distributed **RESTful microservice architecture** designed to provide a seamless buying and selling experience. The platform integrates advanced AI capabilities via "Wallabot," an intelligent agent that assists users with automated category suggestions and competitive price recommendations.
+## Application Flow
 
----
+The user journey is centered on the frontend router:
 
-## Features
+1. `/` redirects to `/products`.
+2. Anonymous users trying to access protected pages are redirected to `/login`.
+3. `/login` and `/register` are public-only routes.
+4. `/auth/callback` handles social login redirects.
+5. `/products` is the main authenticated catalog.
+6. `/products/:id` shows product details.
+7. `/products/:id/create` and `/products/:id/edit` handle product creation and editing.
 
-### **User Management & Authentication**
+The frontend uses a hash router and syncs authentication state from local storage before each route change. If a protected route is requested without a token, the user is sent back to login with the original target preserved as a redirect parameter.
 
-* **Secure Access**: Traditional registration and login using email and password with hashed storage for security.
+## Services
 
+The backend is split into four services, each with its own responsibility:
 
-* **Social Integration**: OAuth2 authentication flow supporting Google and Facebook accounts.
+| Service | Responsibility | Default local port |
+| --- | --- | --- |
+| `auth-service` | Registration, login, JWT sessions, and social auth callbacks | `8001` |
+| `inventory-service` | Product CRUD, image uploads, and product catalog storage | `8002` |
+| `transaction-service` | Wallet operations, reservations, sales, and transaction history | `8003` |
+| `agentic-service` | AI-assisted category suggestions and pricing support | `8004` |
 
+The frontend runs on `5173` and talks to those services through the URLs provided in the environment.
 
-* **Identity**: Stateless authentication handled via JWT tokens with set expirations.
-
-
-* **Trust System**: A post-transaction rating (1-5 stars) and review system to build community trust.
-
-
-
-### **Inventory & Transaction Engine**
-
-* **Product Lifecycle**: Full CRUD operations for sellers, including image uploads (JPEG/PNG) and quality specifications.
-
-
-* **State Management**: Atomic transitions between `Available`, `Reserved`, and `Sold` states to ensure data integrity.
-
-
-* **Virtual Wallet**: Integrated wallet system for adding funds and making secure, balance-validated purchases.
-
-
-
-### **Wallabot (AI Agent)**
-
-* 
-**Smart Categorization**: Automatically suggests product categories in structured JSON format.
-
-
-* **Price Recommendations**: Provides competitive pricing data using **Tavily** real-time web search grounded by **OpenAI GPT-4o-mini** structured output.
-
-
-* **Observability**: Uses **LangSmith** to trace every AI chain invocation, monitor latency, and alert on validation failures or slow responses.
-
-
-
-### **User Experience**
-
-* **Reactive Frontend**: Built with **TO BE DEFINED** for an intuitive and responsive product listing interface.
-
-
-* 
-**Advanced Filtering**: Capability to filter the product catalog by state, category, price range, and item quality.
-
-
-
----
-
-## Stack
-
-| Component | Technology |
-| --- | --- |
-
- |
-|  **Backend** | FastAPI (Python) 
-
- |
-| **Frontend** | TO BE DEFINED
-
- |
-| **Database** | TO BE DEFINED 
-
- |
-| **AI Monitoring** | LangSmith 
-
- |
-| **External AI API** | OpenAI (GPT-4o-mini) + Tavily Search
-
- |
-| **Containerization** | Docker & Docker Compose 
-
- |
-| **CI/CD** | GitHub Actions 
-
- 
-
----
-
-## Development & Deployment
-
-## Current Project Structure
+## Repository Structure
 
 ```text
 BSPQ26-E9/
-├── .env
 ├── .github/
-├── .gitignore
-├── LICENSE
-├── README.md
-├── docker-compose.yml
+│   └── workflows/
 ├── backend/
-│   ├── agentic-service/
-│   │   ├── Dockerfile
-│   │   └── requirements.txt
 │   ├── auth-service/
+│   │   └── app/
 │   ├── inventory-service/
-│   │   ├── Dockerfile
-│   │   └── requirements.txt
-│   └── transaction-service/
-│       ├── Dockerfile
-│       └── requirements.txt
-├── data/
-│   └── test-wallabot.db
+│   │   ├── app/
+│   │   └── migrations/
+│   ├── transaction-service/
+│   │   └── app/
+│   └── agentic-service/
+│       └── app/
 ├── frontend/
-│   └── Dockerfile
-└── tests/
-	└── integration/
+│   └── src/
+│       ├── components/
+│       ├── composables/
+│       ├── router/
+│       ├── stores/
+│       └── views/
+├── tests/
+│   ├── integration/
+│   ├── performance/
+│   └── smoke/
+├── docker-compose.yml
+├── requirements.txt
+└── README.md
 ```
 
-### **Containerization**
+## Local Development
 
-Each microservice is containerized using optimized **Dockerfiles**. You can spin up the entire local environment, including the database and services, using **Docker Compose**.
+The default local setup uses Docker Compose with SQLite-backed services and optional Supabase configuration through the root `.env` file.
 
-### **Local Deployment**
-
-The local stack uses fixed ports. Do not run the Docker frontend and a separate
-`npm run dev` frontend at the same time, because both use port `5173`.
-
-Port map:
-- Frontend: `http://localhost:5173`
-- Auth service: `http://localhost:8001/health`
-- Inventory service: `http://localhost:8002/health`
-- Transaction service: `http://localhost:8003/health`
-- Wallabot agentic service: `http://localhost:8004/health`
-
-Before a clean restart, stop old project containers and any local Vite process:
+Start the full stack:
 
 ```bash
-docker-compose down
-pkill -f "$PWD/frontend/node_modules/.bin/vite" || true
+docker-compose up --build -d
 ```
 
-Run the full app with Docker:
+Open the application at `http://localhost:5173`.
 
-```bash
-docker-compose up --build
-```
-
-Then open `http://localhost:5173`. The app root (`/`) redirects to `/products`;
-if you are not authenticated, it redirects to `/login`.
-
-For backend-in-Docker plus frontend-on-host development, start only the backend
-services:
+If you want the frontend on the host and only the backend services in Docker:
 
 ```bash
 docker-compose up --build -d auth-service inventory-service transaction-service agentic-service
@@ -250,83 +169,64 @@ python -m pytest --cov=app --cov-report=term-missing --cov-fail-under=50 -q
 
 
 ---
+Useful local endpoints:
 
-## Wallabot — LangSmith Monitoring
+| Endpoint | URL |
+| --- | --- |
+| Frontend | `http://localhost:5173` |
+| Auth health | `http://localhost:8001/health` |
+| Inventory health | `http://localhost:8002/health` |
+| Transaction health | `http://localhost:8003/health` |
+| Agentic health | `http://localhost:8004/health` |
 
-All Wallabot LCEL chains (category suggestion and price recommendation) are
-auto-instrumented by LangSmith when tracing is enabled. No code changes are
-needed beyond setting the environment variables.
+Before restarting the stack, stop any existing containers and Vite process:
 
-### Enable tracing
-
-In `backend/agentic-service/.env` (or the root `.env`):
-
+```bash
+docker-compose down
+pkill -f "$PWD/frontend/node_modules/.bin/vite" || true
 ```
-LANGCHAIN_TRACING_V2=true
-LANGCHAIN_API_KEY=<your key from smith.langchain.com>
-LANGCHAIN_PROJECT=wallabot
+
+## CI/CD Pipeline
+
+GitHub Actions runs the project in layered stages:
+
+1. Backend linting with `ruff`.
+2. Frontend linting with ESLint.
+3. Per-service pytest jobs for `auth-service`, `inventory-service`, `transaction-service`, and `agentic-service`.
+4. A Docker-backed backend test job that runs the services against PostgreSQL.
+5. A final Docker Compose smoke test that builds the full stack and checks each `/health` endpoint.
+
+The pytest jobs now generate three coverage outputs:
+
+* terminal coverage output for the job log
+* XML coverage reports
+* HTML coverage reports
+
+Those reports are uploaded as CI artifacts for each service. The Docker-backed backend job also uploads a combined coverage artifact set.
+
+### CI Artifacts
+
+Coverage artifacts are published under these names:
+
+* `coverage-auth-service`
+* `coverage-inventory-service`
+* `coverage-transaction-service`
+* `coverage-agentic-service`
+* `coverage-backend-docker`
+
+## Coverage Verification
+
+Coverage is measured with `pytest-cov`. To reproduce the CI check locally, run the relevant service test suite with a minimum threshold.
+
+Example for `auth-service`:
+
+```bash
+cd backend/auth-service
+export DATABASE_URL="sqlite:///./test_auth.db"
+export JWT_SECRET="ci-test-secret"
+export JWT_EXPIRY_MINUTES="30"
+pytest --cov=app --cov-report=term-missing --cov-report=xml --cov-report=html --cov-fail-under=50 -q
 ```
 
-The service logs `Wallabot LangSmith tracing ENABLED project='wallabot'` at
-startup when tracing is active.
+The same pattern applies to the other backend services, adjusting the environment variables as needed.
 
-### Accessing the dashboard
-
-1. Open [smith.langchain.com](https://smith.langchain.com) and sign in.
-2. Select the project named `wallabot` (or whatever `LANGCHAIN_PROJECT` is set to).
-3. The **Traces** tab shows every chain invocation with inputs, outputs, and
-   per-step latency.
-
-### Run names and tags
-
-| Run name | What it represents |
-|----------|-------------------|
-| `wallabot_category_suggest` | One category classification request (full chain) |
-| `wallabot_price_recommendation` | One price recommendation request (full chain) |
-| `wallabot_category_agent_validation_failure` | Parser/schema error logged during a category retry |
-| `wallabot_price_agent_validation_failure` | Parser/schema error logged during a price retry |
-| `wallabot_category_agent_latency_exceeded` | Category call exceeded 15 s threshold |
-| `wallabot_price_agent_latency_exceeded` | Price call exceeded 30 s threshold |
-
-All Wallabot runs are tagged `wallabot` plus the component tag (`category_agent`
-or `price_agent`), making it easy to filter by agent in the dashboard.
-
-### Setting up alert rules
-
-In LangSmith → **Automations** → **Add Rule**:
-
-1. **Validation-failure alert**
-   - Filter: Run name contains `validation_failure`
-   - Condition: count > 0 in a 5-minute window
-   - Action: email / Slack webhook
-
-2. **Latency alert**
-   - Filter: Run name contains `latency_exceeded`
-   - Condition: count > 0 in any window
-   - Action: email / Slack webhook
-
-### Interpreting and responding to alerts
-
-| Alert | Likely cause | Response |
-|-------|-------------|----------|
-| `validation_failure` fires repeatedly | Prompt drift — LLM output stopped conforming to the JSON schema | Open the failing run in LangSmith, inspect `llm_output` in the error field, update the prompt in `prompts.py` |
-| `latency_exceeded` for price agent | Tavily rate-limit or slow OpenAI response | Check Tavily dashboard for quota; consider caching frequent queries |
-| `latency_exceeded` for category agent | OpenAI latency spike | Monitor OpenAI status page; the fallback path returns immediately if the provider is down |
-
----
-
-## Product Backlog Highlights
-
-The project is prioritized to ensure core functionality is delivered first:
-
-* **High Priority (1-2)**: Email/Password Authentication, Basic Product Listings, and Containerization.
-
-
-* **Medium Priority (3-5)**: Wallet Management, Image Uploads, and CI/CD Pipeline Setup.
-
-
-* **AI & Social (6-9)**: Social Logins, AI Category/Price suggestions, and User Ratings.
-
-
-
----
