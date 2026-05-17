@@ -175,6 +175,20 @@ Local environment files:
 If your Docker installation has Compose v2, `docker compose` is equivalent to
 `docker-compose`; this machine currently provides `docker-compose`.
 
+### **Render Deployment**
+
+For Render, this repository uses a multi-service blueprint in [render.yaml](render.yaml).
+It creates one Render web service per backend, plus a frontend web service that serves the Vue build and reverse-proxies API calls to the internal Render services.
+
+The frontend stays on the same origin as the browser, so the app can keep using relative API paths while Render handles service-to-service routing privately.
+
+Notes:
+- The backend services use persistent disks mounted at `/app/data` so their SQLite fallbacks survive redeploys.
+- `OPENAI_API_KEY` and `TAVILY_API_KEY` are left as Render secret prompts for the agentic service.
+- The frontend image is defined in [frontend/Dockerfile.render](frontend/Dockerfile.render) and proxies `/auth`, `/api/v1`, `/uploads`, `/products`, `/wallet`, `/transactions`, and `/wallabot` to the matching backend services.
+
+To deploy, connect the repo to a Render Blueprint and point it at [render.yaml](render.yaml).
+
 ### **CI/CD Pipeline**
 
 The project uses **GitHub Actions** to automate quality assurance. The pipeline:
