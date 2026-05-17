@@ -5,7 +5,7 @@ services:
     plan: free
     dockerfilePath: backend/auth-service/Dockerfile
     dockerContext: .
-    dockerCommand: sh -c "uvicorn app.main:app --host 0.0.0.0 --port 10000"
+    dockerCommand: uvicorn app.main:app --host 0.0.0.0 --port 10000
     healthCheckPath: /health
     envVars:
       - key: AUTH_DATABASE_URL
@@ -17,7 +17,7 @@ services:
     plan: free
     dockerfilePath: backend/inventory-service/Dockerfile
     dockerContext: .
-    dockerCommand: sh -c "uvicorn app.main:app --host 0.0.0.0 --port 10000"
+    dockerCommand: uvicorn app.main:app --host 0.0.0.0 --port 10000
     healthCheckPath: /health
     envVars:
       - key: DATABASE_URL
@@ -31,7 +31,7 @@ services:
     plan: free
     dockerfilePath: backend/transaction-service/Dockerfile
     dockerContext: .
-    dockerCommand: sh -c "python -m uvicorn app.main:app --host 0.0.0.0 --port 10000"
+    dockerCommand: python -m uvicorn app.main:app --host 0.0.0.0 --port 10000
     healthCheckPath: /health
     envVars:
       - key: DATABASE_URL
@@ -45,7 +45,7 @@ services:
     plan: free
     dockerfilePath: backend/agentic-service/Dockerfile
     dockerContext: .
-    dockerCommand: sh -c "uvicorn app.main:app --host 0.0.0.0 --port 10000"
+    dockerCommand: uvicorn app.main:app --host 0.0.0.0 --port 10000
     healthCheckPath: /health
     envVars:
       - key: OPENAI_API_KEY
