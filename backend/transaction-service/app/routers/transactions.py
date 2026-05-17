@@ -363,6 +363,14 @@ def purchase_product(
         )
         db.add(transaction)
 
+        # Ensure the transaction has a primary key before commit,
+        # then re-load it from the DB after commit to avoid accessing
+        # a potentially detached/deleted ORM instance in concurrent setups.
+        db.flush()
+        txn_id = transaction.id
+        db.commit()
+        transaction = db.get(type(transaction), txn_id)
+
         db.commit()
 
     except Exception as e:
