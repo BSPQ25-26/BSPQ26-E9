@@ -11,7 +11,7 @@ Tests:
 
 import pytest
 #import threading
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -425,8 +425,7 @@ def test_timeout_release_expired_reservation(client, test_db, mock_verify_token)
     Test timeout release of expired reservations.
     """
     from app.routers.transactions import release_expired_reservations, RESERVATION_TIMEOUT_SECONDS
-    from datetime import timedelta
-    
+
     TestingSessionLocal = sessionmaker(bind=test_db)
     db = TestingSessionLocal()
     
@@ -443,7 +442,7 @@ def test_timeout_release_expired_reservation(client, test_db, mock_verify_token)
     #product_id = product.id
     
     product.state = ProductState.RESERVED
-    product.reserved_at = datetime.now() - timedelta(seconds=RESERVATION_TIMEOUT_SECONDS + 60)
+    product.reserved_at = datetime.now(timezone.utc) - timedelta(seconds=RESERVATION_TIMEOUT_SECONDS + 60)
     db.commit()
     
     db.refresh(product)

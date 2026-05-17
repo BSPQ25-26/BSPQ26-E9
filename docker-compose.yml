@@ -81,6 +81,9 @@ services:
     environment:
       - DATABASE_URL=${TRANSACTION_DATABASE_URL:-sqlite:////app/data/transactions.db}
       - SERVICE_NAME=transaction-service
+      - RESERVATION_TIMEOUT_SECONDS=${RESERVATION_TIMEOUT_SECONDS:-900}
+      - RESERVATION_CLEANUP_INTERVAL_SECONDS=${RESERVATION_CLEANUP_INTERVAL_SECONDS:-60}
+      - RESERVATION_CLEANUP_ENABLED=${RESERVATION_CLEANUP_ENABLED:-true}
     volumes:
       - wallabot-data:/app/data
     healthcheck:

@@ -12,8 +12,12 @@ class Settings(BaseSettings):
     SECRET_KEY: str               = "mi_clave_secreta"
     ALGORITHM: str                = "HS256"
     #SPRINT 3: Reservation Timeout Tuning
-    RESERVATION_TIMEOUT_SECONDS: int = 900  
-    
+    RESERVATION_TIMEOUT_SECONDS: int = 900
+    # Background thread: how often to scan for expired reservations (seconds)
+    RESERVATION_CLEANUP_INTERVAL_SECONDS: int = 60
+    # Set true in Docker/production; keep false in tests to avoid extra DB sessions
+    RESERVATION_CLEANUP_ENABLED: bool = False
+
     model_config = ConfigDict(
         env_file=Path(__file__).parent.parent.parent.parent.parent / ".env",
         extra="ignore"

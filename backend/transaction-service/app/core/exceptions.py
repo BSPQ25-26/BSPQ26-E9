@@ -47,3 +47,33 @@ class AtomicOperationException(HTTPException):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Atomic operation failed: {detail}"
         )
+
+
+class ReservationConflictException(HTTPException):
+    """Another buyer already holds an active reservation."""
+
+    def __init__(self):
+        super().__init__(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Product is already reserved",
+        )
+
+
+class PurchaseReservedByOtherException(HTTPException):
+    """Buyer is not the reservation holder."""
+
+    def __init__(self):
+        super().__init__(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="This product is reserved by another user",
+        )
+
+
+class ReservationReleaseInvalidStateException(HTTPException):
+    """Product cannot be released from reservation in its current state."""
+
+    def __init__(self, state: str):
+        super().__init__(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Product is {state} and cannot be released",
+        )
