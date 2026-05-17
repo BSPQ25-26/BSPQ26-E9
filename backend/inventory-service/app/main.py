@@ -3,6 +3,7 @@ import os
 import shutil
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from app.api.v1.product_router import UPLOAD_DIR, router as product_router
 from app.db.init_db import init_db
@@ -36,6 +37,15 @@ async def lifespan(app: FastAPI):
 prepare_upload_storage()
 
 app = FastAPI(lifespan=lifespan)
+
+_frontend_url = os.getenv("FRONTEND_URL", "https://wallabot-frontend.onrender.com")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[_frontend_url, "http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.include_router(product_router, prefix="/api/v1")
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")

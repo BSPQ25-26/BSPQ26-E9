@@ -5,9 +5,11 @@ Tables are managed directly in Supabase via SQL scripts.
 """
 
 from contextlib import asynccontextmanager
+import os
 import threading
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import inspect, text
 
 from app.database import DATABASE_URL, engine
@@ -87,6 +89,16 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
+_frontend_url = os.getenv("FRONTEND_URL", "https://wallabot-frontend.onrender.com")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[_frontend_url, "http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 _register_routers(app)
 
 
