@@ -7,10 +7,6 @@ services:
     dockerContext: .
     dockerCommand: sh -c "uvicorn app.main:app --host 0.0.0.0 --port 10000"
     healthCheckPath: /health
-    disk:
-      name: auth-data
-      mountPath: /app/data
-      sizeGB: 1
     envVars:
       - key: AUTH_DATABASE_URL
         value: sqlite:////app/data/auth.db
@@ -23,10 +19,6 @@ services:
     dockerContext: .
     dockerCommand: sh -c "uvicorn app.main:app --host 0.0.0.0 --port 10000"
     healthCheckPath: /health
-    disk:
-      name: inventory-data
-      mountPath: /app/data
-      sizeGB: 1
     envVars:
       - key: DATABASE_URL
         value: sqlite:////app/data/inventory.db
@@ -41,10 +33,6 @@ services:
     dockerContext: .
     dockerCommand: sh -c "python -m uvicorn app.main:app --host 0.0.0.0 --port 10000"
     healthCheckPath: /health
-    disk:
-      name: transaction-data
-      mountPath: /app/data
-      sizeGB: 1
     envVars:
       - key: DATABASE_URL
         value: sqlite:////app/data/transactions.db
