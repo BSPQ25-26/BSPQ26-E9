@@ -3,7 +3,9 @@ Transaction router: Product reservation and purchase endpoints.
 Handles wallet-based purchases with atomic transactions and state transitions.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+import time
+
+from fastapi import APIRouter, Depends, status, Query
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 from datetime import datetime, timezone
@@ -27,7 +29,10 @@ from app.core.exceptions import (
     ProductForbiddenException,
     InvalidStateTransitionException,
     InsufficientFundsException,
-    AtomicOperationException
+    AtomicOperationException,
+    ReservationConflictException,
+    PurchaseReservedByOtherException,
+    ReservationReleaseInvalidStateException,
 )
 # Sprint 3: Structured logging
 from app.core.logging import get_logger, log_request, log_result, log_error
@@ -59,39 +64,58 @@ def reserve_product(
 ):
     """
     Reserve a product for future purchase.
-    
+
     - Transitions product state: Available → Reserved
     - Records state change in history
     - Returns updated product state
     - Prevents self-reservation (ownership guard)
     """
-    #SPRINT 3:Structured logging
-    log_request(logger, "POST /products/{product_id}/reserve", user_id, product_id=product_id)  # ← SPRINT 3 LOG
-    # Get product and validate existence
-    product = db.query(Product).filter(Product.id == product_id).first()
-    #Sprint 3: Error handlig audit 
+    t0 = time.perf_counter()
+    endpoint = f"POST /products/{product_id}/reserve"
+    log_request(logger, endpoint, user_id, product_id=product_id)
+
+    product = db.query(Product).filter(Product.id == product_id).with_for_update().first()
+
     if not product:
+        log_error(logger, endpoint, user_id, error="product_not_found", product_id=product_id, t0=t0)
         raise ProductNotFoundException(product_id)
-    
+
     if product.owner_id == user_id:
+        log_error(logger, endpoint, user_id, error="cannot_reserve_own_product", product_id=product_id, t0=t0)
         raise ProductForbiddenException("Cannot reserve your own product")
+
     if product.state == ProductState.RESERVED:
         latest_reservation = get_latest_reservation_history(db, product.id)
 
         if latest_reservation and latest_reservation.changed_by == user_id:
+            log_result(
+                logger,
+                endpoint,
+                user_id,
+                t0=t0,
+                product_id=product_id,
+                outcome="idempotent_reserved",
+            )
             return {
                 "product_id": product.id,
                 "state": product.state,
                 "reserved_by": user_id,
-                "updated_at": product.updated_at
+                "updated_at": product.updated_at,
             }
 
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Product is already reserved"
-        )
-    
+        log_error(logger, endpoint, user_id, error="already_reserved", product_id=product_id, t0=t0)
+        raise ReservationConflictException()
+
     if not is_valid_transition(product.state, ProductState.RESERVED):
+        log_error(
+            logger,
+            endpoint,
+            user_id,
+            error="invalid_state_transition",
+            product_id=product_id,
+            from_state=str(product.state),
+            t0=t0,
+        )
         raise InvalidStateTransitionException(product.state, ProductState.RESERVED)
 
     old_state = product.state
@@ -99,26 +123,24 @@ def reserve_product(
     product.reserved_by = user_id
     product.reserved_at = datetime.now(timezone.utc)
     product.updated_at = datetime.now(timezone.utc)
-    
+
     history = ProductStateHistory(
         product_id=product.id,
         from_state=old_state.value if isinstance(old_state, ProductState) else old_state,
         to_state=ProductState.RESERVED.value,
-        changed_by=user_id
+        changed_by=user_id,
     )
-    
+
     db.add(history)
     db.commit()
     db.refresh(product)
-    
-    #SPRINT3: STRUCTURED LOGGING 
-    log_result(logger, f"POST /products/{product_id}/reserve", user_id, product_id=product_id)
-    #return confirmation
+
+    log_result(logger, endpoint, user_id, t0=t0, product_id=product_id, state=str(product.state))
     return {
         "product_id": product.id,
         "state": product.state,
         "reserved_by": user_id,
-        "updated_at": product.updated_at
+        "updated_at": product.updated_at,
     }
 
 
@@ -129,34 +151,50 @@ def cancel_reservation(
     user_id: str = Depends(get_current_user_id)
 ):
     """Cancel a reservation owned by the user or product seller."""
-    product = db.query(Product).filter(Product.id == product_id).first()
+    t0 = time.perf_counter()
+    endpoint = f"POST /products/{product_id}/cancel-reservation"
+    log_request(logger, endpoint, user_id, product_id=product_id)
+
+    product = db.query(Product).filter(Product.id == product_id).with_for_update().first()
     if not product:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Product {product_id} not found"
-        )
+        log_error(logger, endpoint, user_id, error="product_not_found", product_id=product_id, t0=t0)
+        raise ProductNotFoundException(product_id)
 
     if product.state == ProductState.AVAILABLE:
+        log_result(
+            logger,
+            endpoint,
+            user_id,
+            t0=t0,
+            product_id=product_id,
+            outcome="noop_already_available",
+        )
         return {
             "product_id": product.id,
             "state": product.state,
             "cancelled_by": user_id,
-            "updated_at": product.updated_at
+            "updated_at": product.updated_at,
         }
 
     if product.state != ProductState.RESERVED:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Product is {product.state} and cannot be released"
+        log_error(
+            logger,
+            endpoint,
+            user_id,
+            error="invalid_state_for_release",
+            product_id=product_id,
+            state=str(product.state),
+            t0=t0,
         )
+        raise ReservationReleaseInvalidStateException(str(product.state))
 
     latest_reservation = get_latest_reservation_history(db, product.id)
     reserved_by = latest_reservation.changed_by if latest_reservation else None
 
     if user_id not in {reserved_by, product.owner_id}:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only the reservation owner or seller can cancel this reservation"
+        log_error(logger, endpoint, user_id, error="cancel_forbidden", product_id=product_id, t0=t0)
+        raise ProductForbiddenException(
+            "Only the reservation owner or seller can cancel this reservation"
         )
 
     old_state = product.state
@@ -169,18 +207,19 @@ def cancel_reservation(
         product_id=product.id,
         from_state=old_state.value if isinstance(old_state, ProductState) else old_state,
         to_state=ProductState.AVAILABLE.value,
-        changed_by=user_id
+        changed_by=user_id,
     )
 
     db.add(history)
     db.commit()
     db.refresh(product)
 
+    log_result(logger, endpoint, user_id, t0=t0, product_id=product_id, state=str(product.state))
     return {
         "product_id": product.id,
         "state": product.state,
         "cancelled_by": user_id,
-        "updated_at": product.updated_at
+        "updated_at": product.updated_at,
     }
 
 
@@ -215,33 +254,36 @@ def purchase_product(
        - This ensures buyer and seller balances are always consistent
     
     """
-    #Sprint 3: Structured logging
-    log_request(logger, f"POST /products/{product_id}/buy", user_id)
+    t0 = time.perf_counter()
+    endpoint = f"POST /products/{product_id}/buy"
+    log_request(logger, endpoint, user_id, product_id=product_id)
 
-    # Get product
-    product = db.query(Product).filter(Product.id == product_id).first()
-    
-    
+    product = db.query(Product).filter(Product.id == product_id).with_for_update().first()
+
     if not product:
-        #SPRINT 3: Structured logging
-        log_error(logger, f"POST /products/{product_id}/buy", user_id, error="Product not found")
-        #Sprint 3: Error handling audit
+        log_error(logger, endpoint, user_id, error="product_not_found", product_id=product_id, t0=t0)
         raise ProductNotFoundException(product_id)
-    
+
     if product.owner_id == user_id:
-        log_error(logger, f"POST /products/{product_id}/buy", user_id, error="Cannot purchase your own product")
+        log_error(logger, endpoint, user_id, error="cannot_buy_own_product", product_id=product_id, t0=t0)
         raise ProductForbiddenException("Cannot purchase your own product")
-    
+
     if product.state not in [ProductState.AVAILABLE, ProductState.RESERVED]:
-        log_error(logger, f"POST /products/{product_id}/buy", user_id, error=f"Invalid product state: {product.state}")
-        raise InvalidStateTransitionException(product.state, ProductState.SOLD)
-    
-    if product.state == ProductState.RESERVED and product.reserved_by != user_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="This product is reserved by another user"
+        log_error(
+            logger,
+            endpoint,
+            user_id,
+            error="invalid_product_state",
+            product_id=product_id,
+            state=str(product.state),
+            t0=t0,
         )
-    
+        raise InvalidStateTransitionException(product.state, ProductState.SOLD)
+
+    if product.state == ProductState.RESERVED and product.reserved_by != user_id:
+        log_error(logger, endpoint, user_id, error="reserved_by_other_user", product_id=product_id, t0=t0)
+        raise PurchaseReservedByOtherException()
+
     buyer_ledger = (
         db.query(WalletLedger)
         .filter(WalletLedger.user_id == user_id)
@@ -249,16 +291,23 @@ def purchase_product(
         .with_for_update()
         .first()
     )
-    
+
     buyer_balance = Decimal(str(buyer_ledger.balance_after)) if buyer_ledger else Decimal("0.00")
     product_price = Decimal(str(product.price))
-    
+
     if buyer_balance < product_price:
-        #Sprint 3: Strutured logging 
-        log_error(logger, f"POST /products/{product_id}/buy", user_id, error=f"Insufficient funds: {buyer_balance} < {product_price}")
-        #Sprint 3: Error handling audit
+        log_error(
+            logger,
+            endpoint,
+            user_id,
+            error="insufficient_funds",
+            product_id=product_id,
+            balance=float(buyer_balance),
+            required=float(product_price),
+            t0=t0,
+        )
         raise InsufficientFundsException(float(buyer_balance), float(product_price))
-    
+
     try:
         buyer_new_balance = buyer_balance - product_price
         buyer_debit = WalletLedger(
@@ -267,17 +316,17 @@ def purchase_product(
             transaction_type="purchase",
             description=f"Sale of product {product_id}",
             balance_after=buyer_new_balance,
-            created_at=datetime.now(timezone.utc)
+            created_at=datetime.now(timezone.utc),
         )
         db.add(buyer_debit)
-        
+
         seller_ledger = (
             db.query(WalletLedger)
             .filter(WalletLedger.user_id == product.owner_id)
             .order_by(desc(WalletLedger.id))
             .first()
         )
-        
+
         seller_balance = Decimal(str(seller_ledger.balance_after)) if seller_ledger else Decimal("0.00")
         seller_new_balance = seller_balance + product_price
         seller_credit = WalletLedger(
@@ -286,49 +335,50 @@ def purchase_product(
             description=f"Sale of product {product_id}",
             transaction_type="refund",
             balance_after=seller_new_balance,
-            created_at=datetime.now(timezone.utc)
+            created_at=datetime.now(timezone.utc),
         )
         db.add(seller_credit)
-        
+
         old_state = product.state
         product.state = ProductState.SOLD
         product.reserved_by = None
         product.reserved_at = None
         product.updated_at = datetime.now(timezone.utc)
-        
+
         history = ProductStateHistory(
             product_id=product.id,
             from_state=old_state,
             to_state=ProductState.SOLD,
-            changed_by=user_id
+            changed_by=user_id,
         )
         db.add(history)
-        
+
         transaction = Transaction(
             buyer_id=user_id,
             seller_id=product.owner_id,
             product_id=product.id,
             amount=product_price,
             status="completed",
-            created_at=datetime.now(timezone.utc)
+            created_at=datetime.now(timezone.utc),
         )
         db.add(transaction)
-        
-        db.commit()
-        db.refresh(transaction)
 
-    #In case of error rollback     
-    #Sprint 3: Error handling audit
-    except HTTPException:
-        raise  
+        db.commit()
+
     except Exception as e:
         db.rollback()
-        #Sprint 3: Structured logging for errors
-        log_error(logger, f"POST /products/{product_id}/buy", user_id, error=str(e))
-        raise AtomicOperationException(str(e)) 
-    
-    #Sprint 3: Structured logging 
-    log_result(logger, f"POST /products/{product_id}/buy", user_id, transaction_id=transaction.id, amount=float(product_price))
+        log_error(logger, endpoint, user_id, error=str(e), product_id=product_id, t0=t0)
+        raise AtomicOperationException(str(e)) from e
+
+    log_result(
+        logger,
+        endpoint,
+        user_id,
+        t0=t0,
+        transaction_id=transaction.id,
+        amount=float(product_price),
+        product_id=product_id,
+    )
     return TransactionResponse(
         id=transaction.id,
         buyer_id=transaction.buyer_id,
@@ -353,7 +403,7 @@ def get_transaction_history(
     Get transaction history for authenticated user.
     Returns transaction history with product information.
     """
-    #Sprint 3: Structured logging
+    t0 = time.perf_counter()
     log_request(logger, "GET /products/history", user_id, page=page, role=role)
     # Build filter based on role
     if role == "buyer":
@@ -396,8 +446,7 @@ def get_transaction_history(
             completed_at=txn.created_at
         ))
     
-    #Sprint 3: Structured logging
-    log_result(logger, "GET /products/history", user_id, total=total, page=page, per_page=per_page)
+    log_result(logger, "GET /products/history", user_id, t0=t0, total=total, page=page, per_page=per_page)
     #Return paginated response
     return TransactionHistoryListResponse(
         transactions=transaction_responses,
@@ -415,7 +464,7 @@ def get_purchase_history(
     user_id: str = Depends(get_current_user_id)
 ):
     """Get all products purchased by authenticated user."""
-    #Sprint 3: Structured logging
+    t0 = time.perf_counter()
     log_request(logger, "GET /products/purchases", user_id, page=page)
     
     total = db.query(Transaction).filter(Transaction.buyer_id == user_id).count()
@@ -445,8 +494,7 @@ def get_purchase_history(
             completed_at=txn.created_at
         ))
     
-    #Sprint 3: Structured logging
-    log_result(logger, "GET /products/purchases", user_id, total=total)
+    log_result(logger, "GET /products/purchases", user_id, t0=t0, total=total)
     return TransactionHistoryListResponse(
         transactions=transaction_responses,
         total=total,
@@ -463,7 +511,7 @@ def get_sales_history(
     user_id: str = Depends(get_current_user_id)
 ):
     """Get all products sold by authenticated user."""
-    #Sprint 3: Structured logging
+    t0 = time.perf_counter()
     log_request(logger, "GET /products/sales", user_id, page=page)
     
     total = db.query(Transaction).filter(Transaction.seller_id == user_id).count()
@@ -493,8 +541,7 @@ def get_sales_history(
             completed_at=txn.created_at
         ))
     
-    #Sprint 3: Structured logging
-    log_result(logger, "GET /products/sales", user_id, total=total)
+    log_result(logger, "GET /products/sales", user_id, t0=t0, total=total)
 
     return TransactionHistoryListResponse(
         transactions=transaction_responses,
@@ -509,36 +556,37 @@ def get_sales_history(
 def release_expired_reservations(db: Session, timeout_seconds: int = RESERVATION_TIMEOUT_SECONDS) -> int:
     """
     Release (timeout) expired reservations.
-    
-    Transitions RESERVED products back to AVAILABLE if they've been reserved 
+
+    Transitions RESERVED products back to AVAILABLE if they've been reserved
     longer than timeout_seconds.
-    
-    Example:
-        - Product reserved at 10:00
-        - Timeout = 900 seconds (15 minutes)
-        - At 10:15+, if product still RESERVED → transitions back to AVAILABLE
     """
-    now = datetime.now()
-    
+    def _utc_naive(dt: datetime) -> datetime:
+        if dt.tzinfo is None:
+            return dt
+        return dt.astimezone(timezone.utc).replace(tzinfo=None)
+
+    now = _utc_naive(datetime.now(timezone.utc))
+
     expired_reservations = (
         db.query(Product)
         .filter(Product.state == ProductState.RESERVED)
         .filter(Product.reserved_at.isnot(None))
         .all()
     )
-    
+
     released_count = 0
-    
+
     for product in expired_reservations:
         if product.reserved_at:
-            age_seconds = (now - product.reserved_at).total_seconds()
-            
+            reserved_at = _utc_naive(product.reserved_at)
+            age_seconds = (now - reserved_at).total_seconds()
+
             if age_seconds > timeout_seconds:
                 old_state = product.state
                 product.state = ProductState.AVAILABLE
                 product.reserved_by = None
                 product.reserved_at = None
-                product.updated_at = now
+                product.updated_at = datetime.now(timezone.utc)
                 
                 history = ProductStateHistory(
                     product_id=product.id,
@@ -562,11 +610,19 @@ def release_expired_reservations_endpoint(
     """
     Manual trigger to release expired reservations.
     """
+    t0 = time.perf_counter()
+    log_request(logger, "POST /products/release-expired", user_id="system", trigger="manual")
     released_count = release_expired_reservations(db)
-    
+    log_result(
+        logger,
+        "POST /products/release-expired",
+        user_id="system",
+        t0=t0,
+        released_count=released_count,
+    )
     return {
         "released_count": released_count,
-        "message": f"Released {released_count} expired reservations"
+        "message": f"Released {released_count} expired reservations",
     }
 
 
@@ -577,12 +633,15 @@ def get_transaction_product(
     user_id: str = Depends(get_current_user_id)
 ):
     """Return transaction-side product state for checkout synchronization."""
+    t0 = time.perf_counter()
+    endpoint = f"GET /products/{product_id}"
+    log_request(logger, endpoint, user_id, product_id=product_id)
+
     product = db.query(Product).filter(Product.id == product_id).first()
 
     if product is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Product {product_id} not found"
-        )
+        log_error(logger, endpoint, user_id, error="product_not_found", product_id=product_id, t0=t0)
+        raise ProductNotFoundException(product_id)
 
+    log_result(logger, endpoint, user_id, t0=t0, product_id=product_id, state=str(product.state))
     return product
