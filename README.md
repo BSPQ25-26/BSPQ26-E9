@@ -83,6 +83,92 @@ npm install
 npm run dev -- --host 127.0.0.1 --port 5173
 ```
 
+Local environment files:
+- Root `.env`: backend secrets and optional external database URLs. If
+  `AUTH_DATABASE_URL`, `INVENTORY_DATABASE_URL`, or `TRANSACTION_DATABASE_URL`
+  are not set, Docker Compose falls back to SQLite databases in the
+  `wallabot-data` Docker volume.
+- `frontend/.env`: only `VITE_*` frontend overrides. See
+  `frontend/.env.example`.
+
+If your Docker installation has Compose v2, `docker compose` is equivalent to
+`docker-compose`; this machine currently provides `docker-compose`.
+
+### **Render Deployment**
+
+For Render, this repository uses a multi-service blueprint in [render.yaml](render.yaml).
+It creates one Render web service per backend, plus a frontend web service that serves the Vue build and reverse-proxies API calls to the internal Render services.
+
+The frontend stays on the same origin as the browser, so the app can keep using relative API paths while Render handles service-to-service routing privately.
+
+Notes:
+- The backend services use persistent disks mounted at `/app/data` so their SQLite fallbacks survive redeploys.
+- `OPENAI_API_KEY` and `TAVILY_API_KEY` are left as Render secret prompts for the agentic service.
+- The frontend image is defined in [frontend/Dockerfile.render](frontend/Dockerfile.render) and proxies `/auth`, `/api/v1`, `/uploads`, `/products`, `/wallet`, `/transactions`, and `/wallabot` to the matching backend services.
+
+To deploy, connect the repo to a Render Blueprint and point it at [render.yaml](render.yaml).
+
+### **CI/CD Pipeline**
+
+The project uses **GitHub Actions** to automate quality assurance. The pipeline:
+
+1. Runs unit and integration tests.
+
+
+2. Blocks merges if builds fail, ensuring continuous delivery of stable code.
+
+### **Coverage Evidence (>50%)**
+
+The course requirement asks for **unit test coverage >= 50%**.
+In this repository coverage is measured with `pytest-cov` (see `.github/workflows/ci.yml`), using commands like:
+
+`pytest --cov=app --cov-report=term-missing -q`
+
+If you need explicit evidence that coverage is above the threshold, run the same tests locally but enforce the minimum with `--cov-fail-under=50`
+(the command will fail if coverage is below 50%).
+
+Examples (same idea as CI, using local SQLite DBs):
+
+1. `auth-service`
+```powershell
+cd backend\auth-service
+$env:DATABASE_URL="sqlite:///./test_auth.db"
+$env:JWT_SECRET="ci-test-secret"
+$env:JWT_EXPIRY_MINUTES="30"
+python -m pytest --cov=app --cov-report=term-missing --cov-fail-under=50 -q
+```
+
+2. `inventory-service`
+```powershell
+cd backend\inventory-service
+$env:DATABASE_URL="sqlite:///./test_inventory.db"
+$env:SECRET_KEY="ci-test-secret"
+$env:ALGORITHM="HS256"
+python -m pytest --cov=app --cov-report=term-missing --cov-fail-under=50 -q
+```
+
+Note: if FastAPI complains about multipart uploads, install missing dependency in the venv:
+`pip install python-multipart`
+
+3. `transaction-service`
+```powershell
+cd backend\transaction-service
+$env:DATABASE_URL="sqlite:///./transactions.db"
+python -m pytest --cov=app --cov-report=term-missing --cov-fail-under=50 -q
+```
+
+4. `agentic-service`
+```powershell
+cd backend\agentic-service
+$env:DATABASE_URL="sqlite:///./test_wallabot.db"
+$env:TAVILY_API_KEY="ci-mock-key"
+$env:OPENAI_API_KEY="ci-mock-key"
+python -m pytest --cov=app --cov-report=term-missing --cov-fail-under=50 -q
+```
+
+
+
+---
 Useful local endpoints:
 
 | Endpoint | URL |
