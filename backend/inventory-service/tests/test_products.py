@@ -493,3 +493,45 @@ def test_invalid_condition_filter_returns_422(client, auth_headers, db_session):
 
     assert response.status_code == 422
 
+
+def test_condition_filter_individual_values(client, auth_headers, db_session):
+    _seed_catalog_products(client, auth_headers, db_session)
+
+    assert _catalog_titles(client, auth_headers, condition="New") == {"Phone A"}
+    assert _catalog_titles(client, auth_headers, condition="Like New") == {"Laptop B"}
+    assert _catalog_titles(client, auth_headers, condition="Good") == {"Chair C"}
+    assert _catalog_titles(client, auth_headers, condition="Fair") == {"Table D"}
+    assert _catalog_titles(client, auth_headers, condition="Poor") == {"Book E"}
+
+
+def test_condition_and_state_filter_combination(client, auth_headers, db_session):
+    _seed_catalog_products(client, auth_headers, db_session)
+
+    result = _catalog_titles(
+        client,
+        auth_headers,
+        condition="Good",
+        state="Available",
+    )
+
+    assert result == set()
+
+    result = _catalog_titles(
+        client,
+        auth_headers,
+        condition="Good",
+        state="Reserved",
+    )
+
+    assert result == {"Chair C"}
+
+
+def test_invalid_condition_value_rejected(client, auth_headers):
+    response = client.get(
+        "/api/v1/products",
+        params={"condition": "refurbished"},
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 422
+
