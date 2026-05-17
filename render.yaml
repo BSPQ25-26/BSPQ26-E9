@@ -31,7 +31,7 @@ services:
     plan: free
     dockerfilePath: backend/transaction-service/Dockerfile
     dockerContext: .
-    dockerCommand: python -m uvicorn app.main:app --host 0.0.0.0 --port 10000
+    dockerCommand: uvicorn app.main:app --host 0.0.0.0 --port 10000
     healthCheckPath: /health
     envVars:
       - key: DATABASE_URL
@@ -66,3 +66,20 @@ services:
     dockerfilePath: frontend/Dockerfile.render
     dockerContext: .
     healthCheckPath: /
+    envVars:
+      - key: AUTH_SERVICE_URL
+        fromService:
+          name: auth-service
+          type: web
+      - key: INVENTORY_SERVICE_URL
+        fromService:
+          name: inventory-service
+          type: web
+      - key: TRANSACTION_SERVICE_URL
+        fromService:
+          name: transaction-service
+          type: web
+      - key: AGENTIC_SERVICE_URL
+        fromService:
+          name: agentic-service
+          type: web
