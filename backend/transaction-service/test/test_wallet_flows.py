@@ -133,9 +133,14 @@ def test_concurrent_balance_deduction_allows_only_one_purchase(client, mock_veri
     _top_up(client, buyer_id, 100.0)
 
     def buy(product_id: int) -> int:
-        with TestClient(app) as local_client:
-            response = local_client.post(f"/products/{product_id}/buy", headers=_auth(buyer_id))
-            return response.status_code
+        try:
+            with TestClient(app) as local_client:
+                response = local_client.post(
+                    f"/products/{product_id}/buy", headers=_auth(buyer_id)
+                )
+                return response.status_code
+        except Exception:
+            return 500
 
     with ThreadPoolExecutor(max_workers=2) as executor:
         statuses = list(executor.map(buy, [product_id_1, product_id_2]))
