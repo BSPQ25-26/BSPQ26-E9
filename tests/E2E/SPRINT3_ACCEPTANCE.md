@@ -86,3 +86,19 @@ profile_and_ratings passed: a seller and buyer were created, a transaction compl
 catalog passed: products were created, filtered, searched, and combined filters returned the expected results.
 wallabot passed for category suggestions; live price lookup was not enabled in the default run.
 Frontend routes to review: http://localhost:5173/#/products and http://localhost:5173/#/products/create.
+
+## Acceptance Review Checklist
+
+| Criterion | Status | Verification | Evidence |
+| --- | --- | --- | --- |
+| Ratings update the seller profile | Met | Verified by the acceptance runner and auth-service rating/profile tests. | `tests/E2E/scenario_test.py` creates a completed transaction, posts a 5-star rating, then checks the seller profile and ratings list; `backend/auth-service/tests/test_ratings.py` covers rating creation and avg-rating recalculation; `backend/auth-service/tests/test_profile.py` verifies the public profile payload. |
+| Public profile is accessible without authentication | Met | Verified by the public profile endpoint and unit tests. | `backend/auth-service/app/api/v1/user_router.py` exposes `GET /users/{user_id}/profile` without auth, and `backend/auth-service/tests/test_profile.py` confirms no token is required and the response includes `username`, `member_since`, `avg_rating`, and `active_listing_count`. |
+| Catalog filters narrow the visible products | Met | Verified by the acceptance runner and inventory-service route logic. | `tests/E2E/scenario_test.py` creates mixed catalog items and asserts category, condition, min_price, and max_price filters return only the matching product; `backend/inventory-service/app/api/v1/product_router.py` applies those filters in the query. |
+| Search matches title and description | Met | Verified by the acceptance runner and inventory-service route logic. | `tests/E2E/scenario_test.py` searches `q=camera` and expects only the matching product; `backend/inventory-service/app/api/v1/product_router.py` performs case-insensitive title/description matching with `ilike`. |
+| Wallabot suggests category and pricing guidance | Partially met | Category suggestion is verified; pricing guidance is implemented but not exercised in the default acceptance run. | `tests/E2E/scenario_test.py` always checks `POST /wallabot/category`; the price request is only sent when `RUN_WALLABOT_PRICE=1`. `backend/agentic-service/app/api/wallabot_router.py` and `backend/agentic-service/app/schemas/price.py` define the price endpoint and response contract. |
+
+## Gaps And Issues
+
+1. Wallabot live pricing is not covered in the default acceptance run. The scenario runner gates `POST /wallabot/price` behind `RUN_WALLABOT_PRICE=1`, so the backlog item is only partially verified unless the external pricing provider is configured and the runner is re-executed with that flag enabled.
+
+For the full prioritized post-project backlog, see [tests/E2E/SPRINT3_BACKLOG.md](tests/E2E/SPRINT3_BACKLOG.md).
