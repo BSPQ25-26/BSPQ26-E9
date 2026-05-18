@@ -386,3 +386,152 @@ def test_upload_exceed_image_limit(client, auth_headers):
     assert response.status_code == 400
     assert response.json()["detail"] == "Image limit exceeded"
 
+
+def test_filter_by_each_condition_value(client, auth_headers, db_session):
+    """
+    Verify that filtering by each condition value individually
+    returns the correct products.
+    """
+    _seed_catalog_products(client, auth_headers, db_session)
+
+    expected_results = {
+        "New": {"Phone A"},
+        "Like New": {"Laptop B"},
+        "Good": {"Chair C"},
+        "Fair": {"Table D"},
+        "Poor": {"Book E"},
+    }
+
+    for condition, expected_titles in expected_results.items():
+        assert _catalog_titles(
+            client,
+            auth_headers,
+            condition=condition,
+        ) == expected_titles
+
+
+def test_condition_filter_combined_with_category_filter(client, auth_headers, db_session):
+    """
+    Verify condition filter works together with category filter.
+    """
+    _seed_catalog_products(client, auth_headers, db_session)
+
+    results = _catalog_titles(
+        client,
+        auth_headers,
+        category="electronics",
+        condition="Like New",
+    )
+
+    assert results == {"Laptop B"}
+
+
+def test_condition_filter_combined_with_state_filter(client, auth_headers, db_session):
+    """
+    Verify condition filter works together with state filter.
+    """
+    _seed_catalog_products(client, auth_headers, db_session)
+
+    results = _catalog_titles(
+        client,
+        auth_headers,
+        state="Reserved",
+        condition="Good",
+    )
+
+    assert results == {"Chair C"}
+
+
+def test_condition_filter_combined_with_price_range(client, auth_headers, db_session):
+    """
+    Verify condition filter works together with price range filters.
+    """
+    _seed_catalog_products(client, auth_headers, db_session)
+
+    results = _catalog_titles(
+        client,
+        auth_headers,
+        min_price=100,
+        max_price=200,
+        condition="New",
+    )
+
+    assert results == {"Phone A"}
+
+
+def test_condition_filter_combined_with_all_other_filters(client, auth_headers, db_session):
+    """
+    Verify condition filter works correctly when combined
+    with all supported filters simultaneously.
+    """
+    _seed_catalog_products(client, auth_headers, db_session)
+
+    results = _catalog_titles(
+        client,
+        auth_headers,
+        state="Sold",
+        category="electronics",
+        min_price=250,
+        max_price=350,
+        condition="Like New",
+    )
+
+    assert results == {"Laptop B"}
+
+
+def test_invalid_condition_filter_returns_422(client, auth_headers, db_session):
+    """
+    Verify invalid condition values are rejected by FastAPI validation.
+    """
+    _seed_catalog_products(client, auth_headers, db_session)
+
+    response = client.get(
+        "/api/v1/products",
+        params={"condition": "Refurbished"},
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 422
+
+
+def test_condition_filter_individual_values(client, auth_headers, db_session):
+    _seed_catalog_products(client, auth_headers, db_session)
+
+    assert _catalog_titles(client, auth_headers, condition="New") == {"Phone A"}
+    assert _catalog_titles(client, auth_headers, condition="Like New") == {"Laptop B"}
+    assert _catalog_titles(client, auth_headers, condition="Good") == {"Chair C"}
+    assert _catalog_titles(client, auth_headers, condition="Fair") == {"Table D"}
+    assert _catalog_titles(client, auth_headers, condition="Poor") == {"Book E"}
+
+
+def test_condition_and_state_filter_combination(client, auth_headers, db_session):
+    _seed_catalog_products(client, auth_headers, db_session)
+
+    result = _catalog_titles(
+        client,
+        auth_headers,
+        condition="Good",
+        state="Available",
+    )
+
+    assert result == set()
+
+    result = _catalog_titles(
+        client,
+        auth_headers,
+        condition="Good",
+        state="Reserved",
+    )
+
+    assert result == {"Chair C"}
+
+
+def test_invalid_condition_value_rejected(client, auth_headers):
+    response = client.get(
+        "/api/v1/products",
+        params={"condition": "refurbished"},
+        headers=auth_headers,
+    )
+
+    assert response.status_code == 422
+

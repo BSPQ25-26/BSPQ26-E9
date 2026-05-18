@@ -42,27 +42,52 @@ def _upload_to_supabase(contents: bytes, filename: str, content_type: str) -> st
 
 @router.get("/products", response_model=list[ProductOut])
 def list_products(
-    state: ProductState | None = Query(default=None),
-    category: str | None = Query(default=None, min_length=1),
-    min_price: float | None = Query(default=None, ge=0),
-    max_price: float | None = Query(default=None, ge=0),
-    condition: ProductCondition | None = Query(default=None),
+    state: ProductState | None = Query(
+        default=None,
+        description="Filter products by availability state. Allowed values: Available, Reserved, Sold.",
+    ),
+    category: str | None = Query(
+        default=None,
+        min_length=1,
+        description="Filter products by category.",
+    ),
+    min_price: float | None = Query(
+        default=None,
+        ge=0,
+        description="Minimum product price filter.",
+    ),
+    max_price: float | None = Query(
+        default=None,
+        ge=0,
+        description="Maximum product price filter.",
+    ),
+    condition: ProductCondition | None = Query(
+        default=None,
+        description="Filter products by condition. Allowed values: New, Like New, Good, Fair, Poor.",
+    ),
     db: Session = Depends(get_db),
     current_user: str = Depends(get_current_user),
 ):
     if min_price is not None and max_price is not None and min_price > max_price:
-        raise HTTPException(status_code=422, detail="min_price cannot be greater than max_price")
+        raise HTTPException(
+            status_code=422,
+            detail="min_price cannot be greater than max_price"
+        )
 
     query = db.query(Product)
 
     if state is not None:
         query = query.filter(Product.state == state.value)
+
     if category is not None:
         query = query.filter(Product.category == category)
+
     if min_price is not None:
         query = query.filter(Product.price >= min_price)
+
     if max_price is not None:
         query = query.filter(Product.price <= max_price)
+
     if condition is not None:
         query = query.filter(Product.condition == condition.value)
 
