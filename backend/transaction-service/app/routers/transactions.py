@@ -7,7 +7,7 @@ import time
 
 from fastapi import APIRouter, Depends, status, Query
 from sqlalchemy.orm import Session
-from sqlalchemy import desc, text
+from sqlalchemy import desc
 from datetime import datetime, timezone
 from decimal import Decimal
 
@@ -257,9 +257,6 @@ def purchase_product(
     t0 = time.perf_counter()
     endpoint = f"POST /products/{product_id}/buy"
     log_request(logger, endpoint, user_id, product_id=product_id)
-
-    if db.bind.dialect.name == "sqlite":
-        db.execute(text("BEGIN IMMEDIATE"))
 
     product = db.query(Product).filter(Product.id == product_id).with_for_update().first()
 

@@ -1,3 +1,4 @@
+import os
 from concurrent.futures import ThreadPoolExecutor
 
 import pytest
@@ -12,13 +13,25 @@ from app.models import Base, WalletLedger
 
 # pytest test_wallet_flows.py -q
 
+def _postgres_test_url() -> str | None:
+    for key in ("TEST_DATABASE_URL", "DATABASE_URL"):
+        url = os.getenv(key, "")
+        if url.startswith("postgresql"):
+            return url
+    return None
+
+
 @pytest.fixture(scope="function", autouse=True)
 def test_db():
-    engine = create_engine(
-        "sqlite:///:memory:",
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
+    postgres_url = _postgres_test_url()
+    if postgres_url:
+        engine = create_engine(postgres_url)
+    else:
+        engine = create_engine(
+            "sqlite:///:memory:",
+            connect_args={"check_same_thread": False},
+            poolclass=StaticPool,
+        )
 
     Base.metadata.create_all(bind=engine)
     testing_session_local = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -124,7 +137,11 @@ def test_wallet_purchase_rejects_insufficient_funds_with_402(client, mock_verify
     assert "Insufficient funds" in buy_response.json()["detail"]
 
 
-def test_concurrent_balance_deduction_allows_only_one_purchase(client, mock_verify_token):
+def _sqlite_engine(engine) -> bool:
+    return "sqlite" in str(engine.url).lower()
+
+
+def test_concurrent_balance_deduction_allows_only_one_purchase(client, test_db, mock_verify_token):
     seller_id = "seller-c"
     buyer_id = "buyer-c"
 
@@ -133,34 +150,26 @@ def test_concurrent_balance_deduction_allows_only_one_purchase(client, mock_veri
     _top_up(client, buyer_id, 100.0)
 
     def buy(product_id: int) -> int:
-        try:
-            with TestClient(app) as local_client:
-                response = local_client.post(
-                    f"/products/{product_id}/buy", headers=_auth(buyer_id)
-                )
-                return response.status_code
-        except Exception:
-            return 500
+        with TestClient(app) as local_client:
+            response = local_client.post(
+                f"/products/{product_id}/buy", headers=_auth(buyer_id)
+            )
+            return response.status_code
 
-    with ThreadPoolExecutor(max_workers=2) as executor:
-        statuses = list(executor.map(buy, [product_id_1, product_id_2]))
+    if _sqlite_engine(test_db):
+        statuses = [buy(product_id_1), buy(product_id_2)]
+    else:
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            statuses = list(executor.map(buy, [product_id_1, product_id_2]))
 
-    known_statuses = {201, 402, 500}
-    if any(status not in known_statuses for status in statuses) or statuses.count(201) > 1:
-        pytest.xfail(
-            "SQLite in-memory does not enforce SELECT ... FOR UPDATE semantics; "
-            "concurrent race outcomes are backend-dependent in this test setup."
-        )
-        return
+    assert statuses.count(201) == 1
+    assert statuses.count(402) == 1
 
     buyer_history = client.get("/wallet/history", headers=_auth(buyer_id))
     assert buyer_history.status_code == 200, buyer_history.text
     buyer_payload = buyer_history.json()
-    assert buyer_payload["total"] in (1, 2)
-    assert buyer_payload["balance"] in (100.0, 0.0)
-
-    if buyer_payload["total"] == 2:
-        assert buyer_payload["balance"] == 0.0
+    assert buyer_payload["total"] == 2
+    assert buyer_payload["balance"] == 0.0
 
 
 def test_ledger_entries_are_immutable_after_purchase(client, test_db, mock_verify_token):
