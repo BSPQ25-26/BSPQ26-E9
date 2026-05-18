@@ -19,9 +19,12 @@ from sqlalchemy.pool import StaticPool
 
 from app.main import app
 from app.database import get_db
-from app.models import Base, Product, WalletLedger, Transaction
+from app.models import Base, Product, WalletLedger, Transaction, ProductStateHistory
+from app.routers.transactions import RESERVATION_TIMEOUT_SECONDS
 from app.services.state_machine import ProductState
 
+#cd backend/transaction-service
+#python -m pytest test/test_transactions.py::test_timeout_release_expired_reservation -q -v
 
 @pytest.fixture(scope="function", autouse=True)
 def test_db():
@@ -424,8 +427,6 @@ def test_timeout_release_expired_reservation(client, test_db, mock_verify_token)
     """
     Test timeout release of expired reservations.
     """
-    from app.routers.transactions import release_expired_reservations, RESERVATION_TIMEOUT_SECONDS
-
     TestingSessionLocal = sessionmaker(bind=test_db)
     db = TestingSessionLocal()
     
@@ -448,13 +449,18 @@ def test_timeout_release_expired_reservation(client, test_db, mock_verify_token)
     db.refresh(product)
     assert product.state == ProductState.RESERVED
     
-    released_count = release_expired_reservations(db, timeout_seconds=RESERVATION_TIMEOUT_SECONDS)
-    
-    assert released_count == 1, f"Expected 1 released reservation, got {released_count}"
+    response = client.post("/products/release-expired")
+
+    assert response.status_code == 200, response.text
+    payload = response.json()
+    assert payload["released_count"] == 1, f"Expected 1 released reservation, got {payload}"
     
     db.refresh(product)
     assert product.state == ProductState.AVAILABLE
     assert product.reserved_at is None
+
+    history = db.query(ProductStateHistory).filter(ProductStateHistory.product_id == product.id).all()
+    assert history[-1].changed_by == "system"
     
     db.close()
 

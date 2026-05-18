@@ -7,6 +7,9 @@ from dotenv import load_dotenv
 from fastapi.testclient import TestClient
 from langchain_core.exceptions import OutputParserException
 
+#cd backend/agentic-service
+#python -m pytest test/test_category_endpoint.py -q -v
+
 load_dotenv(dotenv_path=Path(__file__).resolve().parents[1] / ".env")
 
 # When explicitly enabling live mode, mark the full module as live so
@@ -233,6 +236,62 @@ def test_price_endpoint_returns_recommendation(price_agent_module, wallabot_app,
         "price_range_max": 120.0,
         "data_source": "LLM estimate from product details",
     }
+
+
+def test_wallabot_category_and_price_endpoints_share_the_same_app_surface(
+    category_agent_module,
+    price_agent_module,
+    wallabot_app,
+    monkeypatch,
+):
+    monkeypatch.setattr(
+        category_agent_module,
+        "_chain",
+        MockChainFromLlmText(
+            category_agent_module._parser,
+            '{"suggested_category":"Electronics","confidence":0.97,"is_new_category":false}',
+        ),
+    )
+    monkeypatch.setattr(
+        price_agent_module,
+        "_chain",
+        MockChainFromLlmText(
+            price_agent_module._parser,
+            (
+                '{"recommended_price":95.0,"price_range_min":80.0,'
+                '"price_range_max":110.0,"data_source":"LLM estimate from product details"}'
+            ),
+        ),
+    )
+    monkeypatch.setattr(
+        price_agent_module,
+        "_search_tavily",
+        lambda q: "Used electronics market data found",
+    )
+
+    client = TestClient(wallabot_app)
+
+    category_response = client.post(
+        "/wallabot/category",
+        json={
+            "title": "Wireless headset",
+            "description": "Bluetooth over-ear headset with case.",
+            "available_categories": ["Electronics", "Audio", "Other"],
+        },
+    )
+    price_response = client.post(
+        "/wallabot/price",
+        json={
+            "title": "Wireless headset",
+            "description": "Bluetooth over-ear headset with case.",
+            "condition": "Good",
+        },
+    )
+
+    assert category_response.status_code == 200
+    assert category_response.json()["suggested_category"] == "Electronics"
+    assert price_response.status_code == 200
+    assert price_response.json()["recommended_price"] == 95.0
 
 
 @pytest.mark.live
