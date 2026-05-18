@@ -1,6 +1,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException, status, Path, File, UploadFile, Query
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 from app.schemas.product import ProductCreate, ProductOut, ProductUpdate, ProductState, ProductCondition
 from app.repositories.product_repository import ProductRepository
 from app.auth import get_current_user
@@ -44,26 +45,37 @@ def _upload_to_supabase(contents: bytes, filename: str, content_type: str) -> st
 def list_products(
     state: ProductState | None = Query(
         default=None,
-        description="Filter products by availability state. Allowed values: Available, Reserved, Sold.",
+        description="Filter products by availability state.",
+        examples=["Available"],
     ),
     category: str | None = Query(
         default=None,
         min_length=1,
         description="Filter products by category.",
+        examples=["electronics"],
     ),
     min_price: float | None = Query(
         default=None,
         ge=0,
-        description="Minimum product price filter.",
+        description="Minimum product price.",
+        examples=[50],
     ),
     max_price: float | None = Query(
         default=None,
         ge=0,
-        description="Maximum product price filter.",
+        description="Maximum product price.",
+        examples=[300],
     ),
     condition: ProductCondition | None = Query(
         default=None,
-        description="Filter products by condition. Allowed values: New, Like New, Good, Fair, Poor.",
+        description="Filter products by item condition.",
+        examples=["Like New"],
+    ),
+    q: str | None = Query(
+        default=None,
+        min_length=1,
+        description="Case-insensitive keyword search across product title and description.",
+        examples=["camera"],
     ),
     db: Session = Depends(get_db),
     current_user: str = Depends(get_current_user),
@@ -71,7 +83,7 @@ def list_products(
     if min_price is not None and max_price is not None and min_price > max_price:
         raise HTTPException(
             status_code=422,
-            detail="min_price cannot be greater than max_price"
+            detail="min_price cannot be greater than max_price",
         )
 
     query = db.query(Product)
@@ -91,7 +103,18 @@ def list_products(
     if condition is not None:
         query = query.filter(Product.condition == condition.value)
 
+    # Keyword text search
+    if q is not None and q.strip():
+        search = f"%{q.strip()}%"
+        query = query.filter(
+            or_(
+                Product.title.ilike(search),
+                Product.description.ilike(search),
+            )
+        )
+
     return query.order_by(Product.id.asc()).all()
+
 
 @router.post("/products", response_model=ProductOut, status_code=status.HTTP_201_CREATED)
 def create_product(
