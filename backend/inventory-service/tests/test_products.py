@@ -535,3 +535,113 @@ def test_invalid_condition_value_rejected(client, auth_headers):
 
     assert response.status_code == 422
 
+
+def test_text_search_partial_word_match(client, auth_headers, db_session):
+    _create_product(
+        client,
+        auth_headers,
+        title="Vintage Camera",
+        description="Professional analog photography camera",
+    )
+
+    _create_product(
+        client,
+        auth_headers,
+        title="Gaming Laptop",
+        description="High performance laptop",
+    )
+
+    results = _catalog_titles(client, auth_headers, q="cam")
+
+    assert results == {"Vintage Camera"}
+
+
+def test_text_search_case_insensitive(client, auth_headers, db_session):
+    _create_product(
+        client,
+        auth_headers,
+        title="MacBook Pro",
+        description="Apple laptop",
+    )
+
+    results = _catalog_titles(client, auth_headers, q="macbook")
+
+    assert results == {"MacBook Pro"}
+
+    results = _catalog_titles(client, auth_headers, q="MACBOOK")
+
+    assert results == {"MacBook Pro"}
+
+
+def test_text_search_matches_description(client, auth_headers, db_session):
+    _create_product(
+        client,
+        auth_headers,
+        title="Desk",
+        description="Perfect for home office setup",
+    )
+
+    results = _catalog_titles(client, auth_headers, q="office")
+
+    assert results == {"Desk"}
+
+
+def test_text_search_combines_with_condition_and_state_filters(
+    client,
+    auth_headers,
+    db_session,
+):
+    created = _create_product(
+        client,
+        auth_headers,
+        title="Canon Camera",
+        description="Professional DSLR camera",
+        condition="Like New",
+    ).json()
+
+    db_product = db_session.query(Product).filter(Product.id == created["id"]).first()
+    db_product.state = "Reserved"
+    db_session.commit()
+
+    _create_product(
+        client,
+        auth_headers,
+        title="Camera Bag",
+        description="Camera travel accessory",
+        condition="Good",
+    )
+
+    results = _catalog_titles(
+        client,
+        auth_headers,
+        q="camera",
+        condition="Like New",
+        state="Reserved",
+    )
+
+    assert results == {"Canon Camera"}
+
+
+def test_text_search_empty_string_returns_all_products(
+    client,
+    auth_headers,
+    db_session,
+):
+    _create_product(
+        client,
+        auth_headers,
+        title="Phone",
+        description="Smartphone",
+    )
+
+    _create_product(
+        client,
+        auth_headers,
+        title="Chair",
+        description="Wooden chair",
+    )
+
+    results = _catalog_titles(client, auth_headers, q=" ")
+
+    assert results == {"Phone", "Chair"}
+
