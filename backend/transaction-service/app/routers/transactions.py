@@ -362,6 +362,19 @@ def purchase_product(
             created_at=datetime.now(timezone.utc),
         )
         db.add(transaction)
+        db.flush()
+        transaction_id = transaction.id
+        completed_at = transaction.created_at
+        response = TransactionResponse(
+            id=transaction_id,
+            buyer_id=transaction.buyer_id,
+            seller_id=transaction.seller_id,
+            product_id=transaction.product_id,
+            amount=float(transaction.amount),
+            status=transaction.status,
+            created_at=completed_at,
+            completed_at=completed_at,
+        )
 
         db.commit()
 
@@ -375,20 +388,11 @@ def purchase_product(
         endpoint,
         user_id,
         t0=t0,
-        transaction_id=transaction.id,
+        transaction_id=transaction_id,
         amount=float(product_price),
         product_id=product_id,
     )
-    return TransactionResponse(
-        id=transaction.id,
-        buyer_id=transaction.buyer_id,
-        seller_id=transaction.seller_id,
-        product_id=transaction.product_id,
-        amount=float(transaction.amount),
-        status=transaction.status,
-        created_at=transaction.created_at,
-        completed_at=transaction.created_at
-    )
+    return response
 
 
 @router.get("/history", response_model=TransactionHistoryListResponse)
