@@ -49,23 +49,33 @@
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="overview.html">Project Overview</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">System Architecture</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#microservices-overview">Microservices Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#design-philosophy">Design Philosophy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#high-level-diagram">High-Level Diagram</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#service-responsibilities">Service Responsibilities</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#auth-service-port-8001">Auth Service (port 8001)</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#inventory-service-port-8002">Inventory Service (port 8002)</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#transaction-service-port-8003">Transaction Service (port 8003)</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#agentic-service-port-8004">Agentic Service (port 8004)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#auth-service-8001">Auth Service (:8001)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#inventory-service-8002">Inventory Service (:8002)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#transaction-service-8003">Transaction Service (:8003)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#agentic-service-8004">Agentic Service (:8004)</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#authentication-flow">Authentication Flow</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#product-state-machine">Product State Machine</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#wallet-ledger-architecture">Wallet Ledger Architecture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#atomic-purchase-flow">Atomic Purchase Flow</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#database-strategy">Database Strategy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#frontend-architecture">Frontend Architecture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#deployment-architecture-production">Deployment Architecture (Production)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#ci-cd-pipeline">CI/CD Pipeline</a></li>
 </ul>
 </li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">REST API Reference</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="api/index.html">REST API Reference</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Wallabot AI Agent</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="wallabot_agent.html">Wallabot AI Agent</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Testing &amp; Quality</span></p>
 <ul>
@@ -102,136 +112,412 @@
              
   <section id="system-architecture">
 <h1>System Architecture<a class="headerlink" href="#system-architecture" title="Link to this heading"></a></h1>
-<section id="microservices-overview">
-<h2>Microservices Overview<a class="headerlink" href="#microservices-overview" title="Link to this heading"></a></h2>
-<p>Wallabot follows a <strong>microservices architecture</strong>: each domain is encapsulated in an
-independently deployable FastAPI service. The Vue 3 frontend acts as the sole entry point
-for end users and proxies all API calls to the appropriate backend service.</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>┌─────────────────────────────────────────────────────────────┐
-│                     Vue 3 Frontend (5173)                   │
-│           (Vite proxy / Nginx reverse proxy in prod)        │
-└──────┬──────────┬──────────┬──────────┬───────────┬─────────┘
-       │ /auth    │ /api/v1  │ /products│ /wallet   │ /wallabot
-       ▼          ▼          ▼          ▼           ▼
-  ┌─────────┐ ┌──────────┐ ┌──────────────────────┐ ┌─────────────┐
-  │  Auth   │ │Inventory │ │  Transaction Service │ │  Agentic    │
-  │ Service │ │ Service  │ │       (8003)         │ │  Service    │
-  │  (8001) │ │  (8002)  │ └──────────────────────┘ │   (8004)   │
-  └─────────┘ └──────────┘                           └─────────────┘
+<section id="design-philosophy">
+<h2>Design Philosophy<a class="headerlink" href="#design-philosophy" title="Link to this heading"></a></h2>
+<p>Wallabot follows a <strong>microservices architecture</strong> where each business domain is encapsulated
+in an independently deployable FastAPI service. Services share no databases and communicate
+only via HTTP REST. The Vue 3 frontend is the sole public entry point and routes every
+API call through a Vite proxy in development (or Nginx in production) to the appropriate
+service.</p>
+<p>Key design decisions:</p>
+<ul class="simple">
+<li><p><strong>No shared database</strong> — each service owns its schema; cross-service data access goes
+over HTTP with service-scoped JWTs</p></li>
+<li><p><strong>Stateless JWT validation</strong> — every service validates tokens locally, eliminating a
+central auth round-trip per request</p></li>
+<li><p><strong>Append-only ledger</strong> — wallet balance and product state history are immutable,
+audit-safe records</p></li>
+<li><p><strong>Graceful AI degradation</strong> — agents always return a usable response even when the LLM
+provider is unreachable</p></li>
+</ul>
+</section>
+<hr class="docutils" />
+<section id="high-level-diagram">
+<h2>High-Level Diagram<a class="headerlink" href="#high-level-diagram" title="Link to this heading"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>┌──────────────────────────────────────────────────────────────────────┐
+│                        Vue 3 Frontend (:5173)                        │
+│  Vite dev proxy (development)  /  nginx.render.conf (production)     │
+└───────┬──────────────┬──────────────┬──────────────┬────────────────┘
+        │ /auth/*      │ /api/v1/*    │ /products/*  │ /wallabot/*
+        │ /users/*     │ /uploads/*   │ /wallet/*    │
+        ▼              ▼              ▼              ▼
+  ┌──────────┐  ┌───────────┐  ┌──────────────┐  ┌──────────────┐
+  │   Auth   │  │ Inventory │  │ Transaction  │  │   Agentic    │
+  │ Service  │  │  Service  │  │   Service    │  │   Service    │
+  │  :8001   │  │   :8002   │  │    :8003     │  │    :8004     │
+  └────┬─────┘  └─────┬─────┘  └──────┬───────┘  └──────┬───────┘
+       │              │               │                  │
+    SQLite/        SQLite/         SQLite/          OpenAI API
+    PostgreSQL     PostgreSQL      PostgreSQL       Tavily API
+                                                   LangSmith (opt.)
 </pre></div>
 </div>
+<p>The Agentic Service has <strong>no database</strong> — every request is stateless and fully
+self-contained.</p>
 </section>
+<hr class="docutils" />
 <section id="service-responsibilities">
 <h2>Service Responsibilities<a class="headerlink" href="#service-responsibilities" title="Link to this heading"></a></h2>
-<section id="auth-service-port-8001">
-<h3>Auth Service (port 8001)<a class="headerlink" href="#auth-service-port-8001" title="Link to this heading"></a></h3>
-<p>Owns user identity. All other services trust Auth Service-issued JWTs for authentication.</p>
+<section id="auth-service-8001">
+<h3>Auth Service (:8001)<a class="headerlink" href="#auth-service-8001" title="Link to this heading"></a></h3>
+<p>The single source of truth for user identity. Every other service validates JWTs issued
+here by sharing the same <code class="docutils literal notranslate"><span class="pre">SECRET_KEY</span></code> — no cross-service call is needed per request.</p>
+<p><strong>Responsibilities:</strong></p>
 <ul class="simple">
-<li><p>User registration and login (<code class="docutils literal notranslate"><span class="pre">/auth/register</span></code>, <code class="docutils literal notranslate"><span class="pre">/auth/login</span></code>)</p></li>
-<li><p>Social OAuth flow with Google and Facebook (<code class="docutils literal notranslate"><span class="pre">/auth/social/...</span></code>)</p></li>
-<li><p>Public user profiles and ratings (<code class="docutils literal notranslate"><span class="pre">/users/{id}/profile</span></code>, <code class="docutils literal notranslate"><span class="pre">/users/{id}/ratings</span></code>)</p></li>
-<li><p>JWT access-token issuance with <code class="docutils literal notranslate"><span class="pre">python-jose</span></code> + <code class="docutils literal notranslate"><span class="pre">bcrypt</span></code> password hashing</p></li>
+<li><p>User registration with bcrypt password hashing (<code class="docutils literal notranslate"><span class="pre">passlib[bcrypt]</span></code>)</p></li>
+<li><p>Email/password login and JWT issuance (<code class="docutils literal notranslate"><span class="pre">python-jose</span></code>, HS256 algorithm)</p></li>
+<li><p>Social OAuth flow for Google and Facebook (via <code class="docutils literal notranslate"><span class="pre">authlib</span></code>); handles redirect,
+code exchange, and account linking</p></li>
+<li><p>Account merging: links a social account to an existing email account when the email
+matches; rejects conflicting provider links</p></li>
+<li><p>Star ratings (1–5) between users with optional review text</p></li>
+<li><p>Public user profile endpoint: aggregates listing count from Inventory Service via
+an internal service token</p></li>
 </ul>
+<p><strong>Key models:</strong> <code class="docutils literal notranslate"><span class="pre">User</span></code>, <code class="docutils literal notranslate"><span class="pre">SocialAccount</span></code>, <code class="docutils literal notranslate"><span class="pre">Rating</span></code></p>
+<p><strong>API prefix:</strong> <code class="docutils literal notranslate"><span class="pre">/auth/*</span></code>, <code class="docutils literal notranslate"><span class="pre">/users/*</span></code>, <code class="docutils literal notranslate"><span class="pre">/ratings/*</span></code></p>
 </section>
-<section id="inventory-service-port-8002">
-<h3>Inventory Service (port 8002)<a class="headerlink" href="#inventory-service-port-8002" title="Link to this heading"></a></h3>
-<p>Owns the product catalogue. Products here represent the <em>listing</em> view.</p>
+<hr class="docutils" />
+<section id="inventory-service-8002">
+<h3>Inventory Service (:8002)<a class="headerlink" href="#inventory-service-8002" title="Link to this heading"></a></h3>
+<p>Owns the product catalogue: the <em>listing</em> representation of a product, independent
+of its commerce state.</p>
+<p><strong>Responsibilities:</strong></p>
 <ul class="simple">
-<li><p>Full CRUD for product listings (<code class="docutils literal notranslate"><span class="pre">/api/v1/products</span></code>)</p></li>
-<li><p>Image upload to local filesystem or Supabase Storage</p></li>
-<li><p>Filtering by state, category, price range, condition, and full-text keyword search</p></li>
+<li><p>Full CRUD on product listings</p></li>
+<li><p>Image upload and serving (local filesystem <code class="docutils literal notranslate"><span class="pre">data/uploads/</span></code> or Supabase Storage)</p></li>
+<li><p>Advanced filtering: state, category, price range, condition, full-text keyword search</p></li>
+<li><p>Hosts static files at <code class="docutils literal notranslate"><span class="pre">/uploads/</span></code></p></li>
 </ul>
-</section>
-<section id="transaction-service-port-8003">
-<h3>Transaction Service (port 8003)<a class="headerlink" href="#transaction-service-port-8003" title="Link to this heading"></a></h3>
-<p>Owns the commerce domain. Products in this service mirror listing state but track commerce
-events separately.</p>
+<p><strong>Key model:</strong> <code class="docutils literal notranslate"><span class="pre">Product</span></code> (table: <code class="docutils literal notranslate"><span class="pre">inventory_products</span></code>)</p>
+<p>The Inventory product is <strong>distinct</strong> from the Transaction product. They are separate
+data copies in separate databases:</p>
 <ul class="simple">
-<li><p>Wallet operations: top-up and balance query (<code class="docutils literal notranslate"><span class="pre">/wallet</span></code>)</p></li>
-<li><p>Product reservation with configurable timeout (<code class="docutils literal notranslate"><span class="pre">/products/{id}/reserve</span></code>)</p></li>
-<li><p>Purchase completion with atomic wallet debit (<code class="docutils literal notranslate"><span class="pre">/products/{id}/purchase</span></code>)</p></li>
-<li><p>Transaction history (<code class="docutils literal notranslate"><span class="pre">/transactions</span></code>)</p></li>
-<li><p>Background reservation-expiry daemon</p></li>
+<li><p><strong>Inventory</strong> tracks listing metadata (title, description, price, image, category)</p></li>
+<li><p><strong>Transaction</strong> tracks commerce state (reservation owner, purchase record, state history)</p></li>
 </ul>
+<p><strong>API prefix:</strong> <code class="docutils literal notranslate"><span class="pre">/api/v1/products/*</span></code>, <code class="docutils literal notranslate"><span class="pre">/uploads/*</span></code></p>
 </section>
-<section id="agentic-service-port-8004">
-<h3>Agentic Service (port 8004)<a class="headerlink" href="#agentic-service-port-8004" title="Link to this heading"></a></h3>
-<p>The AI subsystem. All endpoints are <strong>stateless</strong> — no session memory between requests.</p>
+<hr class="docutils" />
+<section id="transaction-service-8003">
+<h3>Transaction Service (:8003)<a class="headerlink" href="#transaction-service-8003" title="Link to this heading"></a></h3>
+<p>Owns the commerce domain: wallets, reservations, and purchases.</p>
+<p><strong>Responsibilities:</strong></p>
 <ul class="simple">
-<li><p>Category suggestion via LangChain LCEL + GPT-4o-mini (<code class="docutils literal notranslate"><span class="pre">/wallabot/category</span></code>)</p></li>
-<li><p>Price recommendation via Tavily web search + GPT-4o-mini (<code class="docutils literal notranslate"><span class="pre">/wallabot/price</span></code>)</p></li>
-<li><p>Optional LangSmith tracing for monitoring and debugging</p></li>
+<li><p>Digital wallet with an immutable ledger-based balance (never stores balance as a column)</p></li>
+<li><p>Product reservation with configurable timeout and a background daemon that releases
+expired reservations automatically</p></li>
+<li><p>Atomic purchase: wallet debit, wallet credit, and product state transition executed in
+a single database transaction</p></li>
+<li><p>Per-user transaction history</p></li>
+<li><p>Product state machine enforcement</p></li>
 </ul>
+<p><strong>Key models:</strong></p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">Product</span></code> (table: <code class="docutils literal notranslate"><span class="pre">transaction_products</span></code>) — mirrors inventory data at reservation time</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">WalletLedger</span></code> — append-only balance rows (delta, type, balance_after)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Transaction</span></code> — purchase records</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ProductStateHistory</span></code> — every state transition with actor and timestamp</p></li>
+</ul>
+<p><strong>API prefix:</strong> <code class="docutils literal notranslate"><span class="pre">/products/*</span></code>, <code class="docutils literal notranslate"><span class="pre">/wallet/*</span></code>, <code class="docutils literal notranslate"><span class="pre">/transactions/*</span></code></p>
+</section>
+<hr class="docutils" />
+<section id="agentic-service-8004">
+<h3>Agentic Service (:8004)<a class="headerlink" href="#agentic-service-8004" title="Link to this heading"></a></h3>
+<p>The AI subsystem. Every endpoint is stateless — no memory between requests, no database.</p>
+<p><strong>Responsibilities:</strong></p>
+<ul class="simple">
+<li><p>Category suggestion using LangChain LCEL + GPT-4o-mini</p></li>
+<li><p>Price recommendation using Tavily web search + GPT-4o-mini</p></li>
+<li><p>Retry logic and graceful degradation on any provider failure</p></li>
+<li><p>Optional LangSmith tracing for every chain invocation</p></li>
+</ul>
+<p>See <a class="reference internal" href="wallabot_agent.html"><span class="std std-doc">Wallabot AI Agent</span></a> for full technical details.</p>
+<p><strong>API prefix:</strong> <code class="docutils literal notranslate"><span class="pre">/wallabot/*</span></code>, <code class="docutils literal notranslate"><span class="pre">/health</span></code></p>
 </section>
 </section>
+<hr class="docutils" />
 <section id="authentication-flow">
 <h2>Authentication Flow<a class="headerlink" href="#authentication-flow" title="Link to this heading"></a></h2>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>Client                  Auth Service           Other Services
-  │                          │                       │
-  │── POST /auth/login ──────►│                       │
-  │◄── {access_token: ...} ──│                       │
-  │                          │                       │
-  │── GET /api/v1/products ──────────────────────────►│
-  │   (Authorization: Bearer &lt;token&gt;)                 │
-  │◄── [...products] ─────────────────────────────────│
+<p>JWT tokens are self-contained: each service validates the token locally using the shared
+<code class="docutils literal notranslate"><span class="pre">SECRET_KEY</span></code> without calling the Auth Service. The subject (<code class="docutils literal notranslate"><span class="pre">sub</span></code>) claim contains the
+user’s email address and is used as the <code class="docutils literal notranslate"><span class="pre">user_id</span></code> throughout all services.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>Client               Auth Service             Other Services
+  │                       │                         │
+  │─ POST /auth/login ────►│                         │
+  │◄─ {access_token} ─────│                         │
+  │                       │                         │
+  │─ GET /api/v1/products ──────────────────────────►│
+  │  Authorization: Bearer &lt;token&gt;                   │
+  │  (token validated locally — no Auth Service call)│
+  │◄─ [...products] ────────────────────────────────│
 </pre></div>
 </div>
-<p>JWT tokens are verified locally by each service using the shared <code class="docutils literal notranslate"><span class="pre">SECRET_KEY</span></code> environment
-variable; no service-to-service auth call is required on every request.</p>
+<p><strong>Service-to-service calls</strong> (e.g. Auth Service fetching listing counts from Inventory)
+use a service token with <code class="docutils literal notranslate"><span class="pre">sub:</span> <span class="pre">service&#64;internal</span></code> generated at startup and never exposed
+to external clients.</p>
+<p><strong>Social OAuth flow:</strong></p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>Browser              Auth Service           OAuth Provider
+  │                       │                     │
+  │─ GET /auth/social/login/google ────────────►│
+  │◄─ 302 redirect to Google ──────────────────│
+  │                       │                     │
+  │─ GET /auth/social/callback/google ─────────►│
+  │  ?code=... &amp;state=...                       │
+  │                       │─ exchange code ─────►│
+  │                       │◄─ user profile ──────│
+  │                       │  (create or link account)
+  │◄─ {access_token} ─────│
+</pre></div>
+</div>
 </section>
+<hr class="docutils" />
 <section id="product-state-machine">
 <h2>Product State Machine<a class="headerlink" href="#product-state-machine" title="Link to this heading"></a></h2>
-<p>Products in the Transaction Service follow a strict state machine:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>Available ──► Reserved ──► Sold
-     ▲            │
-     └────────────┘  (timeout / explicit release)
+<p>Products in the <strong>Transaction Service</strong> follow a strict state machine enforced in
+<code class="docutils literal notranslate"><span class="pre">app/services/state_machine.py</span></code>. The <code class="docutils literal notranslate"><span class="pre">Available</span> <span class="pre">→</span> <span class="pre">Reserved</span> <span class="pre">→</span> <span class="pre">Sold</span></code> path is the only
+valid forward path.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>  ┌───────────┐   reserve   ┌──────────┐   purchase   ┌──────┐
+  │ Available │────────────►│ Reserved │─────────────►│ Sold │
+  └───────────┘             └──────────┘              └──────┘
+       ▲                         │
+       └─────────────────────────┘
+         timeout expires / explicit release
 </pre></div>
 </div>
 <table class="docutils align-default">
 <thead>
 <tr class="row-odd"><th class="head"><p>Transition</p></th>
-<th class="head"><p>Trigger</p></th>
-<th class="head"><p>Notes</p></th>
+<th class="head"><p>HTTP endpoint</p></th>
+<th class="head"><p>Guard conditions</p></th>
 </tr>
 </thead>
 <tbody>
 <tr class="row-even"><td><p>Available → Reserved</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">POST</span> <span class="pre">/products/{id}/reserve</span></code></p></td>
-<td><p>Holds for <code class="docutils literal notranslate"><span class="pre">RESERVATION_TIMEOUT_SECONDS</span></code></p></td>
+<td><p>Caller must not be the seller; product must be <code class="docutils literal notranslate"><span class="pre">Available</span></code></p></td>
 </tr>
 <tr class="row-odd"><td><p>Reserved → Available</p></td>
-<td><p>Background cleanup or <code class="docutils literal notranslate"><span class="pre">DELETE</span> <span class="pre">/products/{id}/reserve</span></code></p></td>
-<td><p>Auto-releases on timeout</p></td>
+<td><p>Background daemon or <code class="docutils literal notranslate"><span class="pre">DELETE</span> <span class="pre">/products/{id}/reserve</span></code></p></td>
+<td><p>Caller must be the reservation owner or reservation has expired</p></td>
 </tr>
 <tr class="row-even"><td><p>Reserved → Sold</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">POST</span> <span class="pre">/products/{id}/purchase</span></code></p></td>
-<td><p>Atomically debits buyer’s wallet</p></td>
+<td><p>Caller must be the reservation owner and have sufficient wallet funds</p></td>
+</tr>
+<tr class="row-odd"><td><p>Sold → *</p></td>
+<td><p>—</p></td>
+<td><p>Final state; no further transitions permitted</p></td>
 </tr>
 </tbody>
 </table>
+<p>Every transition writes a row to <code class="docutils literal notranslate"><span class="pre">ProductStateHistory</span></code> with <code class="docutils literal notranslate"><span class="pre">actor</span></code> (user email) and
+<code class="docutils literal notranslate"><span class="pre">timestamp</span></code>, providing a full immutable audit trail.</p>
 </section>
+<hr class="docutils" />
+<section id="wallet-ledger-architecture">
+<h2>Wallet Ledger Architecture<a class="headerlink" href="#wallet-ledger-architecture" title="Link to this heading"></a></h2>
+<p>The wallet uses an <strong>append-only ledger</strong> pattern for balance integrity. The current
+balance is never stored directly in a column — it is always derived from the <code class="docutils literal notranslate"><span class="pre">balance_after</span></code>
+column of the most recent row for that user.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>WalletLedger table (append-only — rows are never updated or deleted):
+
+┌────┬──────────────────┬────────┬──────┬────────────────┐
+│ id │ user_id          │  delta │ type │ balance_after  │
+├────┼──────────────────┼────────┼──────┼────────────────┤
+│  1 │ alice@example.com│ +100.0 │ dep  │ 100.00         │
+│  2 │ alice@example.com│  +50.0 │ dep  │ 150.00         │
+│  3 │ alice@example.com│ -420.0 │ pur  │ (refused)      │
+│  4 │ alice@example.com│ -420.0 │ pur  │ -270.00        │
+└────┴──────────────────┴────────┴──────┴────────────────┘
+
+Current balance = balance_after WHERE id = MAX(id) AND user_id = &#39;alice@example.com&#39;
+</pre></div>
+</div>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Entry type</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">dep</span></code></p></td>
+<td><p>Top-up (wallet deposit)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">pur</span></code></p></td>
+<td><p>Purchase debit (buyer)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">sal</span></code></p></td>
+<td><p>Sale credit (seller, on successful purchase)</p></td>
+</tr>
+</tbody>
+</table>
+<p>Every wallet mutation (top-up, purchase debit, sale credit) creates a <strong>new row</strong>.
+<code class="docutils literal notranslate"><span class="pre">UPDATE</span></code> statements on <code class="docutils literal notranslate"><span class="pre">wallet_ledger</span></code> are never issued. This guarantees a complete,
+immutable financial audit trail.</p>
+</section>
+<hr class="docutils" />
+<section id="atomic-purchase-flow">
+<h2>Atomic Purchase Flow<a class="headerlink" href="#atomic-purchase-flow" title="Link to this heading"></a></h2>
+<p>The purchase operation is the most complex transaction in the system. It must atomically:</p>
+<ol class="arabic simple">
+<li><p>Read the buyer’s current balance</p></li>
+<li><p>Verify the buyer has sufficient funds</p></li>
+<li><p>Debit the buyer’s wallet (new ledger row)</p></li>
+<li><p>Credit the seller’s wallet (new ledger row)</p></li>
+<li><p>Transition the product from <code class="docutils literal notranslate"><span class="pre">Reserved</span></code> to <code class="docutils literal notranslate"><span class="pre">Sold</span></code> in the Transaction Service</p></li>
+<li><p>Record the transition in <code class="docutils literal notranslate"><span class="pre">ProductStateHistory</span></code></p></li>
+</ol>
+<p>All six steps execute inside a single SQLAlchemy <code class="docutils literal notranslate"><span class="pre">Session</span></code> with a database-level
+transaction. If any step fails, the entire transaction is rolled back — no partial
+state is possible.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>POST /products/{id}/purchase
+  │
+  ├─ Validate: caller is reservation owner
+  ├─ BEGIN TRANSACTION
+  │   ├─ Read latest WalletLedger row for buyer → current_balance
+  │   ├─ Verify current_balance &gt;= product.price
+  │   ├─ INSERT WalletLedger (buyer, -price, &quot;pur&quot;, current_balance - price)
+  │   ├─ INSERT WalletLedger (seller, +price, &quot;sal&quot;, seller_balance + price)
+  │   ├─ UPDATE transaction_products SET state = &quot;Sold&quot;
+  │   ├─ INSERT ProductStateHistory (actor=buyer, from=Reserved, to=Sold)
+  │   └─ INSERT Transaction record
+  └─ COMMIT → HTTP 200
+     ROLLBACK on any error → HTTP 4xx/5xx
+</pre></div>
+</div>
+</section>
+<hr class="docutils" />
 <section id="database-strategy">
 <h2>Database Strategy<a class="headerlink" href="#database-strategy" title="Link to this heading"></a></h2>
 <table class="docutils align-default">
 <thead>
 <tr class="row-odd"><th class="head"><p>Environment</p></th>
-<th class="head"><p>Database</p></th>
+<th class="head"><p>Engine</p></th>
 <th class="head"><p>Notes</p></th>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p>Local / CI</p></td>
-<td><p>SQLite (per service)</p></td>
-<td><p>Auto-created on startup</p></td>
+<tr class="row-even"><td><p>Local development</p></td>
+<td><p>SQLite (per service, file-based)</p></td>
+<td><p>Auto-created by SQLAlchemy <code class="docutils literal notranslate"><span class="pre">create_all()</span></code> on startup</p></td>
 </tr>
-<tr class="row-odd"><td><p>Production</p></td>
+<tr class="row-odd"><td><p>CI pipeline</p></td>
+<td><p>SQLite (in-memory or temp file)</p></td>
+<td><p>Isolated per test run; no external dependencies</p></td>
+</tr>
+<tr class="row-even"><td><p>Production</p></td>
 <td><p>PostgreSQL on Supabase</p></td>
-<td><p>Three service-scoped DB roles</p></td>
+<td><p>Three independent DB roles: <code class="docutils literal notranslate"><span class="pre">auth_service_user</span></code>, <code class="docutils literal notranslate"><span class="pre">inventory_service_user</span></code>, <code class="docutils literal notranslate"><span class="pre">transaction_service_user</span></code></p></td>
 </tr>
 </tbody>
 </table>
-<p>Services share <strong>no database</strong>. Cross-service data needs (e.g. listing counts on a profile)
-are satisfied by internal HTTP calls with a service-scoped JWT.</p>
+<p>Services use <strong>no shared database</strong>. Cross-service data access is done via HTTP with
+service-scoped JWTs. The Agentic Service has no database at all.</p>
+</section>
+<hr class="docutils" />
+<section id="frontend-architecture">
+<h2>Frontend Architecture<a class="headerlink" href="#frontend-architecture" title="Link to this heading"></a></h2>
+<p>The Vue 3 SPA uses <strong>hash-based routing</strong> (<code class="docutils literal notranslate"><span class="pre">createWebHashHistory</span></code>) so the frontend can
+be served from any static host without server-side routing configuration.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>main.js
+  └── createApp(App)
+        ├── use(pinia)
+        │     └── auth.js store — JWT in localStorage, reactive auth state
+        ├── use(router)
+        │     ├── Hash-mode routes: /login, /register, /products, /products/:id, ...
+        │     ├── Navigation guard: requiresAuth → redirect /login if no token
+        │     └── /auth/callback → exchanges OAuth code, stores JWT, redirect /products
+        ├── use(i18n)        — en / es locale files
+        └── mount(&#39;#app&#39;)
+</pre></div>
+</div>
+<p><strong>HTTP service modules</strong> (<code class="docutils literal notranslate"><span class="pre">src/services/</span></code>):</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Module</p></th>
+<th class="head"><p>Routes called</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">auth.service.js</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">/auth/register</span></code>, <code class="docutils literal notranslate"><span class="pre">/auth/login</span></code>, <code class="docutils literal notranslate"><span class="pre">/auth/social/*</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">product.service.js</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">/api/v1/products*</span></code>, <code class="docutils literal notranslate"><span class="pre">/uploads/*</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">wallet.service.js</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">/wallet/*</span></code>, <code class="docutils literal notranslate"><span class="pre">/products/*/reserve</span></code>, <code class="docutils literal notranslate"><span class="pre">/products/*/purchase</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">wallabot.service.js</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">/wallabot/category</span></code>, <code class="docutils literal notranslate"><span class="pre">/wallabot/price</span></code></p></td>
+</tr>
+</tbody>
+</table>
+<p>In <strong>production</strong>, <code class="docutils literal notranslate"><span class="pre">nginx.render.conf</span></code> replaces the Vite proxy and forwards each URL
+prefix to the corresponding Render service’s internal URL.</p>
+</section>
+<hr class="docutils" />
+<section id="deployment-architecture-production">
+<h2>Deployment Architecture (Production)<a class="headerlink" href="#deployment-architecture-production" title="Link to this heading"></a></h2>
+<p>All services are deployed on <strong>Render</strong> via the <code class="docutils literal notranslate"><span class="pre">render.yaml</span></code> Blueprint:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>render.yaml
+  ├── wallabot-frontend (Static Site — Nginx)
+  │     nginx.render.conf → proxy_pass to each Render service
+  │
+  ├── wallabot-auth (Web Service — Docker)
+  │     persistent disk at /app/data (SQLite in free tier, PostgreSQL for production)
+  │
+  ├── wallabot-inventory (Web Service — Docker)
+  │     persistent disk at /app/data
+  │
+  ├── wallabot-transaction (Web Service — Docker)
+  │     persistent disk at /app/data
+  │
+  └── wallabot-agentic (Web Service — Docker)
+        no persistent disk (stateless)
+</pre></div>
+</div>
+<p>On every push to <code class="docutils literal notranslate"><span class="pre">main</span></code>, Render automatically rebuilds and redeploys only the services
+whose source directories have changed.</p>
+</section>
+<hr class="docutils" />
+<section id="ci-cd-pipeline">
+<h2>CI/CD Pipeline<a class="headerlink" href="#ci-cd-pipeline" title="Link to this heading"></a></h2>
+<p>The GitHub Actions CI pipeline (<code class="docutils literal notranslate"><span class="pre">ci.yml</span></code>) runs on every push and pull request:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Job</p></th>
+<th class="head"><p>What it does</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">lint-python</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">ruff</span> <span class="pre">check</span></code> on all backend services</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">lint-frontend</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">npm</span> <span class="pre">ci</span> <span class="pre">&amp;&amp;</span> <span class="pre">npm</span> <span class="pre">run</span> <span class="pre">lint</span></code> in <code class="docutils literal notranslate"><span class="pre">frontend/</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test-auth-service</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">pytest</span> <span class="pre">--cov=app</span> <span class="pre">--cov-fail-under=50</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">test-inventory-service</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">pytest</span> <span class="pre">--cov=app</span> <span class="pre">--cov-fail-under=50</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test-transaction-service</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">pytest</span> <span class="pre">--cov=app</span> <span class="pre">--cov-fail-under=50</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">test-agentic-service</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">pytest</span> <span class="pre">--cov=app</span> <span class="pre">--cov-fail-under=50</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">docker-build</span></code></p></td>
+<td><p>Builds all images; runs smoke health checks</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">sphinx-docs</span></code></p></td>
+<td><p>Builds HTML + PDF; deploys to GitHub Pages (<code class="docutils literal notranslate"><span class="pre">gh-pages</span></code> branch)</p></td>
+</tr>
+</tbody>
+</table>
 </section>
 </section>
 
