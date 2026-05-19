@@ -1,192 +1,137 @@
 import { expect, test } from '@playwright/test'
+import {
+  AUTH_TOKEN_STORAGE_KEY,
+  catalogFixtures,
+  cleanupTestData,
+  createRunId,
+  createTestEmail,
+  registerAndLogin,
+  seedCatalogProducts,
+} from './helpers/backend.js'
 
-const productFixtures = [
-  {
-    id: 10,
-    title: 'Desk lamp',
-    description: 'Factory sealed desk lamp.',
-    category: 'Furniture',
-    condition: 'New',
-    price: 45,
-    state: 'Available',
-    seller_id: 'seller@example.com',
-    created_at: '2026-04-01T12:00:00Z',
-    images: [],
-  },
-  {
-    id: 11,
-    title: 'Reading chair',
-    description: 'Comfortable chair with light wear.',
-    category: 'Furniture',
-    condition: 'Good',
-    price: 75,
-    state: 'Available',
-    seller_id: 'seller@example.com',
-    created_at: '2026-04-02T12:00:00Z',
-    images: [],
-  },
-  {
-    id: 12,
-    title: 'Parts tablet',
-    description: 'Scratched tablet for parts.',
-    category: 'Electronics',
-    condition: 'Poor',
-    price: 25,
-    state: 'Reserved',
-    seller_id: 'seller@example.com',
-    created_at: '2026-04-03T12:00:00Z',
-    images: [],
-  },
-]
-
-const encodeJwtPart = (payload) => Buffer.from(JSON.stringify(payload)).toString('base64url')
-
-const createUsableToken = () =>
-  [
-    encodeJwtPart({ alg: 'HS256', typ: 'JWT' }),
-    encodeJwtPart({
-      exp: Math.floor(Date.now() / 1000) + 3600,
-      sub: 'e2e@example.com',
-    }),
-    'signature',
-  ].join('.')
-
-const filterProductsForRequest = (requestUrl) => {
+const parseProductListRequest = (requestUrl) => {
   const url = new URL(requestUrl)
-  const category = url.searchParams.get('category') || ''
-  const conditions = url.searchParams.getAll('condition')
-  const minPriceParam = url.searchParams.get('min_price')
-  const maxPriceParam = url.searchParams.get('max_price')
-  const minPrice = minPriceParam === null ? null : Number(minPriceParam)
-  const maxPrice = maxPriceParam === null ? null : Number(maxPriceParam)
 
-  return productFixtures.filter((product) => {
-    if (category && product.category !== category) {
-      return false
-    }
-
-    if (conditions.length && !conditions.includes(product.condition)) {
-      return false
-    }
-
-    if (minPrice !== null && Number.isFinite(minPrice) && product.price < minPrice) {
-      return false
-    }
-
-    if (maxPrice !== null && Number.isFinite(maxPrice) && product.price > maxPrice) {
-      return false
-    }
-
-    return true
-  })
+  return {
+    category: url.searchParams.get('category') || '',
+    conditions: url.searchParams.getAll('condition'),
+  }
 }
 
-test('filters catalog by product quality, combines filters, and persists URL state', async ({
-  page,
-}) => {
-  const productRequests = []
+const waitForCatalogRefresh = (page) =>
+  page.waitForResponse(
+    (response) =>
+      response.request().method() === 'GET' &&
+      response.url().includes('/api/v1/products') &&
+      response.ok(),
+  )
 
-  await page.addInitScript((token) => {
-    window.localStorage.setItem('wallabot_auth_token', token)
-  }, createUsableToken())
+test.describe('catalog filters against live backend', () => {
+  let runId
+  let email
+  let token
+  let titles
 
-  await page.route('**/wallet/balance', async (route) => {
-    await route.fulfill({
-      contentType: 'application/json',
-      body: JSON.stringify({
-        balance: 100,
-        user_id: 'e2e@example.com',
-      }),
-    })
+  test.beforeAll(async () => {
+    runId = createRunId()
+    email = createTestEmail(runId)
+    token = await registerAndLogin(email)
+    await seedCatalogProducts(runId, token)
+    titles = catalogFixtures(runId).map((product) => product.title)
   })
 
-  await page.route('**/auth/protected', async (route) => {
-    await route.fulfill({
-      contentType: 'application/json',
-      body: JSON.stringify({
-        message: 'acceso permitido',
-        user: 'e2e@example.com',
-      }),
-    })
+  test.afterAll(async () => {
+    if (email) {
+      await cleanupTestData(email)
+    }
   })
 
-  await page.route('**/api/v1/products**', async (route) => {
-    const url = new URL(route.request().url())
+  test('filters catalog by product quality, combines filters, and persists URL state', async ({
+    page,
+  }) => {
+    const productRequests = []
 
-    productRequests.push({
-      category: url.searchParams.get('category') || '',
-      conditions: url.searchParams.getAll('condition'),
+    page.on('request', (request) => {
+      if (request.method() !== 'GET') {
+        return
+      }
+
+      const requestUrl = request.url()
+
+      if (!requestUrl.includes('/api/v1/products')) {
+        return
+      }
+
+      productRequests.push(parseProductListRequest(requestUrl))
     })
 
-    await route.fulfill({
-      contentType: 'application/json',
-      body: JSON.stringify(filterProductsForRequest(route.request().url())),
-    })
-  })
+    await page.addInitScript(
+      ([storageKey, authToken]) => {
+        window.localStorage.setItem(storageKey, authToken)
+      },
+      [AUTH_TOKEN_STORAGE_KEY, token],
+    )
 
-  await page.route('**/users/resolve**', async (route) => {
-    await route.fulfill({
-      contentType: 'application/json',
-      body: JSON.stringify({
-        id: 7,
-        username: 'seller@example.com',
-        avg_rating: 4.5,
-        active_listing_count: 2,
-        member_since: '2026-04-01T00:00:00Z',
-      }),
-    })
-  })
+    const ourProductCards = () => page.locator('.product-card').filter({ hasText: runId })
+    const ourTitles = () => ourProductCards().locator('.product-card__title')
+    const expectOurTitles = async (expectedTitles) => {
+      await expect
+        .poll(async () => ourTitles().allTextContents())
+        .toEqual(expectedTitles)
+    }
 
-  await page.goto('/#/products')
+    await page.goto('/#/products')
 
-  await expect(page.locator('.product-card__title')).toHaveText([
-    'Desk lamp',
-    'Reading chair',
-    'Parts tablet',
-  ])
-  await expect(page.locator('.condition-badge--good')).toHaveText('Good')
+    await expect(page).toHaveURL(/\/products/)
+    await page.getByText(/^Filters/).click()
+    await page.locator('input[name="q"]').fill(runId)
+    await expect.poll(async () => ourProductCards().count()).toBe(3)
+    await expectOurTitles(titles)
+    await expect(page.locator('.condition-badge--good').first()).toHaveText('Good')
 
-  await page.getByText(/^Filters/).click()
-  await page.locator('input[name="condition"][value="Good"]').check()
+    await Promise.all([
+      waitForCatalogRefresh(page),
+      page.locator('input[name="condition"][value="Good"]').check(),
+    ])
 
-  await expect
-    .poll(() => productRequests.at(-1)?.conditions)
-    .toEqual(['Good'])
-  await expect(page.locator('.product-card__title')).toHaveText(['Reading chair'])
+    await expect.poll(() => productRequests.at(-1)?.conditions).toEqual(['Good'])
+    await expectOurTitles([titles[1]])
 
-  await page.locator('input[name="condition"][value="Poor"]').check()
+    await Promise.all([
+      waitForCatalogRefresh(page),
+      page.locator('input[name="condition"][value="Poor"]').check(),
+    ])
 
-  await expect
-    .poll(() => productRequests.at(-1)?.conditions)
-    .toEqual(['Good', 'Poor'])
-  await expect(page.locator('.product-card__title')).toHaveText([
-    'Reading chair',
-    'Parts tablet',
-  ])
+    await expect.poll(() => productRequests.at(-1)?.conditions).toEqual(['Good', 'Poor'])
+    await expectOurTitles([titles[1], titles[2]])
 
-  await page.locator('select[name="category"]').selectOption('Furniture')
+    await Promise.all([
+      waitForCatalogRefresh(page),
+      page.locator('select[name="category"]').selectOption('Furniture'),
+    ])
 
-  await expect
-    .poll(() => productRequests.at(-1))
-    .toMatchObject({
+    await expect.poll(() => productRequests.at(-1)).toMatchObject({
       category: 'Furniture',
       conditions: ['Good', 'Poor'],
     })
-  await expect(page.locator('.product-card__title')).toHaveText(['Reading chair'])
+    await expectOurTitles([titles[1]])
 
-  await page.locator('input[name="q"]').fill('chair')
+    const scopedSearch = `${runId} reading`
+    await page.locator('input[name="q"]').fill(scopedSearch)
 
-  await expect(page).toHaveURL(/condition=Good/)
-  await expect(page).toHaveURL(/condition=Poor/)
-  await expect(page).toHaveURL(/category=Furniture/)
-  await expect(page).toHaveURL(/q=chair/)
-  await expect(page.locator('.product-card__title')).toHaveText(['Reading chair'])
+    await expect(page).toHaveURL(/condition=Good/)
+    await expect(page).toHaveURL(/condition=Poor/)
+    await expect(page).toHaveURL(/category=Furniture/)
+    await expect(page).toHaveURL(new RegExp(`q=.*${runId}.*reading`))
+    await expectOurTitles([titles[1]])
 
-  await page.reload()
+    await page.reload()
+    await waitForCatalogRefresh(page)
 
-  await expect(page.locator('input[name="condition"][value="Good"]')).toBeChecked()
-  await expect(page.locator('input[name="condition"][value="Poor"]')).toBeChecked()
-  await expect(page.locator('select[name="category"]')).toHaveValue('Furniture')
-  await expect(page.locator('input[name="q"]')).toHaveValue('chair')
-  await expect(page.locator('.product-card__title')).toHaveText(['Reading chair'])
+    await expect(page.locator('input[name="condition"][value="Good"]')).toBeChecked()
+    await expect(page.locator('input[name="condition"][value="Poor"]')).toBeChecked()
+    await expect(page.locator('select[name="category"]')).toHaveValue('Furniture')
+    await expect(page.locator('input[name="q"]')).toHaveValue(scopedSearch)
+    await expectOurTitles([titles[1]])
+  })
 })

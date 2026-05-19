@@ -85,7 +85,7 @@ jobs:
           DATABASE_URL: "sqlite:///./test_auth.db"
           JWT_SECRET: "ci-test-secret"
           JWT_EXPIRY_MINUTES: "30"
-        run: pytest --cov=app --cov-report=term-missing --cov-report=xml:coverage.xml --cov-report=html:coverage-html -q
+        run: pytest --cov=app --cov-report=term-missing --cov-report=xml:coverage.xml --cov-report=html:coverage-html --junitxml=junit.xml -q
 
       - name: Upload coverage report
         if: always()
@@ -95,6 +95,7 @@ jobs:
           path: |
             backend/auth-service/coverage.xml
             backend/auth-service/coverage-html/
+            backend/auth-service/junit.xml
 
   # ─────────────────────────────────────────────
   test-inventory:
@@ -119,7 +120,7 @@ jobs:
           DATABASE_URL: "sqlite:///./test_inventory.db"
           SECRET_KEY: "ci-test-secret"
           ALGORITHM: "HS256"
-        run: pytest --cov=app --cov-report=term-missing --cov-report=xml:coverage.xml --cov-report=html:coverage-html -q
+        run: pytest --cov=app --cov-report=term-missing --cov-report=xml:coverage.xml --cov-report=html:coverage-html --junitxml=junit.xml -q
 
       - name: Upload coverage report
         if: always()
@@ -129,6 +130,7 @@ jobs:
           path: |
             backend/inventory-service/coverage.xml
             backend/inventory-service/coverage-html/
+            backend/inventory-service/junit.xml
 
   # ─────────────────────────────────────────────
 
@@ -152,7 +154,7 @@ jobs:
       - name: Run tests
         env:
           DATABASE_URL: "sqlite:///./test_transactions.db"
-        run: pytest --cov=app --cov-report=term-missing --cov-report=xml:coverage.xml --cov-report=html:coverage-html -q
+        run: pytest --cov=app --cov-report=term-missing --cov-report=xml:coverage.xml --cov-report=html:coverage-html --junitxml=junit.xml -q
 
       - name: Upload coverage report
         if: always()
@@ -162,6 +164,7 @@ jobs:
           path: |
             backend/transaction-service/coverage.xml
             backend/transaction-service/coverage-html/
+            backend/transaction-service/junit.xml
 
   # ─────────────────────────────────────────────
 
@@ -187,7 +190,7 @@ jobs:
           DATABASE_URL: "sqlite:///./test_wallabot.db"
           TAVILY_API_KEY: "ci-mock-key"
           OPENAI_API_KEY: "ci-mock-key"
-        run: pytest --cov=app --cov-report=term-missing --cov-report=xml:coverage.xml --cov-report=html:coverage-html -q
+        run: pytest --cov=app --cov-report=term-missing --cov-report=xml:coverage.xml --cov-report=html:coverage-html --junitxml=junit.xml -q
 
       - name: Upload coverage report
         if: always()
@@ -197,6 +200,7 @@ jobs:
           path: |
             backend/agentic-service/coverage.xml
             backend/agentic-service/coverage-html/
+            backend/agentic-service/junit.xml
 
   test-backend-docker:
     name: "Test · backend (docker + live DB)"

@@ -1,12 +1,20 @@
 name: Build and Deploy Sphinx Docs
 
 on:
-  push:
+  # Trigger after CI completes on main so coverage artifacts are guaranteed to exist.
+  # Using workflow_run (instead of push) gives us the exact run_id needed to download
+  # the right artifacts and avoids the race condition where the docs job starts before
+  # pytest has finished generating the HTML coverage reports.
+  workflow_run:
+    workflows: ["Wallabot CI"]
     branches: [main]
+    types: [completed]
+  # Allow manual re-runs, e.g. after a docs-only change or to rebuild without new tests.
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: write  # push to gh-pages
+  actions: read    # read artifacts from the CI workflow run
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -18,6 +26,10 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          # workflow_run events carry the triggering commit in head_sha; fall back to
+          # github.sha for manual workflow_dispatch runs.
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
@@ -34,6 +46,42 @@ jobs:
 
       - name: Install Sphinx and extensions
         run: pip install -r docs-sphinx/requirements.txt
+
+      # ── Coverage injection ────────────────────────────────────────────────────
+      # Only runs on workflow_run events (not manual dispatch) because we need the
+      # CI run_id to locate the right artifacts.  continue-on-error ensures a missing
+      # or incomplete artifact never blocks the documentation build.
+
+      - name: Download coverage HTML reports from CI
+        if: github.event_name == 'workflow_run'
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          workflow: ci.yml
+          run_id: ${{ github.event.workflow_run.id }}
+          path: coverage-artifacts
+          if_no_artifact_found: warn
+        continue-on-error: true
+
+      - name: Inject coverage reports into Sphinx _static
+        run: |
+          mkdir -p docs-sphinx/source/_static/coverage
+          for svc in auth-service inventory-service transaction-service agentic-service; do
+            # Artifacts are uploaded with the workspace-relative path preserved, so
+            # coverage-html lives at:
+            #   coverage-artifacts/coverage-<svc>/backend/<svc>/coverage-html/
+            src="coverage-artifacts/coverage-${svc}/backend/${svc}/coverage-html"
+            if [ -d "$src" ]; then
+              cp -r "$src" "docs-sphinx/source/_static/coverage/${svc}"
+              echo "Injected ${svc} — $(find docs-sphinx/source/_static/coverage/${svc} -name '*.html' | wc -l) HTML files"
+            else
+              echo "No coverage HTML found for ${svc} — link will be inactive in this build"
+            fi
+          done
+
+      - name: Generate dynamic coverage tables
+        run: python3 docs-sphinx/generate_coverage.py
+
+      # ── Sphinx build ──────────────────────────────────────────────────────────
 
       - name: Build Sphinx HTML
         run: |

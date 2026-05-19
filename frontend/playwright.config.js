@@ -6,7 +6,10 @@ const shouldStartWebServer = !process.env.PLAYWRIGHT_BASE_URL
 
 export default defineConfig({
   testDir: './e2e',
-  fullyParallel: true,
+  globalSetup: './e2e/global-setup.js',
+  fullyParallel: false,
+  workers: 1,
+  timeout: 60_000,
   reporter: [['list']],
   use: {
     baseURL,
@@ -23,7 +26,7 @@ export default defineConfig({
   webServer: shouldStartWebServer
     ? {
         command: `npm run dev -- --host 127.0.0.1 --port ${port} --strictPort`,
-        reuseExistingServer: false,
+        reuseExistingServer: !process.env.CI,
         timeout: 120000,
         url: baseURL,
       }
