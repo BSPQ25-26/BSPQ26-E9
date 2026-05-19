@@ -1,0 +1,67 @@
+name: Build and Deploy Sphinx Docs
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  sphinx:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('docs-sphinx/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install Sphinx and extensions
+        run: pip install -r docs-sphinx/requirements.txt
+
+      - name: Build Sphinx HTML
+        run: |
+          cd docs-sphinx
+          make html
+
+      - name: Install PDF dependencies
+        run: |
+          sudo apt-get install -y libpango-1.0-0 libpangoft2-1.0-0
+          pip install weasyprint beautifulsoup4
+
+      - name: Build multi-page PDF
+        run: python3 docs-sphinx/build_pdf.py
+
+      - name: Assemble deployment directory
+        run: |
+          mkdir -p deploy/sphinx
+          touch deploy/.nojekyll
+          cp docs-sphinx/index.html deploy/index.html
+          cp -r docs-sphinx/_build/html/. deploy/sphinx/
+          cp docs-sphinx/_build/BSPQ26-E9.pdf deploy/sphinx/BSPQ26-E9.pdf
+          echo "PDF size: $(du -sh deploy/sphinx/BSPQ26-E9.pdf)"
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./deploy
+          destination_dir: .
+          keep_files: true
+          enable_jekyll: false

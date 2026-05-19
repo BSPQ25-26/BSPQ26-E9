@@ -1,0 +1,16 @@
+/* Wallabot custom Sphinx styles */
+.wy-nav-content {
+    max-width: 1000px;
+}
+
+.rst-content table.docutils td, .rst-content table.docutils th {
+    border: 1px solid #e1e4e5;
+    padding: 8px 12px;
+}
+
+.rst-content code {
+    background: #f5f5f5;
+    border: 1px solid #e1e4e5;
+    padding: 2px 5px;
+    border-radius: 3px;
+}

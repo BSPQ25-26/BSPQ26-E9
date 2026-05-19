@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>System Architecture &mdash; Wallabot 3.0.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=e8a114e6" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=acc74ff5"></script>
+        <script src="_static/doctools.js?v=888ff710"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="REST API Reference" href="api/index.html" />
+    <link rel="prev" title="Project Overview" href="overview.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Wallabot
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Project Overview</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Project Overview</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">System Architecture</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#microservices-overview">Microservices Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#service-responsibilities">Service Responsibilities</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#auth-service-port-8001">Auth Service (port 8001)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#inventory-service-port-8002">Inventory Service (port 8002)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#transaction-service-port-8003">Transaction Service (port 8003)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#agentic-service-port-8004">Agentic Service (port 8004)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#authentication-flow">Authentication Flow</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#product-state-machine">Product State Machine</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#database-strategy">Database Strategy</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">REST API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="api/index.html">REST API Reference</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Testing &amp; Quality</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="testing.html">Testing &amp; Quality</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">DevOps &amp; CI/CD</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="devops.html">DevOps &amp; CI/CD</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Wallabot</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">System Architecture</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/architecture.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="system-architecture">
+<h1>System Architecture<a class="headerlink" href="#system-architecture" title="Link to this heading"></a></h1>
+<section id="microservices-overview">
+<h2>Microservices Overview<a class="headerlink" href="#microservices-overview" title="Link to this heading"></a></h2>
+<p>Wallabot follows a <strong>microservices architecture</strong>: each domain is encapsulated in an
+independently deployable FastAPI service. The Vue 3 frontend acts as the sole entry point
+for end users and proxies all API calls to the appropriate backend service.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>┌─────────────────────────────────────────────────────────────┐
+│                     Vue 3 Frontend (5173)                   │
+│           (Vite proxy / Nginx reverse proxy in prod)        │
+└──────┬──────────┬──────────┬──────────┬───────────┬─────────┘
+       │ /auth    │ /api/v1  │ /products│ /wallet   │ /wallabot
+       ▼          ▼          ▼          ▼           ▼
+  ┌─────────┐ ┌──────────┐ ┌──────────────────────┐ ┌─────────────┐
+  │  Auth   │ │Inventory │ │  Transaction Service │ │  Agentic    │
+  │ Service │ │ Service  │ │       (8003)         │ │  Service    │
+  │  (8001) │ │  (8002)  │ └──────────────────────┘ │   (8004)   │
+  └─────────┘ └──────────┘                           └─────────────┘
+</pre></div>
+</div>
+</section>
+<section id="service-responsibilities">
+<h2>Service Responsibilities<a class="headerlink" href="#service-responsibilities" title="Link to this heading"></a></h2>
+<section id="auth-service-port-8001">
+<h3>Auth Service (port 8001)<a class="headerlink" href="#auth-service-port-8001" title="Link to this heading"></a></h3>
+<p>Owns user identity. All other services trust Auth Service-issued JWTs for authentication.</p>
+<ul class="simple">
+<li><p>User registration and login (<code class="docutils literal notranslate"><span class="pre">/auth/register</span></code>, <code class="docutils literal notranslate"><span class="pre">/auth/login</span></code>)</p></li>
+<li><p>Social OAuth flow with Google and Facebook (<code class="docutils literal notranslate"><span class="pre">/auth/social/...</span></code>)</p></li>
+<li><p>Public user profiles and ratings (<code class="docutils literal notranslate"><span class="pre">/users/{id}/profile</span></code>, <code class="docutils literal notranslate"><span class="pre">/users/{id}/ratings</span></code>)</p></li>
+<li><p>JWT access-token issuance with <code class="docutils literal notranslate"><span class="pre">python-jose</span></code> + <code class="docutils literal notranslate"><span class="pre">bcrypt</span></code> password hashing</p></li>
+</ul>
+</section>
+<section id="inventory-service-port-8002">
+<h3>Inventory Service (port 8002)<a class="headerlink" href="#inventory-service-port-8002" title="Link to this heading"></a></h3>
+<p>Owns the product catalogue. Products here represent the <em>listing</em> view.</p>
+<ul class="simple">
+<li><p>Full CRUD for product listings (<code class="docutils literal notranslate"><span class="pre">/api/v1/products</span></code>)</p></li>
+<li><p>Image upload to local filesystem or Supabase Storage</p></li>
+<li><p>Filtering by state, category, price range, condition, and full-text keyword search</p></li>
+</ul>
+</section>
+<section id="transaction-service-port-8003">
+<h3>Transaction Service (port 8003)<a class="headerlink" href="#transaction-service-port-8003" title="Link to this heading"></a></h3>
+<p>Owns the commerce domain. Products in this service mirror listing state but track commerce
+events separately.</p>
+<ul class="simple">
+<li><p>Wallet operations: top-up and balance query (<code class="docutils literal notranslate"><span class="pre">/wallet</span></code>)</p></li>
+<li><p>Product reservation with configurable timeout (<code class="docutils literal notranslate"><span class="pre">/products/{id}/reserve</span></code>)</p></li>
+<li><p>Purchase completion with atomic wallet debit (<code class="docutils literal notranslate"><span class="pre">/products/{id}/purchase</span></code>)</p></li>
+<li><p>Transaction history (<code class="docutils literal notranslate"><span class="pre">/transactions</span></code>)</p></li>
+<li><p>Background reservation-expiry daemon</p></li>
+</ul>
+</section>
+<section id="agentic-service-port-8004">
+<h3>Agentic Service (port 8004)<a class="headerlink" href="#agentic-service-port-8004" title="Link to this heading"></a></h3>
+<p>The AI subsystem. All endpoints are <strong>stateless</strong> — no session memory between requests.</p>
+<ul class="simple">
+<li><p>Category suggestion via LangChain LCEL + GPT-4o-mini (<code class="docutils literal notranslate"><span class="pre">/wallabot/category</span></code>)</p></li>
+<li><p>Price recommendation via Tavily web search + GPT-4o-mini (<code class="docutils literal notranslate"><span class="pre">/wallabot/price</span></code>)</p></li>
+<li><p>Optional LangSmith tracing for monitoring and debugging</p></li>
+</ul>
+</section>
+</section>
+<section id="authentication-flow">
+<h2>Authentication Flow<a class="headerlink" href="#authentication-flow" title="Link to this heading"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>Client                  Auth Service           Other Services
+  │                          │                       │
+  │── POST /auth/login ──────►│                       │
+  │◄── {access_token: ...} ──│                       │
+  │                          │                       │
+  │── GET /api/v1/products ──────────────────────────►│
+  │   (Authorization: Bearer &lt;token&gt;)                 │
+  │◄── [...products] ─────────────────────────────────│
+</pre></div>
+</div>
+<p>JWT tokens are verified locally by each service using the shared <code class="docutils literal notranslate"><span class="pre">SECRET_KEY</span></code> environment
+variable; no service-to-service auth call is required on every request.</p>
+</section>
+<section id="product-state-machine">
+<h2>Product State Machine<a class="headerlink" href="#product-state-machine" title="Link to this heading"></a></h2>
+<p>Products in the Transaction Service follow a strict state machine:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>Available ──► Reserved ──► Sold
+     ▲            │
+     └────────────┘  (timeout / explicit release)
+</pre></div>
+</div>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Transition</p></th>
+<th class="head"><p>Trigger</p></th>
+<th class="head"><p>Notes</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Available → Reserved</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">POST</span> <span class="pre">/products/{id}/reserve</span></code></p></td>
+<td><p>Holds for <code class="docutils literal notranslate"><span class="pre">RESERVATION_TIMEOUT_SECONDS</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>Reserved → Available</p></td>
+<td><p>Background cleanup or <code class="docutils literal notranslate"><span class="pre">DELETE</span> <span class="pre">/products/{id}/reserve</span></code></p></td>
+<td><p>Auto-releases on timeout</p></td>
+</tr>
+<tr class="row-even"><td><p>Reserved → Sold</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">POST</span> <span class="pre">/products/{id}/purchase</span></code></p></td>
+<td><p>Atomically debits buyer’s wallet</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="database-strategy">
+<h2>Database Strategy<a class="headerlink" href="#database-strategy" title="Link to this heading"></a></h2>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Environment</p></th>
+<th class="head"><p>Database</p></th>
+<th class="head"><p>Notes</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Local / CI</p></td>
+<td><p>SQLite (per service)</p></td>
+<td><p>Auto-created on startup</p></td>
+</tr>
+<tr class="row-odd"><td><p>Production</p></td>
+<td><p>PostgreSQL on Supabase</p></td>
+<td><p>Three service-scoped DB roles</p></td>
+</tr>
+</tbody>
+</table>
+<p>Services share <strong>no database</strong>. Cross-service data needs (e.g. listing counts on a profile)
+are satisfied by internal HTTP calls with a service-scoped JWT.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="overview.html" class="btn btn-neutral float-left" title="Project Overview" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="api/index.html" class="btn btn-neutral float-right" title="REST API Reference" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, BSPQ26-E9.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
