@@ -64,12 +64,28 @@
 <p class="caption" role="heading"><span class="caption-text">DevOps &amp; CI/CD</span></p>
 <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">DevOps &amp; CI/CD</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#docker-compose-local-development">Docker Compose (Local Development)</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#environment-variables">Environment Variables</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#ci-pipeline-github-actions">CI Pipeline (GitHub Actions)</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#cd-pipeline-render">CD Pipeline (Render)</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#github-pages-sphinx-documentation">GitHub Pages (Sphinx Documentation)</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#sphinx-documentation-workflow">Sphinx Documentation Workflow</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#live-production-environment">Live Production Environment</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#sphinx-documentation-github-pages">Sphinx Documentation (GitHub Pages)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#render-deployment-architecture">Render Deployment Architecture</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#overview">Overview</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#service-configuration">Service configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#persistent-storage-sqlite-on-free-tier">Persistent storage (SQLite on free tier)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#service-to-service-routing-frontend-reverse-proxy">Service-to-service routing (frontend reverse proxy)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#environment-variables">Environment variables</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#auto-deploy-behaviour">Auto-deploy behaviour</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#ci-cd-pipeline-github-actions">CI/CD Pipeline (GitHub Actions)</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#ci-yml-continuous-integration"><code class="docutils literal notranslate"><span class="pre">ci.yml</span></code> — Continuous Integration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cd-yml-continuous-delivery"><code class="docutils literal notranslate"><span class="pre">cd.yml</span></code> — Continuous Delivery</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#sphinx-docs-yml-documentation-deployment"><code class="docutils literal notranslate"><span class="pre">sphinx-docs.yml</span></code> — Documentation Deployment</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#docker-compose-local-development">Docker Compose (Local Development)</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#running-only-the-backend-frontend-on-host">Running only the backend (frontend on host)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#environment-variables-reference">Environment Variables Reference</a></li>
 </ul>
 </li>
 </ul>
@@ -100,170 +116,513 @@
              
   <section id="devops-ci-cd">
 <h1>DevOps &amp; CI/CD<a class="headerlink" href="#devops-ci-cd" title="Link to this heading"></a></h1>
+<section id="live-production-environment">
+<h2>Live Production Environment<a class="headerlink" href="#live-production-environment" title="Link to this heading"></a></h2>
+<p>Wallabot is deployed on <a class="reference external" href="https://render.com">Render</a> and is <strong>publicly accessible right now</strong>.</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Service</p></th>
+<th class="head"><p>Production URL</p></th>
+<th class="head"><p>API docs</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><strong>Frontend (app)</strong></p></td>
+<td><p>https://wallabot-frontend.onrender.com</p></td>
+<td><p>—</p></td>
+</tr>
+<tr class="row-odd"><td><p>Auth Service</p></td>
+<td><p>https://wallabot-auth.onrender.com</p></td>
+<td><p>https://wallabot-auth.onrender.com/docs</p></td>
+</tr>
+<tr class="row-even"><td><p>Inventory Service</p></td>
+<td><p>https://wallabot-inventory.onrender.com</p></td>
+<td><p>https://wallabot-inventory.onrender.com/docs</p></td>
+</tr>
+<tr class="row-odd"><td><p>Transaction Service</p></td>
+<td><p>https://wallabot-transaction.onrender.com</p></td>
+<td><p>https://wallabot-transaction.onrender.com/docs</p></td>
+</tr>
+<tr class="row-even"><td><p>Agentic Service</p></td>
+<td><p>https://wallabot-agentic.onrender.com</p></td>
+<td><p>https://wallabot-agentic.onrender.com/docs</p></td>
+</tr>
+</tbody>
+</table>
+<p>The interactive Swagger UI at <code class="docutils literal notranslate"><span class="pre">/docs</span></code> and ReDoc at <code class="docutils literal notranslate"><span class="pre">/redoc</span></code> are enabled on every backend service
+in production — useful for manual testing without running anything locally.</p>
+<blockquote>
+<div><p><strong>Note on free-tier cold starts</strong>: all services run on Render’s free plan. After 15 minutes
+of inactivity Render spins the container down. The first request after inactivity will take
+30–60 seconds while the container boots. Subsequent requests are fast.</p>
+</div></blockquote>
+</section>
+<hr class="docutils" />
+<section id="sphinx-documentation-github-pages">
+<h2>Sphinx Documentation (GitHub Pages)<a class="headerlink" href="#sphinx-documentation-github-pages" title="Link to this heading"></a></h2>
+<p>The full project documentation (this site) is automatically published to GitHub Pages on every
+push to <code class="docutils literal notranslate"><span class="pre">main</span></code>:</p>
+<p><strong>https://BSPQ25-26.github.io/BSPQ26-E9/sphinx/</strong></p>
+<p>A downloadable PDF version of the documentation is also generated and available at:</p>
+<p><strong>https://BSPQ25-26.github.io/BSPQ26-E9/sphinx/BSPQ26-E9.pdf</strong></p>
+<p>How the docs deployment works:</p>
+<ol class="arabic">
+<li><p>The <code class="docutils literal notranslate"><span class="pre">sphinx-docs.yml</span></code> GitHub Actions workflow triggers on every push to <code class="docutils literal notranslate"><span class="pre">main</span></code></p></li>
+<li><p>It installs Python 3.12, then all Sphinx dependencies from <code class="docutils literal notranslate"><span class="pre">docs-sphinx/requirements.txt</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">html</span></code> builds the static HTML site into <code class="docutils literal notranslate"><span class="pre">docs-sphinx/_build/html/</span></code></p></li>
+<li><p>WeasyPrint + BeautifulSoup render the combined PDF (<code class="docutils literal notranslate"><span class="pre">build_pdf.py</span></code>)</p></li>
+<li><p>The deployment directory is assembled:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>deploy/
+├── .nojekyll          ← disables Jekyll processing on GitHub Pages
+├── index.html         ← redirect to sphinx/
+└── sphinx/
+    ├── index.html     ← documentation home page
+    ├── ...            ← all other HTML pages and assets
+    └── BSPQ26-E9.pdf  ← combined PDF export
+</pre></div>
+</div>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">peaceiris/actions-gh-pages&#64;v4</span></code> pushes <code class="docutils literal notranslate"><span class="pre">deploy/</span></code> to the <code class="docutils literal notranslate"><span class="pre">gh-pages</span></code> branch</p></li>
+</ol>
+<p><strong>Required GitHub repository settings</strong> (one-time setup):</p>
+<ol class="arabic simple">
+<li><p>Repository must be <strong>public</strong></p></li>
+<li><p><em>Settings → Actions → General → Workflow permissions</em>: <strong>Read and write permissions</strong></p></li>
+<li><p><em>Settings → Pages → Source</em>: <strong>Deploy from a branch</strong>, branch <strong>gh-pages</strong>, folder <strong>/ (root)</strong></p></li>
+</ol>
+</section>
+<hr class="docutils" />
+<section id="render-deployment-architecture">
+<h2>Render Deployment Architecture<a class="headerlink" href="#render-deployment-architecture" title="Link to this heading"></a></h2>
+<section id="overview">
+<h3>Overview<a class="headerlink" href="#overview" title="Link to this heading"></a></h3>
+<p>All five Wallabot services are deployed as independent <strong>Render Web Services</strong> running Docker
+containers. The deployment is defined in <code class="docutils literal notranslate"><span class="pre">render.yaml</span></code> (Render Blueprint) at the repository
+root and deploys from the <code class="docutils literal notranslate"><span class="pre">main</span></code> branch.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>GitHub (main branch)
+        │
+        │  push / merge → autoDeploy: yes
+        ▼
+  Render Build System
+        │
+        ├── wallabot-auth        → https://wallabot-auth.onrender.com
+        ├── wallabot-inventory   → https://wallabot-inventory.onrender.com
+        ├── wallabot-transaction → https://wallabot-transaction.onrender.com
+        ├── wallabot-agentic     → https://wallabot-agentic.onrender.com
+        └── wallabot-frontend    → https://wallabot-frontend.onrender.com
+</pre></div>
+</div>
+</section>
+<section id="service-configuration">
+<h3>Service configuration<a class="headerlink" href="#service-configuration" title="Link to this heading"></a></h3>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Render service</p></th>
+<th class="head"><p>Source directory</p></th>
+<th class="head"><p>Dockerfile</p></th>
+<th class="head"><p>Port</p></th>
+<th class="head"><p>Health check</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>wallabot-auth</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">backend/auth-service</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">./Dockerfile</span></code></p></td>
+<td><p>10000</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">/health</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>wallabot-inventory</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">backend/inventory-service</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">./Dockerfile</span></code></p></td>
+<td><p>10000</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">/health</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>wallabot-transaction</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">backend/transaction-service</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">./Dockerfile</span></code></p></td>
+<td><p>10000</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">/health</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>wallabot-agentic</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">backend/agentic-service</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">./Dockerfile</span></code></p></td>
+<td><p>10000</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">/health</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>wallabot-frontend</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">frontend</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">./Dockerfile.render</span></code></p></td>
+<td><p>10000</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">/</span></code></p></td>
+</tr>
+</tbody>
+</table>
+<p>Every backend service is started with:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">uvicorn</span> <span class="n">app</span><span class="o">.</span><span class="n">main</span><span class="p">:</span><span class="n">app</span> <span class="o">--</span><span class="n">host</span> <span class="mf">0.0.0.0</span> <span class="o">--</span><span class="n">port</span> <span class="mi">10000</span>
+</pre></div>
+</div>
+</section>
+<section id="persistent-storage-sqlite-on-free-tier">
+<h3>Persistent storage (SQLite on free tier)<a class="headerlink" href="#persistent-storage-sqlite-on-free-tier" title="Link to this heading"></a></h3>
+<p>The three stateful backend services have a <strong>persistent disk</strong> mounted at <code class="docutils literal notranslate"><span class="pre">/app/data</span></code>. SQLite
+database files are created there on first startup and survive container restarts and redeploys.</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Service</p></th>
+<th class="head"><p>Database path</p></th>
+<th class="head"><p>Env variable</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>wallabot-auth</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">/app/data/auth.db</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">AUTH_DATABASE_URL</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>wallabot-inventory</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">/app/data/inventory.db</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">DATABASE_URL</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>wallabot-transaction</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">/app/data/transactions.db</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">DATABASE_URL</span></code> + <code class="docutils literal notranslate"><span class="pre">TRANSACTION_DATABASE_URL</span></code></p></td>
+</tr>
+</tbody>
+</table>
+<p>The Agentic Service has <strong>no database</strong> — it is fully stateless.</p>
+</section>
+<section id="service-to-service-routing-frontend-reverse-proxy">
+<h3>Service-to-service routing (frontend reverse proxy)<a class="headerlink" href="#service-to-service-routing-frontend-reverse-proxy" title="Link to this heading"></a></h3>
+<p>The Vue SPA is served by an <strong>nginx container</strong> built from <code class="docutils literal notranslate"><span class="pre">frontend/Dockerfile.render</span></code>. The
+nginx configuration (<code class="docutils literal notranslate"><span class="pre">frontend/nginx.render.conf</span></code>) acts as a reverse proxy, forwarding each
+URL prefix to the appropriate backend service using Render’s internal private networking.</p>
+<p>Render injects the internal hostname of each backend service at container startup via
+environment variables (<code class="docutils literal notranslate"><span class="pre">AUTH_SERVICE_URL</span></code>, <code class="docutils literal notranslate"><span class="pre">INVENTORY_SERVICE_URL</span></code>, etc.), which are
+referenced in the nginx config at runtime via <code class="docutils literal notranslate"><span class="pre">frontend/entrypoint.sh</span></code>.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>Browser → https://wallabot-frontend.onrender.com
+                 │
+                 │ nginx reverse proxy
+                 ├── /auth/*       → wallabot-auth      (internal Render URL)
+                 ├── /users/*      → wallabot-auth
+                 ├── /ratings/*    → wallabot-auth
+                 ├── /api/v1/*     → wallabot-inventory
+                 ├── /uploads/*    → wallabot-inventory
+                 ├── /products/*   → wallabot-transaction
+                 ├── /wallet/*     → wallabot-transaction
+                 ├── /transactions/*→ wallabot-transaction
+                 └── /wallabot/*   → wallabot-agentic
+</pre></div>
+</div>
+<p>This design keeps all backend services on Render’s internal network — they are only reachable
+through the frontend nginx proxy and are not directly exposed to the public internet through
+the app. (Their individual <code class="docutils literal notranslate"><span class="pre">*.onrender.com</span></code> URLs are still accessible for direct API testing
+and Swagger UI access.)</p>
+</section>
+<section id="environment-variables">
+<h3>Environment variables<a class="headerlink" href="#environment-variables" title="Link to this heading"></a></h3>
+<p>Secrets are configured in the Render dashboard (not stored in <code class="docutils literal notranslate"><span class="pre">render.yaml</span></code>). The following
+must be set for a full-featured production deployment:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Variable</p></th>
+<th class="head"><p>Service</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">SECRET_KEY</span></code></p></td>
+<td><p>auth, inventory, transaction</p></td>
+<td><p>JWT signing key — must be identical across all services</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">OPENAI_API_KEY</span></code></p></td>
+<td><p>agentic</p></td>
+<td><p>GPT-4o-mini API key</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">TAVILY_API_KEY</span></code></p></td>
+<td><p>agentic</p></td>
+<td><p>Tavily web search API key</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">LANGCHAIN_TRACING_V2</span></code></p></td>
+<td><p>agentic</p></td>
+<td><p>Set <code class="docutils literal notranslate"><span class="pre">true</span></code> to enable LangSmith tracing</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">LANGCHAIN_API_KEY</span></code></p></td>
+<td><p>agentic</p></td>
+<td><p>LangSmith project key</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">SUPABASE_URL</span></code></p></td>
+<td><p>inventory</p></td>
+<td><p>(Optional) Supabase project URL for PostgreSQL + Storage</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">SUPABASE_SERVICE_ROLE_KEY</span></code></p></td>
+<td><p>inventory</p></td>
+<td><p>(Optional) Supabase service-role key</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">GOOGLE_CLIENT_ID</span></code> / <code class="docutils literal notranslate"><span class="pre">GOOGLE_CLIENT_SECRET</span></code></p></td>
+<td><p>auth</p></td>
+<td><p>(Optional) Google OAuth credentials</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">FACEBOOK_CLIENT_ID</span></code> / <code class="docutils literal notranslate"><span class="pre">FACEBOOK_CLIENT_SECRET</span></code></p></td>
+<td><p>auth</p></td>
+<td><p>(Optional) Facebook OAuth credentials</p></td>
+</tr>
+</tbody>
+</table>
+<p>The <code class="docutils literal notranslate"><span class="pre">render.yaml</span></code> marks <code class="docutils literal notranslate"><span class="pre">OPENAI_API_KEY</span></code> and <code class="docutils literal notranslate"><span class="pre">TAVILY_API_KEY</span></code> with <code class="docutils literal notranslate"><span class="pre">sync:</span> <span class="pre">false</span></code>, meaning
+Render will prompt for these values when the Blueprint is first applied — they are never
+committed to the repository.</p>
+</section>
+<section id="auto-deploy-behaviour">
+<h3>Auto-deploy behaviour<a class="headerlink" href="#auto-deploy-behaviour" title="Link to this heading"></a></h3>
+<p>Each service has <code class="docutils literal notranslate"><span class="pre">autoDeploy:</span> <span class="pre">yes</span></code> with trigger <code class="docutils literal notranslate"><span class="pre">commit</span></code>. When a commit is pushed to <code class="docutils literal notranslate"><span class="pre">main</span></code>:</p>
+<ol class="arabic simple">
+<li><p>Render detects the push via a GitHub webhook</p></li>
+<li><p>Only services whose source directory contains changed files are rebuilt (Render change
+detection is directory-scoped)</p></li>
+<li><p>The affected service(s) build their Docker image, run health checks, then swap the old
+container for the new one with zero downtime (rolling update)</p></li>
+</ol>
+</section>
+</section>
+<hr class="docutils" />
+<section id="ci-cd-pipeline-github-actions">
+<h2>CI/CD Pipeline (GitHub Actions)<a class="headerlink" href="#ci-cd-pipeline-github-actions" title="Link to this heading"></a></h2>
+<p>Three workflow files live in <code class="docutils literal notranslate"><span class="pre">.github/workflows/</span></code>:</p>
+<section id="ci-yml-continuous-integration">
+<h3><code class="docutils literal notranslate"><span class="pre">ci.yml</span></code> — Continuous Integration<a class="headerlink" href="#ci-yml-continuous-integration" title="Link to this heading"></a></h3>
+<p>Runs on every <strong>push and pull request</strong> to any branch.</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Job</p></th>
+<th class="head"><p>What it runs</p></th>
+<th class="head"><p>Fails if</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">lint-python</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">ruff</span> <span class="pre">check</span></code> on all backend services</p></td>
+<td><p>Any lint error</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">lint-frontend</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">npm</span> <span class="pre">ci</span> <span class="pre">&amp;&amp;</span> <span class="pre">npm</span> <span class="pre">run</span> <span class="pre">lint</span></code> in <code class="docutils literal notranslate"><span class="pre">frontend/</span></code></p></td>
+<td><p>Any lint error</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test-auth-service</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">pytest</span> <span class="pre">--cov=app</span> <span class="pre">--cov-fail-under=50</span></code></p></td>
+<td><p>Coverage &lt; 50% or test failure</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">test-inventory-service</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">pytest</span> <span class="pre">--cov=app</span> <span class="pre">--cov-fail-under=50</span></code></p></td>
+<td><p>Coverage &lt; 50% or test failure</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test-transaction-service</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">pytest</span> <span class="pre">--cov=app</span> <span class="pre">--cov-fail-under=50</span></code></p></td>
+<td><p>Coverage &lt; 50% or test failure</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">test-agentic-service</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">pytest</span> <span class="pre">--cov=app</span> <span class="pre">--cov-fail-under=50</span></code></p></td>
+<td><p>Coverage &lt; 50% or test failure</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">docker-build</span></code></p></td>
+<td><p>Builds all Docker images + smoke health checks</p></td>
+<td><p>Build failure or unhealthy container</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">sphinx-docs</span></code></p></td>
+<td><p>Builds Sphinx HTML + PDF</p></td>
+<td><p>Any Sphinx warning treated as error</p></td>
+</tr>
+</tbody>
+</table>
+<p>Each <code class="docutils literal notranslate"><span class="pre">test-*</span></code> job uploads three coverage artifacts to GitHub Actions:</p>
+<ul class="simple">
+<li><p>Terminal output (visible in job log)</p></li>
+<li><p>XML report (<code class="docutils literal notranslate"><span class="pre">coverage-&lt;service&gt;.xml</span></code>)</p></li>
+<li><p>HTML report (<code class="docutils literal notranslate"><span class="pre">coverage-&lt;service&gt;/</span></code> directory)</p></li>
+</ul>
+</section>
+<section id="cd-yml-continuous-delivery">
+<h3><code class="docutils literal notranslate"><span class="pre">cd.yml</span></code> — Continuous Delivery<a class="headerlink" href="#cd-yml-continuous-delivery" title="Link to this heading"></a></h3>
+<p>Runs <strong>after CI passes</strong> on <code class="docutils literal notranslate"><span class="pre">main</span></code> (triggered by <code class="docutils literal notranslate"><span class="pre">workflow_run</span></code>). It:</p>
+<ol class="arabic">
+<li><p>Checks that the triggering CI run concluded as <code class="docutils literal notranslate"><span class="pre">success</span></code> (guard job)</p></li>
+<li><p>Builds and pushes all five Docker images to <strong>GitHub Container Registry</strong> (GHCR):</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">ghcr</span><span class="o">.</span><span class="n">io</span><span class="o">/</span><span class="n">bspq25</span><span class="o">-</span><span class="mi">26</span><span class="o">/</span><span class="n">bspq26</span><span class="o">-</span><span class="n">e9</span><span class="o">/</span><span class="n">auth</span><span class="o">-</span><span class="n">service</span><span class="p">:</span><span class="o">&lt;</span><span class="n">sha</span><span class="o">&gt;</span>
+<span class="n">ghcr</span><span class="o">.</span><span class="n">io</span><span class="o">/</span><span class="n">bspq25</span><span class="o">-</span><span class="mi">26</span><span class="o">/</span><span class="n">bspq26</span><span class="o">-</span><span class="n">e9</span><span class="o">/</span><span class="n">inventory</span><span class="o">-</span><span class="n">service</span><span class="p">:</span><span class="o">&lt;</span><span class="n">sha</span><span class="o">&gt;</span>
+<span class="n">ghcr</span><span class="o">.</span><span class="n">io</span><span class="o">/</span><span class="n">bspq25</span><span class="o">-</span><span class="mi">26</span><span class="o">/</span><span class="n">bspq26</span><span class="o">-</span><span class="n">e9</span><span class="o">/</span><span class="n">transaction</span><span class="o">-</span><span class="n">service</span><span class="p">:</span><span class="o">&lt;</span><span class="n">sha</span><span class="o">&gt;</span>
+<span class="n">ghcr</span><span class="o">.</span><span class="n">io</span><span class="o">/</span><span class="n">bspq25</span><span class="o">-</span><span class="mi">26</span><span class="o">/</span><span class="n">bspq26</span><span class="o">-</span><span class="n">e9</span><span class="o">/</span><span class="n">agentic</span><span class="o">-</span><span class="n">service</span><span class="p">:</span><span class="o">&lt;</span><span class="n">sha</span><span class="o">&gt;</span>
+<span class="n">ghcr</span><span class="o">.</span><span class="n">io</span><span class="o">/</span><span class="n">bspq25</span><span class="o">-</span><span class="mi">26</span><span class="o">/</span><span class="n">bspq26</span><span class="o">-</span><span class="n">e9</span><span class="o">/</span><span class="n">frontend</span><span class="p">:</span><span class="o">&lt;</span><span class="n">sha</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+</li>
+<li><p>Each image is tagged with both <code class="docutils literal notranslate"><span class="pre">latest</span></code> and the commit SHA</p></li>
+<li><p>BuildKit layer caching (<code class="docutils literal notranslate"><span class="pre">type=registry</span></code>) is used to speed up incremental builds</p></li>
+</ol>
+<p>The actual Render redeploy is triggered independently by Render’s GitHub webhook (not by this
+workflow) — Render listens for <code class="docutils literal notranslate"><span class="pre">main</span></code> branch pushes directly.</p>
+</section>
+<section id="sphinx-docs-yml-documentation-deployment">
+<h3><code class="docutils literal notranslate"><span class="pre">sphinx-docs.yml</span></code> — Documentation Deployment<a class="headerlink" href="#sphinx-docs-yml-documentation-deployment" title="Link to this heading"></a></h3>
+<p>Runs when <strong>“Wallabot CI” completes on <code class="docutils literal notranslate"><span class="pre">main</span></code></strong> (via <code class="docutils literal notranslate"><span class="pre">workflow_run</span></code> trigger) and on manual
+dispatch (<code class="docutils literal notranslate"><span class="pre">workflow_dispatch</span></code>). Using <code class="docutils literal notranslate"><span class="pre">workflow_run</span></code> instead of <code class="docutils literal notranslate"><span class="pre">push</span></code> guarantees the CI
+test artifacts (coverage HTML reports) already exist when the docs build starts — avoiding
+the race condition that would occur if both workflows fired on <code class="docutils literal notranslate"><span class="pre">push</span></code> at the same time.</p>
+<p>The workflow downloads the four <code class="docutils literal notranslate"><span class="pre">coverage-*</span></code> artifacts from the triggering CI run using
+<code class="docutils literal notranslate"><span class="pre">dawidd6/action-download-artifact&#64;v6</span></code> (keyed by <code class="docutils literal notranslate"><span class="pre">run_id</span></code>), injects the HTML reports into
+<code class="docutils literal notranslate"><span class="pre">docs-sphinx/source/_static/coverage/</span></code>, then runs <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">html</span></code>. See the
+<a class="reference internal" href="#sphinx-documentation-github-pages"><span class="xref myst">Sphinx Documentation section</span></a> above and the
+<a class="reference internal" href="testing.html#coverage-reports"><span class="std std-ref">Coverage Reports</span></a> section in Testing for full details.</p>
+</section>
+</section>
+<hr class="docutils" />
 <section id="docker-compose-local-development">
 <h2>Docker Compose (Local Development)<a class="headerlink" href="#docker-compose-local-development" title="Link to this heading"></a></h2>
-<p>The <code class="docutils literal notranslate"><span class="pre">docker-compose.yml</span></code> at the project root starts the full stack locally.</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cp<span class="w"> </span>.env.example<span class="w"> </span>.env<span class="w">   </span><span class="c1"># fill in secrets</span>
+<p>The <code class="docutils literal notranslate"><span class="pre">docker-compose.yml</span></code> at the project root starts the full stack locally with SQLite databases.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># 1. Copy and fill in environment variables</span>
+cp<span class="w"> </span>.env.example<span class="w"> </span>.env
+<span class="c1"># Required: SECRET_KEY, OPENAI_API_KEY, TAVILY_API_KEY</span>
+
+<span class="c1"># 2. Build and start all services</span>
 docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>--build
 </pre></div>
 </div>
-<p>Services and ports:</p>
+<p>Local service ports:</p>
 <table class="docutils align-default">
 <thead>
 <tr class="row-odd"><th class="head"><p>Service</p></th>
 <th class="head"><p>Internal port</p></th>
 <th class="head"><p>Exposed port</p></th>
+<th class="head"><p>URL</p></th>
 </tr>
 </thead>
 <tbody>
 <tr class="row-even"><td><p>auth-service</p></td>
 <td><p>8000</p></td>
 <td><p>8001</p></td>
+<td><p>http://localhost:8001</p></td>
 </tr>
 <tr class="row-odd"><td><p>inventory-service</p></td>
 <td><p>8000</p></td>
 <td><p>8002</p></td>
+<td><p>http://localhost:8002</p></td>
 </tr>
 <tr class="row-even"><td><p>transaction-service</p></td>
 <td><p>8000</p></td>
 <td><p>8003</p></td>
+<td><p>http://localhost:8003</p></td>
 </tr>
 <tr class="row-odd"><td><p>agentic-service</p></td>
 <td><p>8000</p></td>
 <td><p>8004</p></td>
+<td><p>http://localhost:8004</p></td>
 </tr>
 <tr class="row-even"><td><p>frontend</p></td>
 <td><p>5173</p></td>
 <td><p>5173</p></td>
+<td><p>http://localhost:5173</p></td>
 </tr>
 </tbody>
 </table>
-<p>All backend containers share the <code class="docutils literal notranslate"><span class="pre">wallabot-net</span></code> Docker network and the <code class="docutils literal notranslate"><span class="pre">wallabot-data</span></code>
-named volume that persists SQLite database files.</p>
+<p>All backend containers share the <code class="docutils literal notranslate"><span class="pre">wallabot-net</span></code> Docker network. A <code class="docutils literal notranslate"><span class="pre">wallabot-data</span></code> named volume
+persists the SQLite database files across <code class="docutils literal notranslate"><span class="pre">docker</span> <span class="pre">compose</span> <span class="pre">down</span></code> restarts (use
+<code class="docutils literal notranslate"><span class="pre">docker</span> <span class="pre">compose</span> <span class="pre">down</span> <span class="pre">-v</span></code> to fully wipe all data).</p>
+<section id="running-only-the-backend-frontend-on-host">
+<h3>Running only the backend (frontend on host)<a class="headerlink" href="#running-only-the-backend-frontend-on-host" title="Link to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>--build<span class="w"> </span>auth-service<span class="w"> </span>inventory-service<span class="w"> </span>transaction-service<span class="w"> </span>agentic-service
+<span class="nb">cd</span><span class="w"> </span>frontend
+npm<span class="w"> </span>install
+npm<span class="w"> </span>run<span class="w"> </span>dev<span class="w"> </span>--<span class="w"> </span>--host<span class="w"> </span><span class="m">127</span>.0.0.1<span class="w"> </span>--port<span class="w"> </span><span class="m">5173</span>
+</pre></div>
+</div>
 </section>
-<section id="environment-variables">
-<h2>Environment Variables<a class="headerlink" href="#environment-variables" title="Link to this heading"></a></h2>
-<p>Copy <code class="docutils literal notranslate"><span class="pre">.env.example</span></code> to <code class="docutils literal notranslate"><span class="pre">.env</span></code> and fill in:</p>
+</section>
+<hr class="docutils" />
+<section id="environment-variables-reference">
+<h2>Environment Variables Reference<a class="headerlink" href="#environment-variables-reference" title="Link to this heading"></a></h2>
 <table class="docutils align-default">
 <thead>
 <tr class="row-odd"><th class="head"><p>Variable</p></th>
+<th class="head"><p>Required</p></th>
+<th class="head"><p>Services</p></th>
 <th class="head"><p>Description</p></th>
 </tr>
 </thead>
 <tbody>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">SECRET_KEY</span></code></p></td>
-<td><p>JWT signing key (shared by all services)</p></td>
+<td><p>Yes</p></td>
+<td><p>auth, inventory, transaction</p></td>
+<td><p>JWT signing key shared across all services</p></td>
 </tr>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">OPENAI_API_KEY</span></code></p></td>
-<td><p>Required by agentic-service for GPT-4o-mini</p></td>
+<td><p>Yes</p></td>
+<td><p>agentic</p></td>
+<td><p>GPT-4o-mini API key</p></td>
 </tr>
 <tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">TAVILY_API_KEY</span></code></p></td>
-<td><p>Required by agentic-service for web search</p></td>
+<td><p>Yes</p></td>
+<td><p>agentic</p></td>
+<td><p>Tavily web search API key</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">SUPABASE_URL</span></code></p></td>
-<td><p>(Optional) Supabase project URL for PostgreSQL + Storage</p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">AUTH_DATABASE_URL</span></code></p></td>
+<td><p>No</p></td>
+<td><p>auth</p></td>
+<td><p>Full database URL; falls back to SQLite</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">SUPABASE_SERVICE_ROLE_KEY</span></code></p></td>
-<td><p>(Optional) Supabase service-role key</p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">DATABASE_URL</span></code></p></td>
+<td><p>No</p></td>
+<td><p>inventory, transaction</p></td>
+<td><p>Full database URL; falls back to SQLite</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">GOOGLE_CLIENT_ID</span></code> / <code class="docutils literal notranslate"><span class="pre">GOOGLE_CLIENT_SECRET</span></code></p></td>
-<td><p>(Optional) Google OAuth</p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">INVENTORY_UPLOAD_DIR</span></code></p></td>
+<td><p>No</p></td>
+<td><p>inventory</p></td>
+<td><p>Image upload directory (default: <code class="docutils literal notranslate"><span class="pre">data/uploads/</span></code>)</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">FACEBOOK_CLIENT_ID</span></code> / <code class="docutils literal notranslate"><span class="pre">FACEBOOK_CLIENT_SECRET</span></code></p></td>
-<td><p>(Optional) Facebook OAuth</p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">SUPABASE_URL</span></code></p></td>
+<td><p>No</p></td>
+<td><p>inventory</p></td>
+<td><p>Supabase project URL for cloud storage</p></td>
 </tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">LANGCHAIN_TRACING_V2</span></code></p></td>
-<td><p>Set to <code class="docutils literal notranslate"><span class="pre">true</span></code> to enable LangSmith tracing</p></td>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">SUPABASE_SERVICE_ROLE_KEY</span></code></p></td>
+<td><p>No</p></td>
+<td><p>inventory</p></td>
+<td><p>Supabase service-role key</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">LANGCHAIN_API_KEY</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">GOOGLE_CLIENT_ID</span></code></p></td>
+<td><p>No</p></td>
+<td><p>auth</p></td>
+<td><p>Google OAuth 2.0 client ID</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">GOOGLE_CLIENT_SECRET</span></code></p></td>
+<td><p>No</p></td>
+<td><p>auth</p></td>
+<td><p>Google OAuth 2.0 client secret</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">FACEBOOK_CLIENT_ID</span></code></p></td>
+<td><p>No</p></td>
+<td><p>auth</p></td>
+<td><p>Facebook OAuth app ID</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">FACEBOOK_CLIENT_SECRET</span></code></p></td>
+<td><p>No</p></td>
+<td><p>auth</p></td>
+<td><p>Facebook OAuth app secret</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">LANGCHAIN_TRACING_V2</span></code></p></td>
+<td><p>No</p></td>
+<td><p>agentic</p></td>
+<td><p>Set <code class="docutils literal notranslate"><span class="pre">true</span></code> to enable LangSmith tracing</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">LANGCHAIN_API_KEY</span></code></p></td>
+<td><p>No</p></td>
+<td><p>agentic</p></td>
 <td><p>LangSmith API key</p></td>
 </tr>
-</tbody>
-</table>
-</section>
-<section id="ci-pipeline-github-actions">
-<h2>CI Pipeline (GitHub Actions)<a class="headerlink" href="#ci-pipeline-github-actions" title="Link to this heading"></a></h2>
-<p>The CI pipeline (<code class="docutils literal notranslate"><span class="pre">.github/workflows/ci.yml</span></code>) runs on every push and pull request.</p>
-<p><strong>Jobs:</strong></p>
-<ol class="arabic simple">
-<li><p><strong>lint-python</strong> — runs <code class="docutils literal notranslate"><span class="pre">ruff</span> <span class="pre">check</span></code> on all backend services</p></li>
-<li><p><strong>lint-frontend</strong> — runs <code class="docutils literal notranslate"><span class="pre">npm</span> <span class="pre">ci</span> <span class="pre">&amp;&amp;</span> <span class="pre">npm</span> <span class="pre">run</span> <span class="pre">lint</span></code> in <code class="docutils literal notranslate"><span class="pre">frontend/</span></code></p></li>
-<li><p><strong>test-auth-service</strong> — pytest with coverage, fails if &lt; 50%</p></li>
-<li><p><strong>test-inventory-service</strong> — pytest with coverage, fails if &lt; 50%</p></li>
-<li><p><strong>test-transaction-service</strong> — pytest with coverage, fails if &lt; 50%</p></li>
-<li><p><strong>test-agentic-service</strong> — pytest with coverage, fails if &lt; 50%</p></li>
-<li><p><strong>docker-build</strong> — builds all images and runs the smoke test against the live stack</p></li>
-<li><p><strong>sphinx-docs</strong> — builds and deploys this documentation to GitHub Pages</p></li>
-</ol>
-</section>
-<section id="cd-pipeline-render">
-<h2>CD Pipeline (Render)<a class="headerlink" href="#cd-pipeline-render" title="Link to this heading"></a></h2>
-<p>Production deployments are managed via <code class="docutils literal notranslate"><span class="pre">render.yaml</span></code> (Render Blueprint).</p>
-<p>Each service is deployed as an independent Render Web Service. On merge to <code class="docutils literal notranslate"><span class="pre">main</span></code> Render
-automatically rebuilds and redeploys changed services.</p>
-<table class="docutils align-default">
-<thead>
-<tr class="row-odd"><th class="head"><p>Service</p></th>
-<th class="head"><p>Render service name</p></th>
-<th class="head"><p>Persistent disk</p></th>
-</tr>
-</thead>
-<tbody>
-<tr class="row-even"><td><p>auth-service</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">wallabot-auth</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">/app/data</span></code></p></td>
-</tr>
-<tr class="row-odd"><td><p>inventory-service</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">wallabot-inventory</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">/app/data</span></code></p></td>
-</tr>
-<tr class="row-even"><td><p>transaction-service</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">wallabot-transaction</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">/app/data</span></code></p></td>
-</tr>
-<tr class="row-odd"><td><p>agentic-service</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">wallabot-agentic</span></code></p></td>
-<td><p>—</p></td>
-</tr>
-<tr class="row-even"><td><p>frontend</p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">wallabot-frontend</span></code></p></td>
-<td><p>—</p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">LANGSMITH_PROJECT</span></code></p></td>
+<td><p>No</p></td>
+<td><p>agentic</p></td>
+<td><p>LangSmith project name (default: <code class="docutils literal notranslate"><span class="pre">wallabot</span></code>)</p></td>
 </tr>
 </tbody>
 </table>
-</section>
-<section id="github-pages-sphinx-documentation">
-<h2>GitHub Pages (Sphinx Documentation)<a class="headerlink" href="#github-pages-sphinx-documentation" title="Link to this heading"></a></h2>
-<p>This documentation site is automatically built and deployed on every push to <code class="docutils literal notranslate"><span class="pre">main</span></code> by
-the <code class="docutils literal notranslate"><span class="pre">.github/workflows/sphinx-docs.yml</span></code> workflow.</p>
-<p><strong>Required repository settings:</strong></p>
-<ol class="arabic simple">
-<li><p>Repository must be <strong>public</strong></p></li>
-<li><p><em>Settings → Actions → General → Workflow permissions</em>: set to <strong>Read and write permissions</strong></p></li>
-<li><p><em>Settings → Pages → Source</em>: set to <strong>Deploy from a branch</strong>, branch <strong>gh-pages</strong>, folder <strong>/ (root)</strong></p></li>
-</ol>
-<p>After the first successful workflow run, the documentation is available at:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">BSPQ25</span><span class="o">-</span><span class="mf">26.</span><span class="n">github</span><span class="o">.</span><span class="n">io</span><span class="o">/</span><span class="n">BSPQ26</span><span class="o">-</span><span class="n">E9</span><span class="o">/</span><span class="n">sphinx</span><span class="o">/</span>
-</pre></div>
-</div>
-</section>
-<section id="sphinx-documentation-workflow">
-<h2>Sphinx Documentation Workflow<a class="headerlink" href="#sphinx-documentation-workflow" title="Link to this heading"></a></h2>
-<p>The workflow (<code class="docutils literal notranslate"><span class="pre">.github/workflows/sphinx-docs.yml</span></code>) performs these steps on every push to <code class="docutils literal notranslate"><span class="pre">main</span></code>:</p>
-<ol class="arabic simple">
-<li><p>Checkout repository</p></li>
-<li><p>Install Python 3.12 + dependencies from <code class="docutils literal notranslate"><span class="pre">docs-sphinx/requirements.txt</span></code></p></li>
-<li><p>Run <code class="docutils literal notranslate"><span class="pre">make</span> <span class="pre">html</span></code> in <code class="docutils literal notranslate"><span class="pre">docs-sphinx/</span></code></p></li>
-<li><p>Build a PDF with WeasyPrint</p></li>
-<li><p>Assemble the <code class="docutils literal notranslate"><span class="pre">deploy/</span></code> directory:</p>
-<ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">deploy/index.html</span></code> — redirect to <code class="docutils literal notranslate"><span class="pre">sphinx/</span></code></p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">deploy/sphinx/</span></code> — full HTML site</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">deploy/sphinx/BSPQ26-E9.pdf</span></code> — PDF export</p></li>
-</ul>
-</li>
-<li><p>Push <code class="docutils literal notranslate"><span class="pre">deploy/</span></code> to the <code class="docutils literal notranslate"><span class="pre">gh-pages</span></code> branch via <code class="docutils literal notranslate"><span class="pre">peaceiris/actions-gh-pages</span></code></p></li>
-</ol>
 </section>
 </section>
 

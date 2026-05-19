@@ -139,7 +139,12 @@
 <li class="toctree-l3"><a class="reference internal" href="#performance-tests-requires-docker-compose">Performance tests (requires Docker Compose)</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#coverage-reports">Coverage Reports</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#coverage-reports">Coverage Reports</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#interactive-html-reports">Interactive HTML reports</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#how-the-reports-are-injected-ci-pipeline">How the reports are injected (CI pipeline)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#github-actions-artifacts">GitHub Actions artifacts</a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="#linting">Linting</a></li>
 </ul>
 </li>
@@ -216,7 +221,7 @@ for isolating data and a different activation mechanism.</p>
 </tr>
 <tr class="row-even"><td><p><strong>Total</strong></p></td>
 <td class="text-right"><p><strong>210</strong></p></td>
-<td class="text-center"><p><strong>1 386 / 1 653</strong></p></td>
+<td class="text-center"><p><strong>1386 / 1653</strong></p></td>
 <td class="text-right"><p><strong>84%</strong></p></td>
 </tr>
 </tbody>
@@ -1502,13 +1507,110 @@ locust<span class="w"> </span>-f<span class="w"> </span>locustfile.py<span class
 <hr class="docutils" />
 <section id="coverage-reports">
 <h2>Coverage Reports<a class="headerlink" href="#coverage-reports" title="Link to this heading"></a></h2>
-<p>The CI pipeline runs:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pytest<span class="w"> </span>--cov<span class="o">=</span>app<span class="w"> </span>--cov-report<span class="o">=</span>xml<span class="w"> </span>--cov-report<span class="o">=</span>html<span class="w"> </span>--cov-fail-under<span class="o">=</span><span class="m">50</span>
+<section id="interactive-html-reports">
+<h3>Interactive HTML reports<a class="headerlink" href="#interactive-html-reports" title="Link to this heading"></a></h3>
+<p>The CI pipeline generates a full <code class="docutils literal notranslate"><span class="pre">pytest-cov</span></code> HTML report for every service on every
+push to <code class="docutils literal notranslate"><span class="pre">main</span></code>. These reports are <strong>embedded directly in this documentation site</strong> — the
+<code class="docutils literal notranslate"><span class="pre">sphinx-docs.yml</span></code> workflow downloads them from the CI run and injects them into the Sphinx
+<code class="docutils literal notranslate"><span class="pre">_static/coverage/</span></code> directory before building.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The links below are only active in the <strong>published documentation</strong>
+(https://BSPQ25-26.github.io/BSPQ26-E9/sphinx/). They point to files injected at
+CI build time and are not present in local Sphinx builds. To generate reports locally,
+run <code class="docutils literal notranslate"><span class="pre">pytest</span> <span class="pre">--cov=app</span> <span class="pre">--cov-report=html:coverage-html</span></code> inside any service directory.</p>
+</div>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Service</p></th>
+<th class="head text-center"><p>Coverage</p></th>
+<th class="head"><p>Interactive report</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>auth-service</p></td>
+<td class="text-center"><p><strong>80%</strong></p></td>
+<td><p><a class="reference internal" href="#_static/coverage/auth-service/index.html"><span class="xref myst">Open report</span></a></p></td>
+</tr>
+<tr class="row-odd"><td><p>inventory-service</p></td>
+<td class="text-center"><p><strong>89%</strong></p></td>
+<td><p><a class="reference internal" href="#_static/coverage/inventory-service/index.html"><span class="xref myst">Open report</span></a></p></td>
+</tr>
+<tr class="row-even"><td><p>transaction-service</p></td>
+<td class="text-center"><p><strong>83%</strong></p></td>
+<td><p><a class="reference internal" href="#_static/coverage/transaction-service/index.html"><span class="xref myst">Open report</span></a></p></td>
+</tr>
+<tr class="row-odd"><td><p>agentic-service</p></td>
+<td class="text-center"><p><strong>87%</strong></p></td>
+<td><p><a class="reference internal" href="#_static/coverage/agentic-service/index.html"><span class="xref myst">Open report</span></a></p></td>
+</tr>
+</tbody>
+</table>
+<p>Each report shows:</p>
+<ul class="simple">
+<li><p><strong>per-file summary</strong> with statement, branch, and partial-branch counts</p></li>
+<li><p><strong>line-by-line annotation</strong> — green for covered lines, red for missed, yellow for partial
+branches</p></li>
+<li><p><strong>branch-coverage arcs</strong> — which <code class="docutils literal notranslate"><span class="pre">if</span></code>/<code class="docutils literal notranslate"><span class="pre">else</span></code> paths were and were not exercised</p></li>
+</ul>
+</section>
+<section id="how-the-reports-are-injected-ci-pipeline">
+<h3>How the reports are injected (CI pipeline)<a class="headerlink" href="#how-the-reports-are-injected-ci-pipeline" title="Link to this heading"></a></h3>
+<p>The <code class="docutils literal notranslate"><span class="pre">sphinx-docs.yml</span></code> workflow is triggered by <code class="docutils literal notranslate"><span class="pre">workflow_run</span></code> on completion of
+<code class="docutils literal notranslate"><span class="pre">&quot;Wallabot</span> <span class="pre">CI&quot;</span></code>. This guarantees the test artifacts already exist before the docs build
+starts, avoiding a race condition that would occur if both workflows triggered on <code class="docutils literal notranslate"><span class="pre">push</span></code>
+simultaneously.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>push to main
+    │
+    ├─► Wallabot CI (ci.yml)
+    │       ├─ test-auth       → uploads coverage-auth-service artifact
+    │       ├─ test-inventory  → uploads coverage-inventory-service artifact
+    │       ├─ test-transactions → uploads coverage-transaction-service artifact
+    │       └─ test-wallabot   → uploads coverage-agentic-service artifact
+    │
+    └─► (on CI completion) Build and Deploy Sphinx Docs (sphinx-docs.yml)
+            ├─ dawidd6/action-download-artifact@v6
+            │       downloads all four coverage-* artifacts using the CI run_id
+            │       into coverage-artifacts/&lt;artifact-name&gt;/backend/&lt;svc&gt;/coverage-html/
+            ├─ Inject step copies each coverage-html/ → _static/coverage/&lt;svc&gt;/
+            ├─ make html  (Sphinx copies _static/ into _build/html/_static/)
+            └─ Deploy to GitHub Pages
 </pre></div>
 </div>
-<p>HTML and XML coverage reports are uploaded as GitHub Actions artifacts named
-<code class="docutils literal notranslate"><span class="pre">coverage-{service-name}</span></code>. They are available for download from the Actions run summary
-page for 90 days.</p>
+<p>The download step uses <code class="docutils literal notranslate"><span class="pre">if_no_artifact_found:</span> <span class="pre">warn</span></code> and <code class="docutils literal notranslate"><span class="pre">continue-on-error:</span> <span class="pre">true</span></code>, so a
+failed test job (or a manual <code class="docutils literal notranslate"><span class="pre">workflow_dispatch</span></code> run) never blocks the documentation
+deployment — the links simply resolve to a 404 for that build.</p>
+</section>
+<section id="github-actions-artifacts">
+<h3>GitHub Actions artifacts<a class="headerlink" href="#github-actions-artifacts" title="Link to this heading"></a></h3>
+<p>Reports are also available as downloadable archives in GitHub Actions. Artifacts are
+retained for <strong>90 days</strong> after the run. Download them from the
+<a class="reference external" href="https://github.com/BSPQ25-26/BSPQ26-E9/actions/workflows/ci.yml">CI workflow runs page</a>:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Artifact name</p></th>
+<th class="head"><p>Contents</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">coverage-auth-service</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">coverage.xml</span></code> + <code class="docutils literal notranslate"><span class="pre">coverage-html/</span></code> for auth-service</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">coverage-inventory-service</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">coverage.xml</span></code> + <code class="docutils literal notranslate"><span class="pre">coverage-html/</span></code> for inventory-service</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">coverage-transaction-service</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">coverage.xml</span></code> + <code class="docutils literal notranslate"><span class="pre">coverage-html/</span></code> for transaction-service</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">coverage-agentic-service</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">coverage.xml</span></code> + <code class="docutils literal notranslate"><span class="pre">coverage-html/</span></code> for agentic-service</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">coverage-backend-docker</span></code></p></td>
+<td><p>All four services run against PostgreSQL (Docker job)</p></td>
+</tr>
+</tbody>
+</table>
+</section>
 </section>
 <hr class="docutils" />
 <section id="linting">
