@@ -269,6 +269,52 @@ p {
   color: var(--color-danger);
 }
 
+.condition-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  max-width: 100%;
+  padding: 0.35rem 0.65rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.5rem;
+  background: rgba(255, 255, 255, 0.78);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-xs);
+  font-weight: 800;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.condition-badge--new {
+  border-color: rgba(27, 92, 69, 0.18);
+  background: var(--color-success-soft);
+  color: var(--color-success);
+}
+
+.condition-badge--like-new {
+  border-color: rgba(25, 98, 93, 0.18);
+  background: #dcf1ee;
+  color: #19625d;
+}
+
+.condition-badge--good {
+  border-color: rgba(119, 89, 32, 0.2);
+  background: #f7ead1;
+  color: #775920;
+}
+
+.condition-badge--fair {
+  border-color: rgba(143, 75, 31, 0.18);
+  background: #f8e3d2;
+  color: #8f4b1f;
+}
+
+.condition-badge--poor {
+  border-color: rgba(125, 45, 36, 0.14);
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
 .auth-shell {
   max-width: min(100%, 68rem);
   margin: 0 auto;

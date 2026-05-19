@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { i18n } from '@/i18n'
 import { BaseButtonStub, BaseCardStub, BaseInputStub, deferred, flushPromises } from '@/test/stubs'
 import LoginView from '@/views/LoginView.vue'
 
@@ -46,6 +47,7 @@ vi.mock('@/stores/toast', () => ({
 const mountView = () =>
   mount(LoginView, {
     global: {
+      plugins: [i18n],
       stubs: {
         BaseButton: BaseButtonStub,
         BaseCard: BaseCardStub,
@@ -56,6 +58,7 @@ const mountView = () =>
 
 describe('LoginView', () => {
   beforeEach(() => {
+    i18n.global.locale.value = 'en'
     routerState.route.query = {}
     routerState.push.mockReset()
     authState.login.mockReset()

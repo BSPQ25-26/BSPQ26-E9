@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { i18n } from '@/i18n'
 import { BaseButtonStub, BaseCardStub, BaseInputStub, deferred, flushPromises } from '@/test/stubs'
 import RegisterView from '@/views/RegisterView.vue'
 
@@ -34,6 +35,7 @@ vi.mock('@/stores/toast', () => ({
 const mountView = () =>
   mount(RegisterView, {
     global: {
+      plugins: [i18n],
       stubs: {
         BaseButton: BaseButtonStub,
         BaseCard: BaseCardStub,
@@ -43,6 +45,13 @@ const mountView = () =>
   })
 
 describe('RegisterView', () => {
+  beforeEach(() => {
+    i18n.global.locale.value = 'en'
+    routerState.push.mockReset()
+    authState.register.mockReset()
+    toastState.success.mockReset()
+  })
+
   it('keeps email full-width inside the responsive desktop form grid', () => {
     const wrapper = mountView()
     const form = wrapper.find('form')

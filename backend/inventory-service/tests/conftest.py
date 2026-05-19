@@ -3,19 +3,19 @@ import os
 import sys
 
 service_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-if service_root not in sys.path:
-    sys.path.insert(0, service_root)
+if service_root in sys.path:
+    sys.path.remove(service_root)
+sys.path.insert(0, service_root)
+
+for module_name in list(sys.modules):
+    if module_name == "app" or module_name.startswith("app."):
+        del sys.modules[module_name]
 
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient
 from jose import jwt
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-
-from app.auth import ALGORITHM, SECRET_KEY
-from app.db.base import Base
-from app.db.session import get_db
-from app.main import app
 
 TEST_DATABASE_URL = os.getenv(
     "TEST_DATABASE_URL",
@@ -35,6 +35,22 @@ TestingSessionLocal = sessionmaker(
 )
 
 
+def _load_service_modules():
+    if service_root in sys.path:
+        sys.path.remove(service_root)
+    sys.path.insert(0, service_root)
+
+    for module_name in list(sys.modules):
+        if module_name == "app" or module_name.startswith("app."):
+            del sys.modules[module_name]
+
+    from app.db.base import Base
+    from app.db.session import get_db
+    from app.main import app
+
+    return app, Base, get_db
+
+
 def override_get_db():
     db = TestingSessionLocal()
     try:
@@ -44,11 +60,23 @@ def override_get_db():
 
 
 def make_access_token(subject: str) -> str:
+    if service_root in sys.path:
+        sys.path.remove(service_root)
+    sys.path.insert(0, service_root)
+
+    for module_name in list(sys.modules):
+        if module_name == "app" or module_name.startswith("app."):
+            del sys.modules[module_name]
+
+    from app.auth import ALGORITHM, SECRET_KEY
+
     return jwt.encode({"sub": subject}, SECRET_KEY, algorithm=ALGORITHM)
 
 
 @pytest.fixture()
 def client():
+    app, Base, get_db = _load_service_modules()
+
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
 

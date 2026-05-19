@@ -26,4 +26,4 @@ class RatingRepository:
     def get_ratings_for_user(self, db: Session, to_user_id: int, skip: int = 0, limit: int = 20):
         return db.query(Rating).filter(
             Rating.to_user_id == to_user_id
-        ).offset(skip).limit(limit).all()
+        ).order_by(Rating.created_at.desc(), Rating.id.desc()).offset(skip).limit(limit).all()

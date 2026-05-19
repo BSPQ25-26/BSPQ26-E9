@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { i18n } from '@/i18n'
 import { BaseButtonStub, BaseCardStub, flushPromises } from '@/test/stubs'
 import ProductDetailView from '@/views/ProductDetailView.vue'
 
@@ -28,6 +29,11 @@ const productState = vi.hoisted(() => ({
   getProductById: vi.fn(),
   reserveProduct: vi.fn(),
   resolveProductImageUrl: vi.fn((image) => image),
+}))
+
+const userState = vi.hoisted(() => ({
+  createUserRating: vi.fn(),
+  resolveUserProfile: vi.fn(),
 }))
 
 const toastState = vi.hoisted(() => ({
@@ -62,6 +68,11 @@ vi.mock('@/services/product.service', () => ({
   resolveProductImageUrl: productState.resolveProductImageUrl,
 }))
 
+vi.mock('@/services/user.service', () => ({
+  createUserRating: userState.createUserRating,
+  resolveUserProfile: userState.resolveUserProfile,
+}))
+
 const productFactory = (overrides = {}) => ({
   id: 42,
   title: 'Oak side table',
@@ -71,6 +82,7 @@ const productFactory = (overrides = {}) => ({
   price: 149.99,
   state: 'Available',
   seller_id: 'seller@example.com',
+  seller_user_id: 7,
   transaction_product_id: 4242,
   created_at: '2026-04-01T12:00:00Z',
   images: ['/uploads/table-front.png', '/uploads/table-detail.png'],
@@ -80,6 +92,7 @@ const productFactory = (overrides = {}) => ({
 const mountView = () =>
   mount(ProductDetailView, {
     global: {
+      plugins: [i18n],
       stubs: {
         BaseButton: BaseButtonStub,
         BaseCard: BaseCardStub,
@@ -102,7 +115,15 @@ describe('ProductDetailView', () => {
     authState.user.value = {
       email: 'buyer@example.com',
     }
+    i18n.global.locale.value = 'en'
     walletState.fetchBalance.mockResolvedValue({})
+    userState.resolveUserProfile.mockResolvedValue({
+      id: 7,
+      username: 'seller@example.com',
+      avg_rating: 4.4,
+      active_listing_count: 2,
+      member_since: '2026-01-01T00:00:00Z',
+    })
   })
 
   it('renders product details, gallery images, and seller info', async () => {
@@ -116,7 +137,10 @@ describe('ProductDetailView', () => {
     expect(wrapper.text()).toContain('$149.99')
     expect(wrapper.text()).toContain('Solid oak with a drawer')
     expect(wrapper.text()).toContain('seller@example.com')
-    expect(wrapper.text()).toContain('Product ID')
+    expect(wrapper.text()).not.toContain('Product ID')
+    expect(wrapper.text()).not.toContain('Images')
+    expect(wrapper.find('.condition-badge').text()).toBe('Good')
+    expect(wrapper.find('.condition-badge').classes()).toContain('condition-badge--good')
     expect(wrapper.find('img').attributes('src')).toBe('/uploads/table-front.png')
   })
 
@@ -177,10 +201,14 @@ describe('ProductDetailView', () => {
   it('shows buy and cancellation actions for a reserved product', async () => {
     productState.getProductById.mockResolvedValueOnce(
       productFactory({
+        reserved_by: 'buyer@example.com',
         state: 'Reserved',
       }),
     )
-    productState.buyProduct.mockResolvedValueOnce({})
+    productState.buyProduct.mockResolvedValueOnce({
+      id: 9001,
+      status: 'completed',
+    })
 
     const wrapper = mountView()
     await flushPromises()
@@ -210,13 +238,52 @@ describe('ProductDetailView', () => {
     )
     expect(walletState.fetchBalance).toHaveBeenCalled()
     expect(toastState.success).toHaveBeenCalledWith('Purchase completed.')
-    expect(wrapper.find('[role="dialog"]').exists()).toBe(false)
+    expect(wrapper.text()).toContain('Rate this seller')
     expect(wrapper.text()).toContain('Sold')
+  })
+
+  it('submits the post-purchase seller rating', async () => {
+    productState.getProductById.mockResolvedValueOnce(
+      productFactory({
+        reserved_by: 'buyer@example.com',
+        state: 'Reserved',
+      }),
+    )
+    productState.buyProduct.mockResolvedValueOnce({
+      id: 9001,
+      status: 'completed',
+    })
+    userState.createUserRating.mockResolvedValueOnce({
+      rating_id: 123,
+    })
+
+    const wrapper = mountView()
+    await flushPromises()
+
+    await findButtonByText(wrapper, 'Buy').trigger('click')
+    await flushPromises()
+    await findButtonByText(wrapper, 'Confirm purchase').trigger('click')
+    await flushPromises()
+
+    await wrapper.find('[aria-label="5 stars"]').trigger('click')
+    await wrapper.find('textarea[name="review_text"]').setValue('Smooth pickup.')
+    await findButtonByText(wrapper, 'Submit rating').trigger('click')
+    await flushPromises()
+
+    expect(userState.createUserRating).toHaveBeenCalledWith({
+      reviewText: 'Smooth pickup.',
+      stars: 5,
+      toUserId: 7,
+      transactionId: 9001,
+    })
+    expect(toastState.success).toHaveBeenCalledWith('Rating submitted.')
+    expect(wrapper.text()).not.toContain('Rate this seller')
   })
 
   it('cancels an active reservation and switches back to Reserve', async () => {
     productState.getProductById.mockResolvedValueOnce(
       productFactory({
+        reserved_by: 'buyer@example.com',
         state: 'Reserved',
       }),
     )
@@ -244,6 +311,7 @@ describe('ProductDetailView', () => {
   it('cancels the buy confirmation without purchasing', async () => {
     productState.getProductById.mockResolvedValueOnce(
       productFactory({
+        reserved_by: 'buyer@example.com',
         state: 'Reserved',
       }),
     )

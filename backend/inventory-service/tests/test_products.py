@@ -1,6 +1,11 @@
-from app.models.product import Product
 import io
 #pytest test_products.py -k "upload" -q
+
+
+def _product_model():
+    from app.models.product import Product
+
+    return Product
 
 def _product_payload(**overrides):
     payload = {
@@ -39,6 +44,7 @@ def _seed_catalog_products(client, headers, db_session):
         assert response.status_code == 201, response.text
         created[key] = response.json()
 
+    Product = _product_model()
     sold_product = db_session.query(Product).filter(Product.id == created["laptop"]["id"]).first()
     reserved_product = db_session.query(Product).filter(Product.id == created["chair"]["id"]).first()
     sold_product.state = "Sold"
@@ -63,6 +69,7 @@ def test_create_product_success(client, db_session, auth_headers):
     assert data["seller_id"] == "seller@example.com"
     assert "created_at" in data
 
+    Product = _product_model()
     stored_product = db_session.query(Product).filter(Product.id == data["id"]).first()
     assert stored_product is not None
     assert stored_product.state.value == "Available"
@@ -168,6 +175,7 @@ def test_delete_product_success_by_owner(client, db_session, auth_headers):
 
     response = client.delete(f"/api/v1/products/{product_id}", headers=auth_headers)
 
+    Product = _product_model()
     assert response.status_code == 204
     assert db_session.query(Product).filter(Product.id == product_id).first() is None
 
@@ -210,6 +218,14 @@ def test_catalog_filters_all_combinations_return_expected_products(client, auth_
     assert _catalog_titles(client, auth_headers, category="electronics") == {"Phone A", "Laptop B"}
     assert _catalog_titles(client, auth_headers, min_price=90, max_price=200) == {"Phone A", "Table D"}
     assert _catalog_titles(client, auth_headers, condition="Like New") == {"Laptop B"}
+
+    response = client.get(
+        "/api/v1/products",
+        params=[("condition", "Good"), ("condition", "Poor")],
+        headers=auth_headers,
+    )
+    assert response.status_code == 200
+    assert {product["title"] for product in response.json()} == {"Chair C", "Book E"}
 
     assert _catalog_titles(
         client,
@@ -599,6 +615,7 @@ def test_text_search_combines_with_condition_and_state_filters(
         condition="Like New",
     ).json()
 
+    Product = _product_model()
     db_product = db_session.query(Product).filter(Product.id == created["id"]).first()
     db_product.state = "Reserved"
     db_session.commit()
@@ -644,4 +661,3 @@ def test_text_search_empty_string_returns_all_products(
     results = _catalog_titles(client, auth_headers, q=" ")
 
     assert results == {"Phone", "Chair"}
-

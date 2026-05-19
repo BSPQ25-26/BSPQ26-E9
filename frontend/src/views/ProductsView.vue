@@ -1,11 +1,18 @@
 <script setup>
-import { computed, reactive, ref } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useRoute, useRouter } from 'vue-router'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseCard from '@/components/base/BaseCard.vue'
 import BaseInput from '@/components/base/BaseInput.vue'
 import { useDebouncedWatch } from '@/composables/useDebouncedWatch'
 import * as productService from '@/services/product.service'
+import {
+  PRODUCT_CONDITION_OPTIONS,
+  getConditionBadgeClass,
+  getProductCondition,
+  normalizeProductCondition,
+} from '@/utils/product-condition'
 
 const { t } = useI18n()
 
@@ -13,20 +20,24 @@ const FILTER_DEBOUNCE_MS = 300
 const PRODUCTS_PER_PAGE = 8
 const SKELETON_PRODUCT_COUNT = 4
 
+const route = useRoute()
+const router = useRouter()
+
 const stateOptions = ['Available', 'Reserved', 'Sold']
 const stateLabelByKey = {
   available: 'Available',
   reserved: 'Reserved',
   sold: 'Sold',
 }
-const conditionOptions = ['New', 'Like New', 'Good', 'Fair', 'Poor']
+const conditionOptions = PRODUCT_CONDITION_OPTIONS
 const categoryFallbackOptions = ['Books', 'Collectibles', 'Electronics', 'Furniture', 'Home']
 
 const initialFilters = () => ({
   category: '',
-  condition: '',
+  conditions: [],
   maxPrice: '',
   minPrice: '',
+  q: '',
   states: [],
 })
 
@@ -37,6 +48,7 @@ const productListError = ref('')
 const isLoadingProducts = ref(false)
 const currentPage = ref(1)
 let activeRequestId = 0
+let isSyncingRouteQuery = false
 
 const createProductRoute = {
   name: 'product-create',
@@ -51,10 +63,90 @@ const currencyFormatter = new Intl.NumberFormat('en-US', {
 })
 
 const normalizeFilterValue = (value) => String(value ?? '').trim().toLowerCase()
+const normalizeQueryValues = (value) => (Array.isArray(value) ? value : [value])
+  .map((entry) => String(entry ?? '').trim())
+  .filter(Boolean)
 const normalizeProductState = (value) => {
   const key = normalizeFilterValue(value || 'Available')
 
   return stateLabelByKey[key] || String(value || 'Available').trim() || 'Available'
+}
+const normalizeQueryOptions = (value, options, normalizeOption) => {
+  const validOptions = new Map(options.map((option) => [normalizeFilterValue(option), option]))
+  const nextOptions = []
+
+  normalizeQueryValues(value).forEach((entry) => {
+    const normalizedEntry = normalizeOption(entry)
+    const option = validOptions.get(normalizeFilterValue(normalizedEntry))
+
+    if (option && !nextOptions.includes(option)) {
+      nextOptions.push(option)
+    }
+  })
+
+  return nextOptions
+}
+const getFirstQueryValue = (value) => normalizeQueryValues(value)[0] || ''
+const readFiltersFromRouteQuery = (query = {}) => ({
+  category: getFirstQueryValue(query.category),
+  conditions: normalizeQueryOptions(
+    query.condition,
+    conditionOptions,
+    normalizeProductCondition,
+  ),
+  maxPrice: getFirstQueryValue(query.max_price),
+  minPrice: getFirstQueryValue(query.min_price),
+  q: getFirstQueryValue(query.q),
+  states: normalizeQueryOptions(query.state, stateOptions, normalizeProductState),
+})
+const buildRouteQuery = () => {
+  const query = {}
+  const addStringQuery = (key, value) => {
+    const nextValue = String(value ?? '').trim()
+
+    if (nextValue) {
+      query[key] = nextValue
+    }
+  }
+
+  if (productFilters.states.length) {
+    query.state = [...productFilters.states]
+  }
+
+  if (productFilters.conditions.length) {
+    query.condition = [...productFilters.conditions]
+  }
+
+  addStringQuery('category', productFilters.category)
+  addStringQuery('min_price', productFilters.minPrice)
+  addStringQuery('max_price', productFilters.maxPrice)
+  addStringQuery('q', productFilters.q)
+
+  return query
+}
+const normalizeComparableQuery = (query = {}) =>
+  JSON.stringify({
+    category: getFirstQueryValue(query.category),
+    condition: normalizeQueryValues(query.condition),
+    max_price: getFirstQueryValue(query.max_price),
+    min_price: getFirstQueryValue(query.min_price),
+    q: getFirstQueryValue(query.q),
+    state: normalizeQueryValues(query.state),
+  })
+const syncRouteQuery = () => {
+  const query = buildRouteQuery()
+
+  if (normalizeComparableQuery(query) === normalizeComparableQuery(route.query)) {
+    return
+  }
+
+  isSyncingRouteQuery = true
+  Promise.resolve(router.replace({
+    name: route.name || 'products',
+    query,
+  })).finally(() => {
+    isSyncingRouteQuery = false
+  })
 }
 const buildOptionList = (values, fallbackValues = []) => {
   const options = new Map()
@@ -79,6 +171,7 @@ const buildOptionList = (values, fallbackValues = []) => {
 const getProductState = (product) => normalizeProductState(product.state)
 const getProductInitial = (product) => (product.title || product.category || '?').trim().charAt(0) || '?'
 const getProductKey = (product, index) => product.id ?? `${product.title}-${index}`
+const getConditionClass = (product) => getConditionBadgeClass(getProductCondition(product))
 const getProductDetailRoute = (product) => ({
   name: 'product-detail',
   params: {
@@ -87,11 +180,27 @@ const getProductDetailRoute = (product) => ({
 })
 
 const visibleProducts = computed(() => {
-  if (productFilters.states.length === 0) {
-    return products.value
-  }
+  const selectedStates = productFilters.states
+  const selectedConditions = productFilters.conditions
+  const searchTerm = normalizeFilterValue(productFilters.q)
 
-  return products.value.filter((product) => productFilters.states.includes(getProductState(product)))
+  return products.value.filter((product) => {
+    const productCondition = getProductCondition(product)
+    const productText = [
+      product.title,
+      product.description,
+      product.category,
+      productCondition,
+    ]
+      .map(normalizeFilterValue)
+      .join(' ')
+
+    return (
+      (selectedStates.length === 0 || selectedStates.includes(getProductState(product))) &&
+      (selectedConditions.length === 0 || selectedConditions.includes(productCondition)) &&
+      (!searchTerm || productText.includes(searchTerm))
+    )
+  })
 })
 
 const hasProducts = computed(() => visibleProducts.value.length > 0)
@@ -206,7 +315,7 @@ const goToPage = (page) => {
 
 const buildProductQueryFilters = () => ({
   category: productFilters.category,
-  condition: productFilters.condition,
+  condition: [...productFilters.conditions],
   maxPrice: productFilters.maxPrice,
   minPrice: productFilters.minPrice,
   state: '',
@@ -242,22 +351,50 @@ const resetFilters = () => {
   currentPage.value = 1
 }
 
+Object.assign(productFilters, readFiltersFromRouteQuery(route.query))
 fetchProducts()
 
 useDebouncedWatch(
   () => [
-    productFilters.states.join('|'),
     productFilters.category,
-    productFilters.condition,
+    productFilters.conditions.join('|'),
     productFilters.minPrice,
     productFilters.maxPrice,
   ],
   () => {
     currentPage.value = 1
+    syncRouteQuery()
     fetchProducts()
   },
   {
     debounce: FILTER_DEBOUNCE_MS,
+  },
+)
+
+useDebouncedWatch(
+  () => [
+    productFilters.states.join('|'),
+    productFilters.q,
+  ],
+  () => {
+    currentPage.value = 1
+    syncRouteQuery()
+  },
+  {
+    debounce: FILTER_DEBOUNCE_MS,
+  },
+)
+
+watch(
+  () => route.query,
+  (query) => {
+    if (isSyncingRouteQuery) {
+      return
+    }
+
+    Object.assign(productFilters, readFiltersFromRouteQuery(query))
+    currentPage.value = 1
+    fetchProducts()
   },
 )
 </script>
@@ -301,6 +438,15 @@ useDebouncedWatch(
             </summary>
 
             <form class="filter-form filter-dropdown__content" role="search" :aria-label="$t('products.ariaFilters')" @submit.prevent>
+              <BaseInput
+                v-model="productFilters.q"
+                class="filter-field"
+                label="Search"
+                name="q"
+                placeholder="Search listings"
+                type="search"
+              />
+
               <fieldset class="filter-field filter-field--state">
                 <legend class="filter-label">
                   {{ $t('products.stateFilterLabel') }}
@@ -316,6 +462,7 @@ useDebouncedWatch(
                     <input
                       v-model="productFilters.states"
                       class="state-filter-option__input"
+                      name="state"
                       type="checkbox"
                       :value="state"
                     />
@@ -366,17 +513,29 @@ useDebouncedWatch(
                 </div>
               </fieldset>
 
-              <label class="filter-field">
-                <span class="filter-label">{{ $t('products.conditionLabel') }}</span>
-                <select v-model="productFilters.condition" class="filter-control" name="condition">
-                  <option value="">
-                    {{ $t('products.anyCondition') }}
-                  </option>
-                  <option v-for="condition in conditionOptions" :key="condition" :value="condition">
-                    {{ condition }}
-                  </option>
-                </select>
-              </label>
+              <fieldset class="filter-field filter-field--condition">
+                <legend class="filter-label">
+                  {{ $t('products.conditionLabel') }}
+                </legend>
+
+                <div class="state-filter-options">
+                  <label
+                    v-for="condition in conditionOptions"
+                    :key="condition"
+                    class="state-filter-option"
+                    :class="{ 'is-selected': productFilters.conditions.includes(condition) }"
+                  >
+                    <input
+                      v-model="productFilters.conditions"
+                      class="state-filter-option__input"
+                      name="condition"
+                      type="checkbox"
+                      :value="condition"
+                    />
+                    <span>{{ condition }}</span>
+                  </label>
+                </div>
+              </fieldset>
 
               <BaseButton
                 v-if="hasActiveFilters"
@@ -451,6 +610,9 @@ useDebouncedWatch(
                 <div class="product-card__meta">
                   <span class="state-label" :class="getStateClass(product)">
                     {{ $t(`products.states.${getProductState(product).toLowerCase()}`) }}
+                  </span>
+                  <span class="condition-badge" :class="getConditionClass(product)">
+                    {{ getProductCondition(product) }}
                   </span>
                 </div>
 
@@ -829,7 +991,7 @@ useDebouncedWatch(
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: var(--space-2);
 }
 

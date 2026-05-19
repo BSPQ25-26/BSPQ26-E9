@@ -17,19 +17,44 @@ INVENTORY_SERVICE_URL = os.getenv("INVENTORY_SERVICE_URL", "http://inventory-ser
 
 
 def _get_active_listing_count(seller_email: str) -> int:
+    return len(_get_active_listings(seller_email))
+
+
+def _get_active_listings(seller_email: str) -> list[dict]:
     try:
         service_token = create_access_token({"sub": "service@internal"})
         headers = {"Authorization": f"Bearer {service_token}"}
         response = httpx.get(f"{INVENTORY_SERVICE_URL}/api/v1/products", headers=headers, timeout=3.0)
         if response.status_code == 200:
             products = response.json()
-            return sum(
-                1 for p in products
+            return [
+                p for p in products
                 if p.get("seller_id") == seller_email and p.get("state") in ("Available", "Reserved")
-            )
+            ]
     except Exception:
         pass
-    return 0
+    return []
+
+
+def _serialize_public_profile(user):
+    return {
+        "id": user.id,
+        "username": user.email,
+        "member_since": user.created_at,
+        "avg_rating": user.avg_rating,
+        "active_listing_count": _get_active_listing_count(user.email),
+    }
+
+
+@router.get("/resolve")
+def resolve_user_profile(username: str, db: Session = Depends(get_db)):
+    user = user_repository.get_user_by_email(db, username)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Usuario no encontrado"
+        )
+    return _serialize_public_profile(user)
 
 
 @router.get("/{user_id}/profile")
@@ -40,12 +65,18 @@ def get_user_profile(user_id: int, db: Session = Depends(get_db)):
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Usuario no encontrado"
         )
-    return {
-        "username": user.email,
-        "member_since": user.created_at,
-        "avg_rating": user.avg_rating,
-        "active_listing_count": _get_active_listing_count(user.email)
-    }
+    return _serialize_public_profile(user)
+
+
+@router.get("/{user_id}/products")
+def get_user_products(user_id: int, db: Session = Depends(get_db)):
+    user = user_repository.get_user_by_id(db, user_id)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Usuario no encontrado"
+        )
+    return _get_active_listings(user.email)
 
 
 @router.get("/{user_id}/ratings")

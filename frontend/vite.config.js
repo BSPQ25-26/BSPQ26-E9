@@ -62,6 +62,14 @@ export default defineConfig(({ mode }) => {
           target: proxyTargets.auth,
           changeOrigin: true,
         },
+        '/ratings': {
+          target: proxyTargets.auth,
+          changeOrigin: true,
+        },
+        '/users': {
+          target: proxyTargets.auth,
+          changeOrigin: true,
+        },
         '/api/v1': {
           target: proxyTargets.inventory,
           changeOrigin: true,
@@ -86,6 +94,14 @@ export default defineConfig(({ mode }) => {
     },
     test: {
       environment: 'jsdom',
+      exclude: [
+        'coverage/**',
+        'dist/**',
+        'e2e/**',
+        'node_modules/**',
+        'playwright-report/**',
+        'test-results/**',
+      ],
       globals: true,
       setupFiles: './src/test/setup.js',
     },
