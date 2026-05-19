@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Project Overview &mdash; Wallabot 3.0.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=e8a114e6" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=acc74ff5"></script>
+        <script src="_static/doctools.js?v=888ff710"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="System Architecture" href="architecture.html" />
+    <link rel="prev" title="Wallabot Documentation" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            Wallabot
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Project Overview</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Project Overview</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#what-is-wallabot">What is Wallabot?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#key-features">Key Features</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#technology-stack">Technology Stack</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#repository-layout">Repository Layout</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#local-quick-start">Local Quick-Start</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="architecture.html">System Architecture</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">REST API Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="api/index.html">REST API Reference</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Testing &amp; Quality</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="testing.html">Testing &amp; Quality</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">DevOps &amp; CI/CD</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="devops.html">DevOps &amp; CI/CD</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">Wallabot</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Project Overview</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/overview.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="project-overview">
+<h1>Project Overview<a class="headerlink" href="#project-overview" title="Link to this heading"></a></h1>
+<section id="what-is-wallabot">
+<h2>What is Wallabot?<a class="headerlink" href="#what-is-wallabot" title="Link to this heading"></a></h2>
+<p>Wallabot is a full-stack <strong>C2C (consumer-to-consumer) second-hand marketplace</strong> inspired by
+Wallapop. It allows users to list products, browse listings, reserve items, and complete
+purchases through a digital wallet. The platform is augmented by an AI subsystem — the
+<em>Wallabot Agentic Service</em> — which provides intelligent product classification and price
+recommendations powered by LangChain and OpenAI GPT-4o-mini.</p>
+</section>
+<section id="key-features">
+<h2>Key Features<a class="headerlink" href="#key-features" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><strong>User authentication</strong> — email/password registration and login with JWT, plus OAuth via
+Google and Facebook.</p></li>
+<li><p><strong>Product catalogue</strong> — create, browse, filter, and search listings with image uploads.</p></li>
+<li><p><strong>Smart AI assistance</strong> — automatic category suggestion and market-based price estimation
+when creating a listing.</p></li>
+<li><p><strong>Wallet &amp; transactions</strong> — deposit funds, reserve products, and complete peer-to-peer
+purchases atomically.</p></li>
+<li><p><strong>User ratings</strong> — buyers and sellers can rate each other after a completed transaction.</p></li>
+<li><p><strong>Internationalisation</strong> — the frontend supports English and Spanish (<code class="docutils literal notranslate"><span class="pre">vue-i18n</span></code>).</p></li>
+</ul>
+</section>
+<section id="technology-stack">
+<h2>Technology Stack<a class="headerlink" href="#technology-stack" title="Link to this heading"></a></h2>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Layer</p></th>
+<th class="head"><p>Technology</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Frontend</p></td>
+<td><p>Vue 3, Vite, Pinia, Vue Router, Axios, vue-i18n</p></td>
+</tr>
+<tr class="row-odd"><td><p>Backend (all services)</p></td>
+<td><p>Python 3.11+, FastAPI 0.135, SQLAlchemy 2, Pydantic v2</p></td>
+</tr>
+<tr class="row-even"><td><p>AI / Agentic subsystem</p></td>
+<td><p>LangChain LCEL, OpenAI GPT-4o-mini, Tavily Web Search</p></td>
+</tr>
+<tr class="row-odd"><td><p>Observability</p></td>
+<td><p>LangSmith tracing (optional), structlog structured logging</p></td>
+</tr>
+<tr class="row-even"><td><p>Database (local)</p></td>
+<td><p>SQLite per service</p></td>
+</tr>
+<tr class="row-odd"><td><p>Database (production)</p></td>
+<td><p>PostgreSQL on Supabase, 3 service-scoped roles</p></td>
+</tr>
+<tr class="row-even"><td><p>Container</p></td>
+<td><p>Docker, Docker Compose</p></td>
+</tr>
+<tr class="row-odd"><td><p>Deployment</p></td>
+<td><p>Render Blueprint</p></td>
+</tr>
+<tr class="row-even"><td><p>CI/CD</p></td>
+<td><p>GitHub Actions</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="repository-layout">
+<h2>Repository Layout<a class="headerlink" href="#repository-layout" title="Link to this heading"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>BSPQ26-E9/
+├── backend/
+│   ├── auth-service/          # JWT auth, social login, ratings
+│   ├── inventory-service/     # Product catalogue and image storage
+│   ├── transaction-service/   # Wallet, reservation, purchase
+│   └── agentic-service/       # AI category &amp; price agents
+├── frontend/                  # Vue 3 SPA
+├── tests/
+│   ├── integration/           # Cross-service end-to-end tests
+│   ├── performance/           # Locust load tests
+│   └── smoke/                 # Docker Compose health checks
+├── docs-sphinx/               # This documentation
+├── docker-compose.yml
+├── render.yaml
+└── .github/workflows/
+</pre></div>
+</div>
+</section>
+<section id="local-quick-start">
+<h2>Local Quick-Start<a class="headerlink" href="#local-quick-start" title="Link to this heading"></a></h2>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># 1. Copy environment template</span>
+cp<span class="w"> </span>.env.example<span class="w"> </span>.env
+<span class="c1"># 2. Start all services (requires Docker)</span>
+docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>--build
+</pre></div>
+</div>
+<p>Once running the services are available at:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Service</p></th>
+<th class="head"><p>URL</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Frontend</p></td>
+<td><p>http://localhost:5173</p></td>
+</tr>
+<tr class="row-odd"><td><p>Auth Service</p></td>
+<td><p>http://localhost:8001</p></td>
+</tr>
+<tr class="row-even"><td><p>Inventory Service</p></td>
+<td><p>http://localhost:8002</p></td>
+</tr>
+<tr class="row-odd"><td><p>Transaction Service</p></td>
+<td><p>http://localhost:8003</p></td>
+</tr>
+<tr class="row-even"><td><p>Agentic Service</p></td>
+<td><p>http://localhost:8004</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="index.html" class="btn btn-neutral float-left" title="Wallabot Documentation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="architecture.html" class="btn btn-neutral float-right" title="System Architecture" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, BSPQ26-E9.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
