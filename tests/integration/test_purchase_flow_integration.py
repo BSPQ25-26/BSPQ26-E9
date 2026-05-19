@@ -155,6 +155,45 @@ def _get_product_history(client: httpx.Client, product_id: int, token: str) -> l
     return response.json()
 
 
+def _find_user_id_by_email(client: httpx.Client, email: str, max_user_id: int = 50) -> int:
+    try:
+        for candidate_user_id in range(1, max_user_id + 1):
+            response = client.get(f"{AUTH_BASE_URL}/users/{candidate_user_id}/profile")
+            if response.status_code != 200:
+                continue
+
+            profile = response.json()
+            if profile.get("username") == email:
+                return candidate_user_id
+    except _CONNECT_ERRORS as exc:
+        pytest.skip(f"Auth service unreachable at {AUTH_BASE_URL}: {exc}")
+
+    pytest.skip(f"Could not resolve auth user id for {email!r} via /users/<id>/profile")
+
+
+def _submit_rating(
+    client: httpx.Client,
+    token: str,
+    to_user_id: int,
+    transaction_id: int,
+    stars: int = 5,
+    review_text: str = "Integration test rating",
+) -> httpx.Response:
+    try:
+        return client.post(
+            f"{AUTH_BASE_URL}/ratings",
+            json={
+                "to_user_id": to_user_id,
+                "transaction_id": transaction_id,
+                "stars": stars,
+                "review_text": review_text,
+            },
+            headers=_headers(token),
+        )
+    except _CONNECT_ERRORS as exc:
+        pytest.skip(f"Auth service unreachable at {AUTH_BASE_URL}: {exc}")
+
+
 @pytest.fixture()
 def api_client():
     with httpx.Client(timeout=20.0) as client:
@@ -205,10 +244,10 @@ def test_full_purchase_flow_records_reservation_purchase_and_wallet_ledger_entri
 
     buyer_latest = buyer_history["entries"][0]
     buyer_earlier = buyer_history["entries"][1]
-    assert buyer_latest["transaction_type"] == "PURCHASE"
+    assert buyer_latest["transaction_type"] == "purchase"
     assert buyer_latest["amount"] == -125.0
     assert buyer_latest["balance_after"] == 125.0
-    assert buyer_earlier["transaction_type"] == "TOP_UP"
+    assert buyer_earlier["transaction_type"] == "deposit"
     assert buyer_earlier["amount"] == 250.0
     assert buyer_earlier["balance_after"] == 250.0
 
@@ -218,7 +257,7 @@ def test_full_purchase_flow_records_reservation_purchase_and_wallet_ledger_entri
     assert len(seller_history["entries"]) == 1
 
     seller_entry = seller_history["entries"][0]
-    assert seller_entry["transaction_type"] == "SALE"
+    assert seller_entry["transaction_type"] == "refund"
     assert seller_entry["amount"] == 125.0
     assert seller_entry["balance_after"] == 125.0
 
@@ -247,7 +286,7 @@ def test_purchase_flow_rejects_insufficient_funds_without_creating_purchase_ledg
     buyer_history = _get_wallet_history(api_client, buyer["token"])
     assert buyer_history["total"] == 1
     assert len(buyer_history["entries"]) == 1
-    assert buyer_history["entries"][0]["transaction_type"] == "TOP_UP"
+    assert buyer_history["entries"][0]["transaction_type"] == "deposit"
     assert buyer_history["entries"][0]["balance_after"] == 50.0
 
     seller_history = _get_wallet_history(api_client, seller["token"])
@@ -256,3 +295,50 @@ def test_purchase_flow_rejects_insufficient_funds_without_creating_purchase_ledg
 
     product_history = _get_product_history(api_client, product_id, buyer["token"])
     assert product_history[-1]["to_state"] == "reserved"
+
+
+def test_completed_purchase_enables_rating_submission(api_client, seller, buyer):
+    product = _create_product(api_client, seller["token"], price=75.0)
+    product_id = product[PRODUCT_ID_FIELD]
+
+    _top_up_wallet(api_client, buyer["token"], amount=100.0)
+    _reserve_product(api_client, product_id, buyer["token"])
+
+    purchase_response = _buy_product(api_client, product_id, buyer["token"])
+    assert purchase_response.status_code == 201, purchase_response.text
+
+    seller_user_id = _find_user_id_by_email(api_client, seller["email"])
+    rating_response = _submit_rating(
+        api_client,
+        buyer["token"],
+        to_user_id=seller_user_id,
+        transaction_id=purchase_response.json()["id"],
+        stars=5,
+        review_text="Great purchase flow",
+    )
+
+    assert rating_response.status_code == 200, rating_response.text
+    body = rating_response.json()
+    assert body["message"] == "valoración creada correctamente"
+    assert "rating_id" in body
+
+
+def test_uncompleted_transaction_cannot_be_rated(api_client, seller, buyer):
+    product = _create_product(api_client, seller["token"], price=55.0)
+    product_id = product[PRODUCT_ID_FIELD]
+
+    _top_up_wallet(api_client, buyer["token"], amount=100.0)
+    _reserve_product(api_client, product_id, buyer["token"])
+
+    seller_user_id = _find_user_id_by_email(api_client, seller["email"])
+    rating_response = _submit_rating(
+        api_client,
+        buyer["token"],
+        to_user_id=seller_user_id,
+        transaction_id=product_id,
+        stars=4,
+        review_text="Should not be accepted yet",
+    )
+
+    assert rating_response.status_code == 403, rating_response.text
+    assert "transacción" in rating_response.text.lower()

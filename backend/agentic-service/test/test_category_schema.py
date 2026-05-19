@@ -1,12 +1,14 @@
 import pytest
 from pydantic import ValidationError
 
-from app.schemas import CategoryRequest, CategorySuggestion, PriceRecommendation
+from app.schemas import CategoryRequest, CategorySuggestion, PriceRecommendation, PriceRequest
 
+#cd backend\agentic-service
+#python -m pytest test\test_category_schema.py -q
 
 def test_category_suggestion_valid_data() -> None:
     suggestion = CategorySuggestion(
-        suggested_category="Electronics",
+        suggested_category="  Electronics  ",
         confidence=0.92,
         is_new_category=False,
     )
@@ -18,6 +20,15 @@ def test_category_suggestion_valid_data() -> None:
 def test_category_suggestion_rejects_empty_category() -> None:
     with pytest.raises(ValidationError):
         CategorySuggestion(suggested_category="", confidence=0.5, is_new_category=False)
+
+
+def test_price_request_rejects_invalid_condition_literal() -> None:
+    with pytest.raises(ValidationError):
+        PriceRequest(
+            title="iPhone 13",
+            description="Used smartphone, 128GB",
+            condition="Refurbished",
+        )
 
 
 def test_category_suggestion_rejects_confidence_out_of_range() -> None:
