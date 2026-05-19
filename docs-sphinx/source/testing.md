@@ -11,13 +11,8 @@ for isolating data and a different activation mechanism.
 
 ## Coverage Summary
 
-| Service | Tests | Lines covered | Coverage |
-|---------|------:|:-------------:|---------:|
-| auth-service | 34 | 331 / 415 | **80%** |
-| inventory-service | 44 | 267 / 301 | **89%** |
-| transaction-service | 57 | 511 / 619 | **83%** |
-| agentic-service | 75 | 277 / 318 | **87%** |
-| **Total** | **210** | **1 386 / 1 653** | **84%** |
+```{include} _generated/coverage_summary_table.md
+```
 
 Coverage is measured with `pytest-cov` against each service's `app/` package.
 The CI pipeline enforces a minimum of 50% via `--cov-fail-under=50`.
@@ -198,7 +193,8 @@ The override is cleared after each test via `app.dependency_overrides.clear()`.
 
 ## Unit Tests — Auth Service
 
-**34 tests | 80% coverage | `backend/auth-service/tests/`**
+```{include} _generated/stats_auth_service.md
+```
 
 ### `conftest.py`
 
@@ -315,7 +311,8 @@ the full authenticate-then-act lifecycle in a single test function.
 
 ## Unit Tests — Inventory Service
 
-**44 tests | 89% coverage | `backend/inventory-service/tests/`**
+```{include} _generated/stats_inventory_service.md
+```
 
 ### `conftest.py`
 
@@ -406,7 +403,8 @@ In CI, the workspace is ephemeral so this is not a problem.
 
 ## Unit Tests — Transaction Service
 
-**57 tests | 83% coverage | `backend/transaction-service/tests/`**
+```{include} _generated/stats_transaction_service.md
+```
 
 ### `test_state_transitions.py` — 9 direct state machine tests
 
@@ -435,7 +433,8 @@ lifecycle described for the auth and inventory services.
 
 ## Unit Tests — Agentic Service
 
-**75 tests | 87% coverage | `backend/agentic-service/test/`**
+```{include} _generated/stats_agentic_service.md
+```
 
 The agentic service tests **never call OpenAI or Tavily** (except the explicitly gated
 live tests). All LLM interaction is replaced with mock objects.
@@ -920,15 +919,72 @@ locust -f locustfile.py --headless -u 20 -r 5 -t 120s
 
 ## Coverage Reports
 
-The CI pipeline runs:
+### Interactive HTML reports
 
-```bash
-pytest --cov=app --cov-report=xml --cov-report=html --cov-fail-under=50
+The CI pipeline generates a full `pytest-cov` HTML report for every service on every
+push to `main`. These reports are **embedded directly in this documentation site** — the
+`sphinx-docs.yml` workflow downloads them from the CI run and injects them into the Sphinx
+`_static/coverage/` directory before building.
+
+```{note}
+The links below are only active in the **published documentation**
+(https://BSPQ25-26.github.io/BSPQ26-E9/sphinx/). They point to files injected at
+CI build time and are not present in local Sphinx builds. To generate reports locally,
+run ``pytest --cov=app --cov-report=html:coverage-html`` inside any service directory.
 ```
 
-HTML and XML coverage reports are uploaded as GitHub Actions artifacts named
-`coverage-{service-name}`. They are available for download from the Actions run summary
-page for 90 days.
+```{include} _generated/coverage_links_table.md
+```
+
+Each report shows:
+
+- **per-file summary** with statement, branch, and partial-branch counts
+- **line-by-line annotation** — green for covered lines, red for missed, yellow for partial
+  branches
+- **branch-coverage arcs** — which `if`/`else` paths were and were not exercised
+
+### How the reports are injected (CI pipeline)
+
+The `sphinx-docs.yml` workflow is triggered by `workflow_run` on completion of
+`"Wallabot CI"`. This guarantees the test artifacts already exist before the docs build
+starts, avoiding a race condition that would occur if both workflows triggered on `push`
+simultaneously.
+
+```
+push to main
+    │
+    ├─► Wallabot CI (ci.yml)
+    │       ├─ test-auth       → uploads coverage-auth-service artifact
+    │       ├─ test-inventory  → uploads coverage-inventory-service artifact
+    │       ├─ test-transactions → uploads coverage-transaction-service artifact
+    │       └─ test-wallabot   → uploads coverage-agentic-service artifact
+    │
+    └─► (on CI completion) Build and Deploy Sphinx Docs (sphinx-docs.yml)
+            ├─ dawidd6/action-download-artifact@v6
+            │       downloads all four coverage-* artifacts using the CI run_id
+            │       into coverage-artifacts/<artifact-name>/backend/<svc>/coverage-html/
+            ├─ Inject step copies each coverage-html/ → _static/coverage/<svc>/
+            ├─ make html  (Sphinx copies _static/ into _build/html/_static/)
+            └─ Deploy to GitHub Pages
+```
+
+The download step uses `if_no_artifact_found: warn` and `continue-on-error: true`, so a
+failed test job (or a manual `workflow_dispatch` run) never blocks the documentation
+deployment — the links simply resolve to a 404 for that build.
+
+### GitHub Actions artifacts
+
+Reports are also available as downloadable archives in GitHub Actions. Artifacts are
+retained for **90 days** after the run. Download them from the
+[CI workflow runs page](https://github.com/BSPQ25-26/BSPQ26-E9/actions/workflows/ci.yml):
+
+| Artifact name | Contents |
+|---------------|---------|
+| `coverage-auth-service` | `coverage.xml` + `coverage-html/` for auth-service |
+| `coverage-inventory-service` | `coverage.xml` + `coverage-html/` for inventory-service |
+| `coverage-transaction-service` | `coverage.xml` + `coverage-html/` for transaction-service |
+| `coverage-agentic-service` | `coverage.xml` + `coverage-html/` for agentic-service |
+| `coverage-backend-docker` | All four services run against PostgreSQL (Docker job) |
 
 ---
 

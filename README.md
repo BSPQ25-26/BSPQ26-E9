@@ -3,6 +3,16 @@
 Wallabot is a multi-service marketplace built around a Vue frontend, four FastAPI backend services, and a Docker-based container
  stack. The application covers authentication, product browsing and management, wallet and transaction flows, and AI-assisted category and pricing support.
 
+## Live Links
+
+| | URL |
+|--|-----|
+| **Application** | https://wallabot-frontend.onrender.com |
+| **Documentation** | https://BSPQ25-26.github.io/BSPQ26-E9/sphinx/ |
+| **Documentation (PDF)** | https://BSPQ25-26.github.io/BSPQ26-E9/sphinx/BSPQ26-E9.pdf |
+
+> The app runs on Render's free tier — the first request after a period of inactivity may take up to 60 seconds while the containers cold-start.
+
 ## Application Flow
 
 The user journey is centered on the frontend router:
@@ -105,8 +115,19 @@ Notes:
 - The backend services use persistent disks mounted at `/app/data` so their SQLite fallbacks survive redeploys.
 - `OPENAI_API_KEY` and `TAVILY_API_KEY` are left as Render secret prompts for the agentic service.
 - The frontend image is defined in [frontend/Dockerfile.render](frontend/Dockerfile.render) and proxies `/auth`, `/api/v1`, `/uploads`, `/products`, `/wallet`, `/transactions`, and `/wallabot` to the matching backend services.
+- All services deploy automatically from the `main` branch on every push.
 
 To deploy, connect the repo to a Render Blueprint and point it at [render.yaml](render.yaml).
+
+**Production service URLs:**
+
+| Service | URL |
+| --- | --- |
+| Frontend | https://wallabot-frontend.onrender.com |
+| Auth Service | https://wallabot-auth.onrender.com |
+| Inventory Service | https://wallabot-inventory.onrender.com |
+| Transaction Service | https://wallabot-transaction.onrender.com |
+| Agentic Service | https://wallabot-agentic.onrender.com |
 
 ### **CI/CD Pipeline**
 

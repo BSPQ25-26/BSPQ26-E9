@@ -127,7 +127,7 @@ BSPQ26-E9/
 │   │   │   ├── repositories/      # user_repository, rating_repository
 │   │   │   ├── schemas/           # auth, rating, user, common
 │   │   │   └── services/          # auth_service, rating_service
-│   │   └── tests/                 # 34 unit + integration tests (80% coverage)
+│   │   └── tests/                 # unit + integration tests
 │   │
 │   ├── inventory-service/         # Product catalogue and image storage
 │   │   ├── app/
@@ -136,7 +136,7 @@ BSPQ26-E9/
 │   │   │   ├── models/            # Product (inventory_products table)
 │   │   │   ├── repositories/      # product_repository
 │   │   │   └── schemas/           # ProductCreate, ProductOut, ProductUpdate
-│   │   └── tests/                 # 44 unit tests (89% coverage)
+│   │   └── tests/                 # unit tests
 │   │
 │   ├── transaction-service/       # Wallet, reservation, purchase, state machine
 │   │   ├── app/
@@ -145,14 +145,14 @@ BSPQ26-E9/
 │   │   │   ├── services/          # state_machine (Available→Reserved→Sold)
 │   │   │   ├── models.py          # Product, WalletLedger, Transaction, ProductStateHistory
 │   │   │   └── schemas.py         # all transaction schemas
-│   │   └── tests/                 # 57 unit tests (83% coverage)
+│   │   └── tests/                 # unit tests
 │   │
 │   └── agentic-service/           # AI agents: category suggestion + price recommendation
 │       ├── app/
 │       │   ├── agent/             # category_agent, price_agent, tracing
 │       │   ├── api/               # wallabot_router
 │       │   └── schemas/           # CategoryRequest/Suggestion, PriceRequest/Recommendation
-│       └── test/                  # 75 tests including live API tests (87% coverage)
+│       └── test/                  # unit tests (incl. live API tests)
 │
 ├── frontend/                      # Vue 3 SPA
 │   ├── src/
