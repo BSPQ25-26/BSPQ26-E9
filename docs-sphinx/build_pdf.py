@@ -16,6 +16,7 @@ PAGE_ORDER = [
     "api/inventory_api.html",
     "api/transaction_api.html",
     "api/agentic_api.html",
+    "wallabot_agent.html",
     "testing.html",
     "devops.html",
 ]
