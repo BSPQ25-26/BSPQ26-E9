@@ -1,8 +1,10 @@
 import logging
+import os
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import wallabot_router
 
@@ -64,6 +66,15 @@ app = FastAPI(
     version="1.0.0",
     openapi_tags=_TAGS_METADATA,
     lifespan=lifespan,
+)
+
+_frontend_url = os.getenv("FRONTEND_URL", "https://wallabot-frontend.onrender.com")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[_frontend_url, "http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 

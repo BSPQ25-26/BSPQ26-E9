@@ -2,15 +2,11 @@ services:
   - type: web
     name: auth-service
     runtime: docker
-    plan: starter
+    plan: free
     dockerfilePath: backend/auth-service/Dockerfile
     dockerContext: .
-    dockerCommand: sh -c "uvicorn app.main:app --host 0.0.0.0 --port 10000"
+    dockerCommand: uvicorn app.main:app --host 0.0.0.0 --port 10000
     healthCheckPath: /health
-    disk:
-      name: auth-data
-      mountPath: /app/data
-      sizeGB: 1
     envVars:
       - key: AUTH_DATABASE_URL
         value: sqlite:////app/data/auth.db
@@ -18,15 +14,11 @@ services:
   - type: web
     name: inventory-service
     runtime: docker
-    plan: starter
+    plan: free
     dockerfilePath: backend/inventory-service/Dockerfile
     dockerContext: .
-    dockerCommand: sh -c "uvicorn app.main:app --host 0.0.0.0 --port 10000"
+    dockerCommand: uvicorn app.main:app --host 0.0.0.0 --port 10000
     healthCheckPath: /health
-    disk:
-      name: inventory-data
-      mountPath: /app/data
-      sizeGB: 1
     envVars:
       - key: DATABASE_URL
         value: sqlite:////app/data/inventory.db
@@ -36,15 +28,11 @@ services:
   - type: web
     name: transaction-service
     runtime: docker
-    plan: starter
+    plan: free
     dockerfilePath: backend/transaction-service/Dockerfile
     dockerContext: .
-    dockerCommand: sh -c "python -m uvicorn app.main:app --host 0.0.0.0 --port 10000"
+    dockerCommand: uvicorn app.main:app --host 0.0.0.0 --port 10000
     healthCheckPath: /health
-    disk:
-      name: transaction-data
-      mountPath: /app/data
-      sizeGB: 1
     envVars:
       - key: DATABASE_URL
         value: sqlite:////app/data/transactions.db
@@ -54,10 +42,10 @@ services:
   - type: web
     name: agentic-service
     runtime: docker
-    plan: starter
+    plan: free
     dockerfilePath: backend/agentic-service/Dockerfile
     dockerContext: .
-    dockerCommand: sh -c "uvicorn app.main:app --host 0.0.0.0 --port 10000"
+    dockerCommand: uvicorn app.main:app --host 0.0.0.0 --port 10000
     healthCheckPath: /health
     envVars:
       - key: OPENAI_API_KEY
@@ -74,7 +62,28 @@ services:
   - type: web
     name: frontend
     runtime: docker
-    plan: starter
+    plan: free
     dockerfilePath: frontend/Dockerfile.render
     dockerContext: .
     healthCheckPath: /
+    envVars:
+      - key: AUTH_SERVICE_URL
+        fromService:
+          name: auth-service
+          type: web
+          property: host
+      - key: INVENTORY_SERVICE_URL
+        fromService:
+          name: inventory-service
+          type: web
+          property: host
+      - key: TRANSACTION_SERVICE_URL
+        fromService:
+          name: transaction-service
+          type: web
+          property: host
+      - key: AGENTIC_SERVICE_URL
+        fromService:
+          name: agentic-service
+          type: web
+          property: host

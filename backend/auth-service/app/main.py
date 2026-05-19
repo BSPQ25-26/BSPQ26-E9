@@ -1,4 +1,7 @@
+import os
+
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1.auth_router import router as auth_router
 from app.api.v1.social_auth_router import router as social_auth_router
 from app.api.v1.rating_router import router as rating_router
@@ -6,6 +9,15 @@ from app.api.v1.user_router import router as user_router
 from app.db.init_db import init_db
 
 app = FastAPI()
+
+_frontend_url = os.getenv("FRONTEND_URL", "https://wallabot-frontend.onrender.com")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[_frontend_url, "http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.on_event("startup")
