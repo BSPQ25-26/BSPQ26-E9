@@ -27,6 +27,8 @@ services:
       - FACEBOOK_CLIENT_SECRET=${FACEBOOK_CLIENT_SECRET:-}
       - FACEBOOK_REDIRECT_URI=${FACEBOOK_REDIRECT_URI:-http://localhost:8001/auth/facebook/callback}
       - FRONTEND_AUTH_CALLBACK_URL=${FRONTEND_AUTH_CALLBACK_URL:-http://localhost:5173/#/auth/callback}
+      - ENABLE_TEST_CLEANUP=${ENABLE_TEST_CLEANUP:-true}
+      - TEST_CLEANUP_SECRET=${TEST_CLEANUP_SECRET:-dev-test-cleanup}
     volumes:
       - wallabot-data:/app/data
     healthcheck:
@@ -56,6 +58,8 @@ services:
       - SUPABASE_URL=${SUPABASE_URL:-}
       - SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY:-}
       - SUPABASE_STORAGE_BUCKET=${SUPABASE_STORAGE_BUCKET:-product-images}
+      - ENABLE_TEST_CLEANUP=${ENABLE_TEST_CLEANUP:-true}
+      - TEST_CLEANUP_SECRET=${TEST_CLEANUP_SECRET:-dev-test-cleanup}
     volumes:
       - wallabot-data:/app/data
     healthcheck:
@@ -84,6 +88,8 @@ services:
       - RESERVATION_TIMEOUT_SECONDS=${RESERVATION_TIMEOUT_SECONDS:-900}
       - RESERVATION_CLEANUP_INTERVAL_SECONDS=${RESERVATION_CLEANUP_INTERVAL_SECONDS:-60}
       - RESERVATION_CLEANUP_ENABLED=${RESERVATION_CLEANUP_ENABLED:-true}
+      - ENABLE_TEST_CLEANUP=${ENABLE_TEST_CLEANUP:-true}
+      - TEST_CLEANUP_SECRET=${TEST_CLEANUP_SECRET:-dev-test-cleanup}
     volumes:
       - wallabot-data:/app/data
     healthcheck:

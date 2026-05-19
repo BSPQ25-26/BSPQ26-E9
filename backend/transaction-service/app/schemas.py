@@ -148,3 +148,9 @@ class TransactionHistoryListResponse(BaseModel):
     total:        int
     page:         int
     per_page:     int
+
+
+class TestCleanupRequest(BaseModel):
+    emails: list[str] = Field(default_factory=list)
+    run_id: str | None = None
+    purge_test_patterns: bool = True

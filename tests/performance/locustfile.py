@@ -1,5 +1,12 @@
 from __future__ import annotations
 
+import sys
+from pathlib import Path
+
+_PROJECT_ROOT = Path(__file__).resolve().parents[2]
+if str(_PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PROJECT_ROOT))
+
 import io
 import json
 import logging
@@ -20,6 +27,9 @@ from perf_config import (
     configure_logging,
     load_settings,
 )
+
+from tests.support.cleanup import cleanup_test_users
+from tests.support import test_user_registry
 
 
 configure_logging()
@@ -65,6 +75,7 @@ def _register_and_login(user: HttpUser, role: str, identity: str) -> AuthContext
         configured_password = f"{role.title()}!{settings.run_id}"
 
     email, password = build_identity(role, settings.run_id, identity, password=configured_password)
+    test_user_registry.register(email)
     register_url = build_absolute_url(settings.auth_base_url, "/auth/register")
     login_url = build_absolute_url(settings.auth_base_url, "/auth/login")
 
@@ -489,3 +500,18 @@ def on_test_stop(environment, **kwargs) -> None:  # type: ignore[override]
             kpi_alias_html_path,
         )
     logger.info("Wrote ContiPerf-like HTML report to %s", kpi_html_path)
+
+    try:
+        cleanup_results = cleanup_test_users(
+            emails=test_user_registry.snapshot(),
+            run_id=settings.run_id,
+            auth_base_url=settings.auth_base_url,
+            transaction_base_url=settings.transaction_base_url,
+            inventory_base_url=settings.inventory_base_url,
+            purge_test_patterns=True,
+        )
+        logger.info("Performance test cleanup results: %s", cleanup_results)
+    except Exception:
+        logger.exception("Performance test cleanup failed")
+    finally:
+        test_user_registry.clear()

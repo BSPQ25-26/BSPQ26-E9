@@ -3,7 +3,9 @@ from app.api.v1.auth_router import router as auth_router
 from app.api.v1.social_auth_router import router as social_auth_router
 from app.api.v1.rating_router import router as rating_router
 from app.api.v1.user_router import router as user_router
+from app.api.v1.test_cleanup_router import router as test_cleanup_router
 from app.db.init_db import init_db
+from app.services.test_cleanup_service import is_test_cleanup_enabled
 
 app = FastAPI()
 
@@ -22,3 +24,5 @@ app.include_router(auth_router)
 app.include_router(social_auth_router)
 app.include_router(rating_router)
 app.include_router(user_router)
+if is_test_cleanup_enabled():
+    app.include_router(test_cleanup_router)

@@ -22,6 +22,11 @@ PERF_ROOT = PROJECT_ROOT / "tests" / "performance"
 LOCUSTFILE = PERF_ROOT / "locustfile.py"
 REPORTS_DIR = PERF_ROOT / "reports"
 
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from tests.support.cleanup import cleanup_test_users
+
 
 def run_locust(*, run_id: str, users: int, hatch_rate: int, run_time: str, html_out: Path) -> None:
     env = os.environ.copy()
@@ -81,6 +86,8 @@ def main() -> None:
         run_time=args.success_duration,
         html_out=success_html,
     )
+    _cleanup_perf_run(success_run_id, logger)
+
     run_locust(
         run_id=fail_run_id,
         users=args.fail_users,
@@ -88,8 +95,17 @@ def main() -> None:
         run_time=args.fail_duration,
         html_out=fail_html,
     )
+    _cleanup_perf_run(fail_run_id, logger)
 
     logger.info("Performance suite finished.")
+
+
+def _cleanup_perf_run(run_id: str, logger: logging.Logger) -> None:
+    try:
+        results = cleanup_test_users(run_id=run_id, purge_test_patterns=True)
+        logger.info("Cleanup after perf run %s: %s", run_id, results)
+    except Exception:
+        logger.exception("Cleanup failed for perf run %s", run_id)
 
 
 if __name__ == "__main__":

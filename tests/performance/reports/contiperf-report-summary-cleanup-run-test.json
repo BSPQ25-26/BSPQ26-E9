@@ -1,0 +1,26 @@
+{
+  "run_id": "cleanup-run-test",
+  "base_urls": {
+    "auth": "http://localhost:8001",
+    "inventory": "http://localhost:8002",
+    "transaction": "http://localhost:8003",
+    "wallabot": "http://localhost:8004"
+  },
+  "load": {
+    "users": 3,
+    "hatch_rate": 1.0,
+    "run_time": 15
+  },
+  "results": {
+    "num_requests": 20,
+    "num_failures": 0,
+    "failure_rate": 0.0,
+    "duration_seconds": 14.45464301109314,
+    "throughput_ops_per_second": 1.3836384602961904,
+    "threads": 3,
+    "avg_response_time_ms": 652.6404899981571,
+    "p95_response_time_ms": 1300,
+    "max_response_time_ms_estimate": 1300,
+    "current_rps": 2.0
+  }
+}

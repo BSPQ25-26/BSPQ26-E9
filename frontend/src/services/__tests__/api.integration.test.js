@@ -4,6 +4,10 @@ const RUN_INTEGRATION = globalThis.process?.env?.RUN_FRONTEND_API_INTEGRATION ==
 
 const AUTH_BASE_URL = globalThis.process?.env?.FRONTEND_AUTH_BASE_URL || 'http://127.0.0.1:8001'
 const INVENTORY_BASE_URL = globalThis.process?.env?.FRONTEND_INVENTORY_BASE_URL || 'http://127.0.0.1:8002'
+const TRANSACTION_BASE_URL =
+  globalThis.process?.env?.FRONTEND_TRANSACTION_BASE_URL || 'http://127.0.0.1:8003'
+const TEST_CLEANUP_SECRET = globalThis.process?.env?.TEST_CLEANUP_SECRET || 'dev-test-cleanup'
+const TEST_AUTO_CLEANUP = globalThis.process?.env?.TEST_AUTO_CLEANUP !== '0'
 
 const FETCH_TIMEOUT_MS = 10000
 
@@ -29,6 +33,27 @@ async function postJson(url, body, { headers = {} } = {}) {
   } finally {
     clearTimeout(timeoutId)
   }
+}
+
+async function cleanupTestData(email) {
+  if (!TEST_AUTO_CLEANUP) {
+    return
+  }
+
+  const payload = JSON.stringify({
+    emails: [email],
+    purge_test_patterns: true,
+  })
+  const headers = {
+    'Content-Type': 'application/json',
+    'X-Test-Cleanup-Secret': TEST_CLEANUP_SECRET,
+  }
+
+  await Promise.allSettled([
+    fetch(`${AUTH_BASE_URL}/internal/test/cleanup`, { method: 'POST', headers, body: payload }),
+    fetch(`${INVENTORY_BASE_URL}/internal/test/cleanup`, { method: 'POST', headers, body: payload }),
+    fetch(`${TRANSACTION_BASE_URL}/internal/test/cleanup`, { method: 'POST', headers, body: payload }),
+  ])
 }
 
 maybeDescribe('frontend client -> server integration', () => {
@@ -63,6 +88,8 @@ maybeDescribe('frontend client -> server integration', () => {
     expect(createRes.status).toBe(201)
     expect(createBody).toHaveProperty('id')
     expect(createBody).toHaveProperty('seller_id')
+
+    await cleanupTestData(email)
   })
 })
 
