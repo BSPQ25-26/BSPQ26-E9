@@ -63,21 +63,82 @@
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Testing &amp; Quality</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#overview">Overview</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#coverage-summary">Coverage Summary</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#per-service-breakdown">Per-Service Breakdown</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#auth-service-80">Auth Service — 80%</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#inventory-service-89">Inventory Service — 89%</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#transaction-service-83">Transaction Service — 83%</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#agentic-service-87">Agentic Service — 87%</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#test-architecture">Test Architecture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#unit-tests-data-lifecycle">Unit Tests — Data Lifecycle</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#how-the-test-database-works">How the Test Database Works</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#the-client-fixture-per-test-wipe">The <code class="docutils literal notranslate"><span class="pre">client</span></code> Fixture — Per-Test Wipe</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#the-db-fixture-direct-session-access">The <code class="docutils literal notranslate"><span class="pre">db</span></code> Fixture — Direct Session Access</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#the-db-session-and-token-fixtures-inventory-service">The <code class="docutils literal notranslate"><span class="pre">db_session</span></code> and Token Fixtures (Inventory Service)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#the-dependency-override-pattern">The Dependency Override Pattern</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#test-layers">Test Layers</a><ul>
-<li class="toctree-l3"><a class="reference internal" href="#unit-tests-per-service">Unit Tests (per service)</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#integration-tests">Integration Tests</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#performance-load-tests">Performance / Load Tests</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#smoke-tests">Smoke Tests</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#unit-tests-auth-service">Unit Tests — Auth Service</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#conftest-py"><code class="docutils literal notranslate"><span class="pre">conftest.py</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#test-register-py-3-tests"><code class="docutils literal notranslate"><span class="pre">test_register.py</span></code> — 3 tests</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#test-login-py-3-tests"><code class="docutils literal notranslate"><span class="pre">test_login.py</span></code> — 3 tests</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#test-auth-middleware-py-4-tests"><code class="docutils literal notranslate"><span class="pre">test_auth_middleware.py</span></code> — 4 tests</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#test-social-auth-py-5-tests"><code class="docutils literal notranslate"><span class="pre">test_social_auth.py</span></code> — 5 tests</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#test-ratings-py-5-tests"><code class="docutils literal notranslate"><span class="pre">test_ratings.py</span></code> — 5 tests</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#test-profile-py-5-tests"><code class="docutils literal notranslate"><span class="pre">test_profile.py</span></code> — 5 tests</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#test-auth-integration-flow-py-1-test"><code class="docutils literal notranslate"><span class="pre">test_auth_integration_flow.py</span></code> — 1 test</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#running-all-tests-locally">Running All Tests Locally</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#unit-tests-inventory-service">Unit Tests — Inventory Service</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#id1"><code class="docutils literal notranslate"><span class="pre">conftest.py</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#test-products-py-44-tests"><code class="docutils literal notranslate"><span class="pre">test_products.py</span></code> — 44 tests</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#product-crud-tests">Product CRUD Tests</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#filtering-tests">Filtering Tests</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#full-text-search-tests">Full-Text Search Tests</a></li>
+<li class="toctree-l4"><a class="reference internal" href="#image-upload-tests">Image Upload Tests</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#unit-tests-transaction-service">Unit Tests — Transaction Service</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#test-state-transitions-py-9-direct-state-machine-tests"><code class="docutils literal notranslate"><span class="pre">test_state_transitions.py</span></code> — 9 direct state machine tests</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#unit-tests-agentic-service">Unit Tests — Agentic Service</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#how-the-chain-is-replaced">How the Chain is Replaced</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#mock-classes">Mock Classes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#test-category-agent-py-9-tests"><code class="docutils literal notranslate"><span class="pre">test_category_agent.py</span></code> — 9 tests</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#test-category-endpoint-py-8-tests"><code class="docutils literal notranslate"><span class="pre">test_category_endpoint.py</span></code> — 8 tests</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#test-price-agent-py-22-tests"><code class="docutils literal notranslate"><span class="pre">test_price_agent.py</span></code> — 22 tests</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#test-price-live-py-live-tests-skipped-by-default"><code class="docutils literal notranslate"><span class="pre">test_price_live.py</span></code> — Live Tests (Skipped by Default)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#test-tracing-py-21-tests"><code class="docutils literal notranslate"><span class="pre">test_tracing.py</span></code> — 21 tests</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#integration-tests">Integration Tests</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#what-happens-when-a-service-is-unreachable">What Happens When a Service is Unreachable</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#test-data-lifecycle-integration-tests">Test Data Lifecycle — Integration Tests</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#how-to-clean-up-integration-test-data">How to Clean Up Integration Test Data</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#test-purchase-flow-integration-py"><code class="docutils literal notranslate"><span class="pre">test_purchase_flow_integration.py</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#test-state-machine-integration-py"><code class="docutils literal notranslate"><span class="pre">test_state_machine_integration.py</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#test-product-crud-integration-py"><code class="docutils literal notranslate"><span class="pre">test_product_crud_integration.py</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#test-protected-endpoints-integration-py"><code class="docutils literal notranslate"><span class="pre">test_protected_endpoints_integration.py</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#performance-load-tests">Performance / Load Tests</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#user-types">User Types</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#test-data-lifecycle-performance-tests">Test Data Lifecycle — Performance Tests</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#reports">Reports</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#configuration">Configuration</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#smoke-tests">Smoke Tests</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#what-smoke-tests-do">What Smoke Tests Do</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#required-vs-optional-services">Required vs Optional Services</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#data-lifecycle-smoke-tests">Data Lifecycle — Smoke Tests</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#running-everything-locally">Running Everything Locally</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#unit-tests-only-no-docker-required">Unit tests only (no Docker required)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#live-agentic-tests-requires-openai-tavily-keys">Live agentic tests (requires OpenAI + Tavily keys)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#integration-tests-requires-docker-compose">Integration tests (requires Docker Compose)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#smoke-tests-requires-docker-compose">Smoke tests (requires Docker Compose)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#performance-tests-requires-docker-compose">Performance tests (requires Docker Compose)</a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="#coverage-reports">Coverage Reports</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#linting">Linting</a></li>
 </ul>
@@ -116,10 +177,10 @@
 <h1>Testing &amp; Quality<a class="headerlink" href="#testing-quality" title="Link to this heading"></a></h1>
 <section id="overview">
 <h2>Overview<a class="headerlink" href="#overview" title="Link to this heading"></a></h2>
-<p>Wallabot enforces a <strong>50% minimum code coverage</strong> threshold across all backend services.
-The CI pipeline fails if any service falls below this threshold. All four services exceed
-this threshold significantly — the current measured coverage, obtained by running the full
-test suite locally, is summarised below.</p>
+<p>Wallabot’s test suite is organised into four distinct layers: <strong>unit tests</strong> (per service),
+<strong>integration tests</strong> (cross-service, live stack), <strong>performance / load tests</strong> (Locust),
+and <strong>smoke tests</strong> (Docker Compose health checks). Each layer has a different strategy
+for isolating data and a different activation mechanism.</p>
 </section>
 <hr class="docutils" />
 <section id="coverage-summary">
@@ -160,483 +221,1292 @@ test suite locally, is summarised below.</p>
 </tr>
 </tbody>
 </table>
-<blockquote>
-<div><p>Coverage is measured with <code class="docutils literal notranslate"><span class="pre">pytest-cov</span></code> against each service’s <code class="docutils literal notranslate"><span class="pre">app/</span></code> package.
-The 50% minimum threshold is enforced by <code class="docutils literal notranslate"><span class="pre">--cov-fail-under=50</span></code> in every test run.</p>
-</div></blockquote>
+<p>Coverage is measured with <code class="docutils literal notranslate"><span class="pre">pytest-cov</span></code> against each service’s <code class="docutils literal notranslate"><span class="pre">app/</span></code> package.
+The CI pipeline enforces a minimum of 50% via <code class="docutils literal notranslate"><span class="pre">--cov-fail-under=50</span></code>.</p>
 </section>
 <hr class="docutils" />
-<section id="per-service-breakdown">
-<h2>Per-Service Breakdown<a class="headerlink" href="#per-service-breakdown" title="Link to this heading"></a></h2>
-<section id="auth-service-80">
-<h3>Auth Service — 80%<a class="headerlink" href="#auth-service-80" title="Link to this heading"></a></h3>
-<p>Run:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>backend/auth-service
-pytest<span class="w"> </span>--cov<span class="o">=</span>app<span class="w"> </span>--cov-report<span class="o">=</span>term-missing<span class="w"> </span>-q
+<section id="test-architecture">
+<h2>Test Architecture<a class="headerlink" href="#test-architecture" title="Link to this heading"></a></h2>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>tests/
+├── integration/               # Cross-service tests; require a live Docker stack
+│   ├── test_product_crud_integration.py
+│   ├── test_protected_endpoints_integration.py
+│   ├── test_purchase_flow_integration.py
+│   └── test_state_machine_integration.py
+├── performance/               # Locust load tests; require a live Docker stack
+│   ├── locustfile.py
+│   ├── perf_config.py
+│   └── reports/               # Auto-generated JSON + HTML reports
+└── smoke/
+    └── test_docker_smoke.py   # /health endpoint checks; require a live Docker stack
+
+backend/auth-service/tests/
+├── conftest.py                # Shared fixtures: client, db, test database setup
+├── test_register.py
+├── test_login.py              # (same file as test_register.py — reuses it)
+├── test_auth_middleware.py
+├── test_social_auth.py
+├── test_ratings.py
+└── test_profile.py
+└── test_auth_integration_flow.py
+
+backend/inventory-service/tests/
+├── conftest.py                # Shared fixtures: client, db_session, seller_token, auth_headers
+├── test_products.py
+└── test_schema_validators.py
+
+backend/transaction-service/tests/
+├── __init__.py
+└── test_state_transitions.py  # Pure state-machine unit tests (no database, no HTTP)
+
+backend/agentic-service/test/
+├── __init__.py
+├── test_category_agent.py     # Mocked LangChain chain; no OpenAI calls
+├── test_category_endpoint.py  # FastAPI TestClient + mocked chain; no OpenAI calls
+├── test_category_schema.py
+├── test_price_agent.py        # Mocked chain + mocked Tavily; no live API calls
+├── test_price_live.py         # Live OpenAI + Tavily calls; skipped unless RUN_LIVE_TESTS=true
+└── test_tracing.py            # LangSmith tracing module unit tests
 </pre></div>
 </div>
-<table class="docutils align-default">
-<thead>
-<tr class="row-odd"><th class="head"><p>Module</p></th>
-<th class="head text-right"><p>Stmts</p></th>
-<th class="head text-right"><p>Miss</p></th>
-<th class="head text-right"><p>Cover</p></th>
-</tr>
-</thead>
-<tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">api/deps.py</span></code></p></td>
-<td class="text-right"><p>10</p></td>
-<td class="text-right"><p>0</p></td>
-<td class="text-right"><p><strong>100%</strong></p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">api/v1/auth_router.py</span></code></p></td>
-<td class="text-right"><p>20</p></td>
-<td class="text-right"><p>1</p></td>
-<td class="text-right"><p><strong>95%</strong></p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">api/v1/rating_router.py</span></code></p></td>
-<td class="text-right"><p>11</p></td>
-<td class="text-right"><p>0</p></td>
-<td class="text-right"><p><strong>100%</strong></p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">api/v1/social_auth_router.py</span></code></p></td>
-<td class="text-right"><p>92</p></td>
-<td class="text-right"><p>38</p></td>
-<td class="text-right"><p>59%</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">api/v1/user_router.py</span></code></p></td>
-<td class="text-right"><p>37</p></td>
-<td class="text-right"><p>3</p></td>
-<td class="text-right"><p><strong>92%</strong></p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">core/security.py</span></code></p></td>
-<td class="text-right"><p>26</p></td>
-<td class="text-right"><p>0</p></td>
-<td class="text-right"><p><strong>100%</strong></p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">models/rating.py</span></code></p></td>
-<td class="text-right"><p>16</p></td>
-<td class="text-right"><p>0</p></td>
-<td class="text-right"><p><strong>100%</strong></p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">models/social_account.py</span></code></p></td>
-<td class="text-right"><p>14</p></td>
-<td class="text-right"><p>0</p></td>
-<td class="text-right"><p><strong>100%</strong></p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">models/user.py</span></code></p></td>
-<td class="text-right"><p>11</p></td>
-<td class="text-right"><p>0</p></td>
-<td class="text-right"><p><strong>100%</strong></p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">repositories/rating_repository.py</span></code></p></td>
-<td class="text-right"><p>13</p></td>
-<td class="text-right"><p>0</p></td>
-<td class="text-right"><p><strong>100%</strong></p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">repositories/user_repository.py</span></code></p></td>
-<td class="text-right"><p>23</p></td>
-<td class="text-right"><p>0</p></td>
-<td class="text-right"><p><strong>100%</strong></p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">services/auth_service.py</span></code></p></td>
-<td class="text-right"><p>25</p></td>
-<td class="text-right"><p>2</p></td>
-<td class="text-right"><p><strong>92%</strong></p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">services/rating_service.py</span></code></p></td>
-<td class="text-right"><p>47</p></td>
-<td class="text-right"><p>22</p></td>
-<td class="text-right"><p>53%</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">db/init_db.py</span></code></p></td>
-<td class="text-right"><p>27</p></td>
-<td class="text-right"><p>10</p></td>
-<td class="text-right"><p>63%</p></td>
-</tr>
-</tbody>
-</table>
-<p><strong>Test files:</strong></p>
-<table class="docutils align-default">
-<thead>
-<tr class="row-odd"><th class="head"><p>File</p></th>
-<th class="head"><p>What it covers</p></th>
-</tr>
-</thead>
-<tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_register.py</span></code></p></td>
-<td><p>User registration, duplicate email rejection, password hashing</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">test_login.py</span></code></p></td>
-<td><p>JWT issuance, wrong password, unknown user</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_auth_middleware.py</span></code></p></td>
-<td><p>Bearer token validation, expired token rejection</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">test_social_auth.py</span></code></p></td>
-<td><p>OAuth callback handling, account linking flow</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_ratings.py</span></code></p></td>
-<td><p>Star rating creation, invalid star rejection (422), self-rating guard</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">test_profile.py</span></code></p></td>
-<td><p>Public user profile endpoint, average rating calculation</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_auth_integration_flow.py</span></code></p></td>
-<td><p>Full register → login → protected-route end-to-end flow</p></td>
-</tr>
-</tbody>
-</table>
-<p>The lowest coverage is in <code class="docutils literal notranslate"><span class="pre">social_auth_router.py</span></code> (59%) because the OAuth redirect flows
-require a live OAuth provider to test fully, and <code class="docutils literal notranslate"><span class="pre">rating_service.py</span></code> (53%) which has
-several guard branches around completed-transaction requirements.</p>
 </section>
 <hr class="docutils" />
-<section id="inventory-service-89">
-<h3>Inventory Service — 89%<a class="headerlink" href="#inventory-service-89" title="Link to this heading"></a></h3>
-<p>Run:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>backend/inventory-service
-pytest<span class="w"> </span>--cov<span class="o">=</span>app<span class="w"> </span>--cov-report<span class="o">=</span>term-missing<span class="w"> </span>-q
+<section id="unit-tests-data-lifecycle">
+<h2>Unit Tests — Data Lifecycle<a class="headerlink" href="#unit-tests-data-lifecycle" title="Link to this heading"></a></h2>
+<section id="how-the-test-database-works">
+<h3>How the Test Database Works<a class="headerlink" href="#how-the-test-database-works" title="Link to this heading"></a></h3>
+<p>Unit tests across all services use <strong>SQLite</strong>, not PostgreSQL. The database file is
+created on disk in the service’s working directory:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Service</p></th>
+<th class="head"><p>Database file</p></th>
+<th class="head"><p>Location</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>auth-service</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">test_auth.db</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">backend/auth-service/test_auth.db</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>inventory-service</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">test_inventory.db</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">backend/inventory-service/test_inventory.db</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>transaction-service</p></td>
+<td><p>(none)</p></td>
+<td><p>State machine tests run no database</p></td>
+</tr>
+<tr class="row-odd"><td><p>agentic-service</p></td>
+<td><p>(none)</p></td>
+<td><p>Agent tests have no persistence</p></td>
+</tr>
+</tbody>
+</table>
+<p>The database URL is resolved in this order:</p>
+<ol class="arabic simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">TEST_DATABASE_URL</span></code> environment variable (overrides everything — used in CI to point to a specific file or an in-memory SQLite)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">DATABASE_URL</span></code> environment variable</p></li>
+<li><p>Hardcoded default: <code class="docutils literal notranslate"><span class="pre">sqlite:///./test_auth.db</span></code> (or <code class="docutils literal notranslate"><span class="pre">test_inventory.db</span></code>)</p></li>
+</ol>
+<p><strong>These files are not in-memory.</strong> They are real SQLite files written to disk. This is
+why <code class="docutils literal notranslate"><span class="pre">backend/inventory-service/test.db</span></code> and <code class="docutils literal notranslate"><span class="pre">test_inventory.db</span></code> appear as untracked files
+in <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">status</span></code> — they are artefacts of local test runs and are listed in <code class="docutils literal notranslate"><span class="pre">.gitignore</span></code>.</p>
+</section>
+<section id="the-client-fixture-per-test-wipe">
+<h3>The <code class="docutils literal notranslate"><span class="pre">client</span></code> Fixture — Per-Test Wipe<a class="headerlink" href="#the-client-fixture-per-test-wipe" title="Link to this heading"></a></h3>
+<p>The most important fixture in both auth and inventory conftest files is <code class="docutils literal notranslate"><span class="pre">client</span></code>. It
+performs a <strong>full schema drop-and-recreate</strong> before every single test, and drops again
+after:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@pytest</span><span class="o">.</span><span class="n">fixture</span><span class="p">()</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">client</span><span class="p">():</span>
+    <span class="n">Base</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">drop_all</span><span class="p">(</span><span class="n">bind</span><span class="o">=</span><span class="n">engine</span><span class="p">)</span>   <span class="c1"># ← wipe everything before the test</span>
+    <span class="n">Base</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">create_all</span><span class="p">(</span><span class="n">bind</span><span class="o">=</span><span class="n">engine</span><span class="p">)</span>  <span class="c1"># ← recreate all tables empty</span>
+
+    <span class="n">app</span><span class="o">.</span><span class="n">dependency_overrides</span><span class="p">[</span><span class="n">get_db</span><span class="p">]</span> <span class="o">=</span> <span class="n">override_get_db</span>  <span class="c1"># ← redirect DB calls to test DB</span>
+
+    <span class="k">with</span> <span class="n">TestClient</span><span class="p">(</span><span class="n">app</span><span class="p">)</span> <span class="k">as</span> <span class="n">test_client</span><span class="p">:</span>
+        <span class="k">yield</span> <span class="n">test_client</span>                  <span class="c1"># ← test runs here</span>
+
+    <span class="n">app</span><span class="o">.</span><span class="n">dependency_overrides</span><span class="o">.</span><span class="n">clear</span><span class="p">()</span>       <span class="c1"># ← restore normal DB dependency</span>
+    <span class="n">Base</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">drop_all</span><span class="p">(</span><span class="n">bind</span><span class="o">=</span><span class="n">engine</span><span class="p">)</span>   <span class="c1"># ← wipe everything after the test</span>
 </pre></div>
 </div>
-<table class="docutils align-default">
-<thead>
-<tr class="row-odd"><th class="head"><p>Module</p></th>
-<th class="head text-right"><p>Stmts</p></th>
-<th class="head text-right"><p>Miss</p></th>
-<th class="head text-right"><p>Cover</p></th>
-</tr>
-</thead>
-<tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">api/v1/product_router.py</span></code></p></td>
-<td class="text-right"><p>112</p></td>
-<td class="text-right"><p>13</p></td>
-<td class="text-right"><p><strong>88%</strong></p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">auth.py</span></code></p></td>
-<td class="text-right"><p>19</p></td>
-<td class="text-right"><p>3</p></td>
-<td class="text-right"><p><strong>84%</strong></p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">db/init_db.py</span></code></p></td>
-<td class="text-right"><p>15</p></td>
-<td class="text-right"><p>3</p></td>
-<td class="text-right"><p>80%</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">db/session.py</span></code></p></td>
-<td class="text-right"><p>14</p></td>
-<td class="text-right"><p>4</p></td>
-<td class="text-right"><p>71%</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">main.py</span></code></p></td>
-<td class="text-right"><p>31</p></td>
-<td class="text-right"><p>8</p></td>
-<td class="text-right"><p>74%</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">models/product.py</span></code></p></td>
-<td class="text-right"><p>27</p></td>
-<td class="text-right"><p>0</p></td>
-<td class="text-right"><p><strong>100%</strong></p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">repositories/product_repository.py</span></code></p></td>
-<td class="text-right"><p>26</p></td>
-<td class="text-right"><p>1</p></td>
-<td class="text-right"><p><strong>96%</strong></p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">schemas/product.py</span></code></p></td>
-<td class="text-right"><p>55</p></td>
-<td class="text-right"><p>2</p></td>
-<td class="text-right"><p><strong>96%</strong></p></td>
-</tr>
-</tbody>
-</table>
-<p><strong>Test files:</strong></p>
-<table class="docutils align-default">
-<thead>
-<tr class="row-odd"><th class="head"><p>File</p></th>
-<th class="head"><p>What it covers</p></th>
-</tr>
-</thead>
-<tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_products.py</span></code></p></td>
-<td><p>Full CRUD (create, read, update, delete), filtering by category/condition/price range, keyword search, image upload, auth enforcement</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">test_schema_validators.py</span></code></p></td>
-<td><p>Pydantic schema validation for <code class="docutils literal notranslate"><span class="pre">ProductCreate</span></code>, <code class="docutils literal notranslate"><span class="pre">ProductUpdate</span></code>, <code class="docutils literal notranslate"><span class="pre">ProductOut</span></code> edge cases</p></td>
-</tr>
-</tbody>
-</table>
-<p>The inventory service achieves the highest overall coverage (89%) because its core business
-logic — the product repository and schemas — is almost entirely covered. The uncovered lines
-in <code class="docutils literal notranslate"><span class="pre">main.py</span></code> and <code class="docutils literal notranslate"><span class="pre">db/session.py</span></code> are production startup paths (Supabase Storage
-initialisation, PostgreSQL connection) that require external services.</p>
-</section>
-<hr class="docutils" />
-<section id="transaction-service-83">
-<h3>Transaction Service — 83%<a class="headerlink" href="#transaction-service-83" title="Link to this heading"></a></h3>
-<p>Run:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>backend/transaction-service
-pytest<span class="w"> </span>--cov<span class="o">=</span>app<span class="w"> </span>--cov-report<span class="o">=</span>term-missing<span class="w"> </span>-q
-</pre></div>
-</div>
-<table class="docutils align-default">
-<thead>
-<tr class="row-odd"><th class="head"><p>Module</p></th>
-<th class="head text-right"><p>Stmts</p></th>
-<th class="head text-right"><p>Miss</p></th>
-<th class="head text-right"><p>Cover</p></th>
-</tr>
-</thead>
-<tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">api/deps.py</span></code></p></td>
-<td class="text-right"><p>10</p></td>
-<td class="text-right"><p>1</p></td>
-<td class="text-right"><p><strong>90%</strong></p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">core/config.py</span></code></p></td>
-<td class="text-right"><p>16</p></td>
-<td class="text-right"><p>1</p></td>
-<td class="text-right"><p><strong>94%</strong></p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">core/exceptions.py</span></code></p></td>
-<td class="text-right"><p>28</p></td>
-<td class="text-right"><p>3</p></td>
-<td class="text-right"><p><strong>89%</strong></p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">core/logging.py</span></code></p></td>
-<td class="text-right"><p>30</p></td>
-<td class="text-right"><p>1</p></td>
-<td class="text-right"><p><strong>97%</strong></p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">core/security.py</span></code></p></td>
-<td class="text-right"><p>11</p></td>
-<td class="text-right"><p>8</p></td>
-<td class="text-right"><p>27%</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">database.py</span></code></p></td>
-<td class="text-right"><p>15</p></td>
-<td class="text-right"><p>7</p></td>
-<td class="text-right"><p>53%</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">main.py</span></code></p></td>
-<td class="text-right"><p>57</p></td>
-<td class="text-right"><p>5</p></td>
-<td class="text-right"><p><strong>91%</strong></p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">models.py</span></code></p></td>
-<td class="text-right"><p>62</p></td>
-<td class="text-right"><p>3</p></td>
-<td class="text-right"><p><strong>95%</strong></p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">routers/products.py</span></code></p></td>
-<td class="text-right"><p>61</p></td>
-<td class="text-right"><p>31</p></td>
-<td class="text-right"><p>49%</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">routers/transactions.py</span></code></p></td>
-<td class="text-right"><p>228</p></td>
-<td class="text-right"><p>42</p></td>
-<td class="text-right"><p><strong>82%</strong></p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">routers/wallet.py</span></code></p></td>
-<td class="text-right"><p>59</p></td>
-<td class="text-right"><p>6</p></td>
-<td class="text-right"><p><strong>90%</strong></p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">schemas.py</span></code></p></td>
-<td class="text-right"><p>31</p></td>
-<td class="text-right"><p>0</p></td>
-<td class="text-right"><p><strong>100%</strong></p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">services/state_machine.py</span></code></p></td>
-<td class="text-right"><p>11</p></td>
-<td class="text-right"><p>0</p></td>
-<td class="text-right"><p><strong>100%</strong></p></td>
-</tr>
-</tbody>
-</table>
-<p><strong>Test files:</strong></p>
-<table class="docutils align-default">
-<thead>
-<tr class="row-odd"><th class="head"><p>File</p></th>
-<th class="head"><p>What it covers</p></th>
-</tr>
-</thead>
-<tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_state_transitions.py</span></code></p></td>
-<td><p>All product state machine transitions (Available → Reserved → Sold), invalid transition rejection, background expiry, atomic purchase (wallet debit + product state in one transaction)</p></td>
-</tr>
-</tbody>
-</table>
-<p>The <code class="docutils literal notranslate"><span class="pre">services/state_machine.py</span></code> module — the critical correctness invariant — achieves
-<strong>100% coverage</strong>. The low score on <code class="docutils literal notranslate"><span class="pre">routers/products.py</span></code> (49%) reflects admin/internal
-endpoints not exercised by the public test suite. <code class="docutils literal notranslate"><span class="pre">core/security.py</span></code> is low because it
-contains production JWT validation helpers invoked only under live PostgreSQL configuration.</p>
-</section>
-<hr class="docutils" />
-<section id="agentic-service-87">
-<h3>Agentic Service — 87%<a class="headerlink" href="#agentic-service-87" title="Link to this heading"></a></h3>
-<p>Run:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>backend/agentic-service
-pytest<span class="w"> </span>--cov<span class="o">=</span>app<span class="w"> </span>--cov-report<span class="o">=</span>term-missing<span class="w"> </span>-q
-</pre></div>
-</div>
-<table class="docutils align-default">
-<thead>
-<tr class="row-odd"><th class="head"><p>Module</p></th>
-<th class="head text-right"><p>Stmts</p></th>
-<th class="head text-right"><p>Miss</p></th>
-<th class="head text-right"><p>Cover</p></th>
-</tr>
-</thead>
-<tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">agent/category_agent.py</span></code></p></td>
-<td class="text-right"><p>72</p></td>
-<td class="text-right"><p>2</p></td>
-<td class="text-right"><p><strong>97%</strong></p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">agent/price_agent.py</span></code></p></td>
-<td class="text-right"><p>94</p></td>
-<td class="text-right"><p>11</p></td>
-<td class="text-right"><p><strong>88%</strong></p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">agent/tracing.py</span></code></p></td>
-<td class="text-right"><p>45</p></td>
-<td class="text-right"><p>0</p></td>
-<td class="text-right"><p><strong>100%</strong></p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">api/wallabot_router.py</span></code></p></td>
-<td class="text-right"><p>31</p></td>
-<td class="text-right"><p>6</p></td>
-<td class="text-right"><p><strong>81%</strong></p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">main.py</span></code></p></td>
-<td class="text-right"><p>20</p></td>
-<td class="text-right"><p>6</p></td>
-<td class="text-right"><p>70%</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">schemas/category.py</span></code></p></td>
-<td class="text-right"><p>15</p></td>
-<td class="text-right"><p>0</p></td>
-<td class="text-right"><p><strong>100%</strong></p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">schemas/price.py</span></code></p></td>
-<td class="text-right"><p>18</p></td>
-<td class="text-right"><p>0</p></td>
-<td class="text-right"><p><strong>100%</strong></p></td>
-</tr>
-</tbody>
-</table>
-<p><strong>Test files:</strong></p>
-<table class="docutils align-default">
-<thead>
-<tr class="row-odd"><th class="head"><p>File</p></th>
-<th class="head"><p>What it covers</p></th>
-</tr>
-</thead>
-<tbody>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_category_agent.py</span></code></p></td>
-<td><p>Unit tests using mock chains: happy path, retry-on-parse-failure, retry-exhaustion, provider-down fallback, retry payload feedback content</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">test_category_endpoint.py</span></code></p></td>
-<td><p>HTTP endpoint tests via FastAPI <code class="docutils literal notranslate"><span class="pre">TestClient</span></code>: request validation, 200 responses, 422 on empty categories</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_category_schema.py</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">CategoryRequest</span></code> and <code class="docutils literal notranslate"><span class="pre">CategorySuggestion</span></code> Pydantic schema validation</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">test_price_agent.py</span></code></p></td>
-<td><p>Unit tests: happy path, Tavily available/unavailable branches, condition multiplier fallback</p></td>
-</tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_price_live.py</span></code></p></td>
-<td><p>Live integration tests — makes real calls to OpenAI and Tavily; validates response structure, price range invariants, and condition ordering</p></td>
-</tr>
-<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">test_tracing.py</span></code></p></td>
-<td><p>LangSmith tracing module: <code class="docutils literal notranslate"><span class="pre">is_tracing_enabled()</span></code>, <code class="docutils literal notranslate"><span class="pre">get_project_name()</span></code>, disabled tracing no-ops, latency threshold constants</p></td>
-</tr>
-</tbody>
-</table>
-<p>The <code class="docutils literal notranslate"><span class="pre">agent/tracing.py</span></code> module achieves <strong>100% coverage</strong> and <code class="docutils literal notranslate"><span class="pre">category_agent.py</span></code> reaches
-<strong>97%</strong> — only two lines (the final <code class="docutils literal notranslate"><span class="pre">raise</span> <span class="pre">RuntimeError</span></code> guard in the error path) are not
-exercised. The live tests in <code class="docutils literal notranslate"><span class="pre">test_price_live.py</span></code> make real API calls and account for the
-~105 second test suite execution time.</p>
-</section>
-</section>
-<hr class="docutils" />
-<section id="test-layers">
-<h2>Test Layers<a class="headerlink" href="#test-layers" title="Link to this heading"></a></h2>
-<section id="unit-tests-per-service">
-<h3>Unit Tests (per service)<a class="headerlink" href="#unit-tests-per-service" title="Link to this heading"></a></h3>
-<p>Each backend service has its own <code class="docutils literal notranslate"><span class="pre">tests/</span></code> (or <code class="docutils literal notranslate"><span class="pre">test/</span></code>) directory with pytest-based unit
-tests. Tests use in-memory SQLite databases so there are no external runtime dependencies.
-The agentic service tests additionally include a live test suite (<code class="docutils literal notranslate"><span class="pre">test_price_live.py</span></code>) that
-calls the real OpenAI and Tavily APIs to verify end-to-end agent behaviour.</p>
-</section>
-<section id="integration-tests">
-<h3>Integration Tests<a class="headerlink" href="#integration-tests" title="Link to this heading"></a></h3>
-<p>Located in <code class="docutils literal notranslate"><span class="pre">tests/integration/</span></code>, these exercise cross-service flows using a live
-Docker Compose stack.</p>
-<p>Key flows covered:</p>
+<p><strong>What this means in practice:</strong></p>
 <ul class="simple">
-<li><p>Full registration → login → product creation → purchase flow</p></li>
-<li><p>Product state machine transitions: Available → Reserved → Sold</p></li>
-<li><p>Wallet deposit → reservation → purchase atomicity</p></li>
-<li><p>Social OAuth callback handling</p></li>
+<li><p>Every test that uses the <code class="docutils literal notranslate"><span class="pre">client</span></code> fixture starts with a completely empty database</p></li>
+<li><p>All data created during the test (registered users, products, ratings) is deleted when
+the test ends</p></li>
+<li><p>If a test crashes mid-execution (e.g. <code class="docutils literal notranslate"><span class="pre">KeyboardInterrupt</span></code>), the teardown <code class="docutils literal notranslate"><span class="pre">drop_all()</span></code>
+is not called and the <code class="docutils literal notranslate"><span class="pre">.db</span></code> file is left with partial data. The next test run’s <code class="docutils literal notranslate"><span class="pre">drop_all()</span></code>
+at the start of the <code class="docutils literal notranslate"><span class="pre">client</span></code> fixture cleans this up automatically</p></li>
 </ul>
-<p>Run integration tests:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>-d
+</section>
+<section id="the-db-fixture-direct-session-access">
+<h3>The <code class="docutils literal notranslate"><span class="pre">db</span></code> Fixture — Direct Session Access<a class="headerlink" href="#the-db-fixture-direct-session-access" title="Link to this heading"></a></h3>
+<p>The <code class="docutils literal notranslate"><span class="pre">db</span></code> fixture in the auth-service <code class="docutils literal notranslate"><span class="pre">conftest.py</span></code> gives tests a direct SQLAlchemy
+session for inspecting or seeding the database without going through the HTTP layer:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@pytest</span><span class="o">.</span><span class="n">fixture</span><span class="p">()</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">db</span><span class="p">():</span>
+    <span class="n">Base</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">drop_all</span><span class="p">(</span><span class="n">bind</span><span class="o">=</span><span class="n">engine</span><span class="p">)</span>
+    <span class="n">Base</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">create_all</span><span class="p">(</span><span class="n">bind</span><span class="o">=</span><span class="n">engine</span><span class="p">)</span>
+    <span class="n">session</span> <span class="o">=</span> <span class="n">TestingSessionLocal</span><span class="p">()</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">yield</span> <span class="n">session</span>
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="n">session</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="n">Base</span><span class="o">.</span><span class="n">metadata</span><span class="o">.</span><span class="n">drop_all</span><span class="p">(</span><span class="n">bind</span><span class="o">=</span><span class="n">engine</span><span class="p">)</span>  <span class="c1"># ← wipe on teardown</span>
+</pre></div>
+</div>
+<p>Used in <code class="docutils literal notranslate"><span class="pre">test_social_auth.py</span></code> to verify that <code class="docutils literal notranslate"><span class="pre">User</span></code> and <code class="docutils literal notranslate"><span class="pre">SocialAccount</span></code> rows were created
+correctly after calling the internal <code class="docutils literal notranslate"><span class="pre">_handle_social_login()</span></code> function. The <code class="docutils literal notranslate"><span class="pre">client</span></code> and
+<code class="docutils literal notranslate"><span class="pre">db</span></code> fixtures are used <strong>together</strong> in those tests — both point to the same SQLite engine
+so changes made via one are visible via the other.</p>
+</section>
+<section id="the-db-session-and-token-fixtures-inventory-service">
+<h3>The <code class="docutils literal notranslate"><span class="pre">db_session</span></code> and Token Fixtures (Inventory Service)<a class="headerlink" href="#the-db-session-and-token-fixtures-inventory-service" title="Link to this heading"></a></h3>
+<p>The inventory conftest provides additional fixtures:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="nd">@pytest</span><span class="o">.</span><span class="n">fixture</span><span class="p">()</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">db_session</span><span class="p">():</span>
+    <span class="c1"># Does NOT drop/recreate tables — relies on client fixture having done so</span>
+    <span class="n">session</span> <span class="o">=</span> <span class="n">TestingSessionLocal</span><span class="p">()</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="k">yield</span> <span class="n">session</span>
+    <span class="k">finally</span><span class="p">:</span>
+        <span class="n">session</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+<span class="nd">@pytest</span><span class="o">.</span><span class="n">fixture</span><span class="p">()</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">seller_token</span><span class="p">():</span>
+    <span class="k">return</span> <span class="n">make_access_token</span><span class="p">(</span><span class="s2">&quot;seller@example.com&quot;</span><span class="p">)</span>  <span class="c1"># JWT only — no DB row created</span>
+
+<span class="nd">@pytest</span><span class="o">.</span><span class="n">fixture</span><span class="p">()</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">other_seller_token</span><span class="p">():</span>
+    <span class="k">return</span> <span class="n">make_access_token</span><span class="p">(</span><span class="s2">&quot;other-seller@example.com&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p><strong>Critical detail — <code class="docutils literal notranslate"><span class="pre">seller_token</span></code> does NOT create a user in the database.</strong>
+It creates a valid JWT signed with the same <code class="docutils literal notranslate"><span class="pre">SECRET_KEY</span></code> as the application. The
+inventory service validates the token cryptographically and extracts <code class="docutils literal notranslate"><span class="pre">sub</span></code> (<code class="docutils literal notranslate"><span class="pre">seller&#64;example.com</span></code>)
+as the <code class="docutils literal notranslate"><span class="pre">seller_id</span></code>. No user lookup is ever made against the Auth Service in unit tests.
+This is how the inventory unit tests can test ownership rules (<code class="docutils literal notranslate"><span class="pre">test_update_product_forbidden_for_non_owner</span></code>,
+etc.) without needing the Auth Service to be running.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">db_session</span></code> fixture is used in tests that need to <strong>directly modify database state</strong>
+that cannot be done through the public API — for example, <code class="docutils literal notranslate"><span class="pre">test_catalog_filters_*</span></code> tests
+use <code class="docutils literal notranslate"><span class="pre">db_session</span></code> to manually set a product’s state to <code class="docutils literal notranslate"><span class="pre">&quot;Sold&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;Reserved&quot;</span></code> since there
+is no HTTP endpoint to do that in the Inventory Service.</p>
+</section>
+<section id="the-dependency-override-pattern">
+<h3>The Dependency Override Pattern<a class="headerlink" href="#the-dependency-override-pattern" title="Link to this heading"></a></h3>
+<p>All unit test clients override FastAPI’s <code class="docutils literal notranslate"><span class="pre">get_db</span></code> dependency injector:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">app</span><span class="o">.</span><span class="n">dependency_overrides</span><span class="p">[</span><span class="n">get_db</span><span class="p">]</span> <span class="o">=</span> <span class="n">override_get_db</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">override_get_db</span></code> returns sessions from <code class="docutils literal notranslate"><span class="pre">TestingSessionLocal</span></code> which is bound to the
+test SQLite engine, not the production engine. This is the mechanism that makes every
+HTTP call from <code class="docutils literal notranslate"><span class="pre">TestClient</span></code> hit the test database instead of the production database.
+The override is cleared after each test via <code class="docutils literal notranslate"><span class="pre">app.dependency_overrides.clear()</span></code>.</p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="unit-tests-auth-service">
+<h2>Unit Tests — Auth Service<a class="headerlink" href="#unit-tests-auth-service" title="Link to this heading"></a></h2>
+<p><strong>34 tests | 80% coverage | <code class="docutils literal notranslate"><span class="pre">backend/auth-service/tests/</span></code></strong></p>
+<section id="conftest-py">
+<h3><code class="docutils literal notranslate"><span class="pre">conftest.py</span></code><a class="headerlink" href="#conftest-py" title="Link to this heading"></a></h3>
+<p>Creates the test SQLite engine, defines the <code class="docutils literal notranslate"><span class="pre">client</span></code> and <code class="docutils literal notranslate"><span class="pre">db</span></code> fixtures, and wires up
+the DB dependency override. Both fixtures fully drop and recreate all tables before and
+after each test. The <code class="docutils literal notranslate"><span class="pre">client</span></code> fixture sets up the dependency override so HTTP requests
+go to the test database.</p>
+</section>
+<section id="test-register-py-3-tests">
+<h3><code class="docutils literal notranslate"><span class="pre">test_register.py</span></code> — 3 tests<a class="headerlink" href="#test-register-py-3-tests" title="Link to this heading"></a></h3>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Test</p></th>
+<th class="head"><p>What it asserts</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_register_success</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">POST</span> <span class="pre">/auth/register</span></code> with valid email/password returns 200, message <code class="docutils literal notranslate"><span class="pre">&quot;usuario</span> <span class="pre">creado</span> <span class="pre">correctamente&quot;</span></code>, a valid JWT access token, and <code class="docutils literal notranslate"><span class="pre">token_type:</span> <span class="pre">&quot;bearer&quot;</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">test_register_duplicate</span></code></p></td>
+<td><p>Registering the same email twice returns 400 with <code class="docutils literal notranslate"><span class="pre">&quot;El</span> <span class="pre">usuario</span> <span class="pre">ya</span> <span class="pre">existe&quot;</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_register_invalid_email</span></code></p></td>
+<td><p>Registering with a non-email string (<code class="docutils literal notranslate"><span class="pre">&quot;correo-invalido&quot;</span></code>) returns 422 (Pydantic validation)</p></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Data created:</strong> One <code class="docutils literal notranslate"><span class="pre">User</span></code> row per registration call. All rows are deleted by the <code class="docutils literal notranslate"><span class="pre">client</span></code> fixture teardown.</p>
+</section>
+<section id="test-login-py-3-tests">
+<h3><code class="docutils literal notranslate"><span class="pre">test_login.py</span></code> — 3 tests<a class="headerlink" href="#test-login-py-3-tests" title="Link to this heading"></a></h3>
+<p>Same file contains both register and login assertions. Exercises the login endpoint after prior registration.</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Test</p></th>
+<th class="head"><p>What it asserts</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_register_success</span></code></p></td>
+<td><p>As above — registration returns a token immediately</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">test_register_duplicate</span></code></p></td>
+<td><p>As above</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_register_invalid_email</span></code></p></td>
+<td><p>As above</p></td>
+</tr>
+</tbody>
+</table>
+<p><em>(Note: <code class="docutils literal notranslate"><span class="pre">test_login.py</span></code> and <code class="docutils literal notranslate"><span class="pre">test_register.py</span></code> are identical files in this service — both cover the registration endpoint. The login-specific behaviour is tested in <code class="docutils literal notranslate"><span class="pre">test_auth_middleware.py</span></code> and <code class="docutils literal notranslate"><span class="pre">test_auth_integration_flow.py</span></code>.)</em></p>
+</section>
+<section id="test-auth-middleware-py-4-tests">
+<h3><code class="docutils literal notranslate"><span class="pre">test_auth_middleware.py</span></code> — 4 tests<a class="headerlink" href="#test-auth-middleware-py-4-tests" title="Link to this heading"></a></h3>
+<p>Tests the JWT validation middleware on the <code class="docutils literal notranslate"><span class="pre">GET</span> <span class="pre">/auth/protected</span></code> endpoint.</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Test</p></th>
+<th class="head"><p>What it asserts</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_protected_without_token</span></code></p></td>
+<td><p>Request with no <code class="docutils literal notranslate"><span class="pre">Authorization</span></code> header returns 401</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">test_protected_with_valid_token</span></code></p></td>
+<td><p>Registers a user, takes the returned token, calls <code class="docutils literal notranslate"><span class="pre">/auth/protected</span></code> — returns 200 with <code class="docutils literal notranslate"><span class="pre">user:</span> <span class="pre">&quot;protected_ok&#64;example.com&quot;</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_protected_with_invalid_token</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Authorization:</span> <span class="pre">Bearer</span> <span class="pre">token_falso</span></code> returns 401 with <code class="docutils literal notranslate"><span class="pre">&quot;Token</span> <span class="pre">inválido&quot;</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">test_protected_with_expired_token</span></code></p></td>
+<td><p>A JWT manually crafted with <code class="docutils literal notranslate"><span class="pre">exp</span></code> 5 minutes in the <strong>past</strong> returns 401 with <code class="docutils literal notranslate"><span class="pre">&quot;Token</span> <span class="pre">inválido&quot;</span></code></p></td>
+</tr>
+</tbody>
+</table>
+<p><strong>How the expired token is created:</strong> The test constructs the token directly using <code class="docutils literal notranslate"><span class="pre">jose.jwt.encode()</span></code> with the real <code class="docutils literal notranslate"><span class="pre">SECRET_KEY</span></code> but with <code class="docutils literal notranslate"><span class="pre">exp</span> <span class="pre">=</span> <span class="pre">datetime.utcnow()</span> <span class="pre">-</span> <span class="pre">timedelta(minutes=5)</span></code>. This bypasses the application’s token-issuance code entirely.</p>
+<p><strong>Data created:</strong> One <code class="docutils literal notranslate"><span class="pre">User</span></code> row in <code class="docutils literal notranslate"><span class="pre">test_protected_with_valid_token</span></code>. The expired-token test creates no database row — it only constructs a JWT string in memory. All rows are deleted by the <code class="docutils literal notranslate"><span class="pre">client</span></code> fixture teardown.</p>
+</section>
+<section id="test-social-auth-py-5-tests">
+<h3><code class="docutils literal notranslate"><span class="pre">test_social_auth.py</span></code> — 5 tests<a class="headerlink" href="#test-social-auth-py-5-tests" title="Link to this heading"></a></h3>
+<p>Tests the internal <code class="docutils literal notranslate"><span class="pre">_handle_social_login()</span></code> function directly (not through HTTP) and one
+HTTP test for the blocked-password-login case.</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Test</p></th>
+<th class="head"><p>What it asserts</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_handle_social_login_creates_new_user</span></code></p></td>
+<td><p>Calling <code class="docutils literal notranslate"><span class="pre">_handle_social_login(db,</span> <span class="pre">email,</span> <span class="pre">provider_id,</span> <span class="pre">&quot;google&quot;)</span></code> for a new email creates a <code class="docutils literal notranslate"><span class="pre">User</span></code> row with <code class="docutils literal notranslate"><span class="pre">password_hash=&quot;&quot;</span></code> and a linked <code class="docutils literal notranslate"><span class="pre">SocialAccount</span></code> row</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">test_handle_social_login_links_existing_email_user</span></code></p></td>
+<td><p>If a <code class="docutils literal notranslate"><span class="pre">User</span></code> with that email already exists (inserted directly via <code class="docutils literal notranslate"><span class="pre">db</span></code>), the social login links a new <code class="docutils literal notranslate"><span class="pre">SocialAccount</span></code> to the existing user without creating a second <code class="docutils literal notranslate"><span class="pre">User</span></code> row</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_handle_social_login_duplicate_provider_returns_409</span></code></p></td>
+<td><p>Attempting to link the same email to a second provider raises <code class="docutils literal notranslate"><span class="pre">HTTPException(409)</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">test_handle_social_login_same_provider_returns_token</span></code></p></td>
+<td><p>Logging in with the same (email, provider_id) pair twice succeeds both times</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_login_blocked_for_oauth_only_account</span></code></p></td>
+<td><p>An account created via OAuth (no <code class="docutils literal notranslate"><span class="pre">password_hash</span></code>) returns 401 with <code class="docutils literal notranslate"><span class="pre">&quot;login</span> <span class="pre">social&quot;</span></code> when <code class="docutils literal notranslate"><span class="pre">POST</span> <span class="pre">/auth/login</span></code> is called with any password</p></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Why both <code class="docutils literal notranslate"><span class="pre">client</span></code> and <code class="docutils literal notranslate"><span class="pre">db</span></code> fixtures are used together:</strong> <code class="docutils literal notranslate"><span class="pre">_handle_social_login()</span></code> takes a
+SQLAlchemy session argument. The <code class="docutils literal notranslate"><span class="pre">db</span></code> fixture provides the session. The <code class="docutils literal notranslate"><span class="pre">client</span></code> fixture is
+required because it runs <code class="docutils literal notranslate"><span class="pre">drop_all()</span></code> / <code class="docutils literal notranslate"><span class="pre">create_all()</span></code> to establish the clean schema — without it,
+the <code class="docutils literal notranslate"><span class="pre">db</span></code> session would attempt to insert rows into tables that may not exist. The two fixtures share
+the same <code class="docutils literal notranslate"><span class="pre">engine</span></code> so they operate on the same SQLite file.</p>
+<p><strong>Data created:</strong> <code class="docutils literal notranslate"><span class="pre">User</span></code> and <code class="docutils literal notranslate"><span class="pre">SocialAccount</span></code> rows. All deleted by both fixtures’ teardowns.</p>
+</section>
+<section id="test-ratings-py-5-tests">
+<h3><code class="docutils literal notranslate"><span class="pre">test_ratings.py</span></code> — 5 tests<a class="headerlink" href="#test-ratings-py-5-tests" title="Link to this heading"></a></h3>
+<p>Uses a helper <code class="docutils literal notranslate"><span class="pre">_register_and_login()</span></code> to create two users via the HTTP API before each test.</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Test</p></th>
+<th class="head"><p>What it asserts</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_create_rating_success</span></code></p></td>
+<td><p>Authenticated <code class="docutils literal notranslate"><span class="pre">POST</span> <span class="pre">/ratings</span></code> with valid payload and a patched eligibility check returns 200</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">test_create_rating_duplicate_returns_409</span></code></p></td>
+<td><p>Posting the same <code class="docutils literal notranslate"><span class="pre">transaction_id</span></code> twice returns 409 with <code class="docutils literal notranslate"><span class="pre">&quot;Ya</span> <span class="pre">has</span> <span class="pre">valorado</span> <span class="pre">esta</span> <span class="pre">transacción&quot;</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_create_rating_invalid_stars_returns_422</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">stars:</span> <span class="pre">10</span></code> (out of 1–5 range) returns 422</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">test_create_rating_without_token_returns_401</span></code></p></td>
+<td><p>Unauthenticated request returns 401</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_avg_rating_recalculated_after_multiple_ratings</span></code></p></td>
+<td><p>Two ratings for the same user are accepted; the service does not enforce a uniqueness check on the rated user (only on <code class="docutils literal notranslate"><span class="pre">transaction_id</span></code>)</p></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Why <code class="docutils literal notranslate"><span class="pre">_check_transaction_eligibility</span></code> is patched:</strong> The real implementation calls the
+Transaction Service to verify that the rater participated in the transaction. In unit tests,
+the Transaction Service is not running. <code class="docutils literal notranslate"><span class="pre">unittest.mock.patch</span></code> replaces the function with a
+no-op that always passes, allowing the rating logic to be tested in isolation.</p>
+<p><strong>Data created:</strong> <code class="docutils literal notranslate"><span class="pre">User</span></code> rows (rater + rated) and <code class="docutils literal notranslate"><span class="pre">Rating</span></code> rows. All deleted by the <code class="docutils literal notranslate"><span class="pre">client</span></code> fixture teardown.</p>
+</section>
+<section id="test-profile-py-5-tests">
+<h3><code class="docutils literal notranslate"><span class="pre">test_profile.py</span></code> — 5 tests<a class="headerlink" href="#test-profile-py-5-tests" title="Link to this heading"></a></h3>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Test</p></th>
+<th class="head"><p>What it asserts</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_profile_returns_correct_data</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">GET</span> <span class="pre">/users/1/profile</span></code> returns <code class="docutils literal notranslate"><span class="pre">username</span></code>, <code class="docutils literal notranslate"><span class="pre">member_since</span></code>, <code class="docutils literal notranslate"><span class="pre">avg_rating</span></code>, <code class="docutils literal notranslate"><span class="pre">active_listing_count</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">test_profile_user_without_ratings_has_null_avg</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">avg_rating</span></code> is <code class="docutils literal notranslate"><span class="pre">null</span></code> when no ratings exist</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_profile_is_public_no_token_needed</span></code></p></td>
+<td><p>Profile endpoint does not require a token</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">test_profile_not_found_returns_404</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">GET</span> <span class="pre">/users/9999/profile</span></code> returns 404 with <code class="docutils literal notranslate"><span class="pre">&quot;Usuario</span> <span class="pre">no</span> <span class="pre">encontrado&quot;</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_ratings_list_is_paginated</span></code></p></td>
+<td><p>Creates 3 ratings, fetches with <code class="docutils literal notranslate"><span class="pre">limit=2</span></code> twice — first page has 2, second has 1</p></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Why <code class="docutils literal notranslate"><span class="pre">active_listing_count</span></code> returns 0 in tests:</strong> The real implementation calls the
+Inventory Service to count listings. In unit tests, no Inventory Service is running,
+so the count defaults to 0 or the request is silently handled.</p>
+<p><strong>Data created:</strong> <code class="docutils literal notranslate"><span class="pre">User</span></code> rows via <code class="docutils literal notranslate"><span class="pre">_register_and_login()</span></code>, <code class="docutils literal notranslate"><span class="pre">Rating</span></code> rows in the pagination test. All deleted by the <code class="docutils literal notranslate"><span class="pre">client</span></code> fixture teardown.</p>
+</section>
+<section id="test-auth-integration-flow-py-1-test">
+<h3><code class="docutils literal notranslate"><span class="pre">test_auth_integration_flow.py</span></code> — 1 test<a class="headerlink" href="#test-auth-integration-flow-py-1-test" title="Link to this heading"></a></h3>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Test</p></th>
+<th class="head"><p>What it asserts</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_register_login_and_access_protected_flow</span></code></p></td>
+<td><p>Full flow: register → JWT returned → login → JWT returned → use JWT on protected endpoint; validates JWT structure (<code class="docutils literal notranslate"><span class="pre">alg</span></code>, <code class="docutils literal notranslate"><span class="pre">sub</span></code>, <code class="docutils literal notranslate"><span class="pre">exp</span></code>) at each step</p></td>
+</tr>
+</tbody>
+</table>
+<p>This is the closest thing to a user acceptance test in the auth unit suite: it exercises
+the full authenticate-then-act lifecycle in a single test function.</p>
+<p><strong>Data created:</strong> One <code class="docutils literal notranslate"><span class="pre">User</span></code> row. Deleted by the <code class="docutils literal notranslate"><span class="pre">client</span></code> fixture teardown.</p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="unit-tests-inventory-service">
+<h2>Unit Tests — Inventory Service<a class="headerlink" href="#unit-tests-inventory-service" title="Link to this heading"></a></h2>
+<p><strong>44 tests | 89% coverage | <code class="docutils literal notranslate"><span class="pre">backend/inventory-service/tests/</span></code></strong></p>
+<section id="id1">
+<h3><code class="docutils literal notranslate"><span class="pre">conftest.py</span></code><a class="headerlink" href="#id1" title="Link to this heading"></a></h3>
+<p>Same pattern as auth: creates <code class="docutils literal notranslate"><span class="pre">test_inventory.db</span></code>, defines <code class="docutils literal notranslate"><span class="pre">client</span></code> (drops/recreates tables),
+<code class="docutils literal notranslate"><span class="pre">db_session</span></code> (raw session, no schema management), <code class="docutils literal notranslate"><span class="pre">seller_token</span></code>, <code class="docutils literal notranslate"><span class="pre">other_seller_token</span></code>, and
+<code class="docutils literal notranslate"><span class="pre">auth_headers</span></code>. Key detail: tokens are created <strong>without registering users</strong> — the JWT is
+valid but the database contains no <code class="docutils literal notranslate"><span class="pre">User</span></code> record for <code class="docutils literal notranslate"><span class="pre">seller&#64;example.com</span></code>.</p>
+</section>
+<section id="test-products-py-44-tests">
+<h3><code class="docutils literal notranslate"><span class="pre">test_products.py</span></code> — 44 tests<a class="headerlink" href="#test-products-py-44-tests" title="Link to this heading"></a></h3>
+<p>This file contains all inventory tests. It defines three internal helpers:</p>
+<p><strong><code class="docutils literal notranslate"><span class="pre">_product_payload(**overrides)</span></code></strong> — returns a base product dict with sensible defaults
+(title <code class="docutils literal notranslate"><span class="pre">&quot;Vintage</span> <span class="pre">camera&quot;</span></code>, category <code class="docutils literal notranslate"><span class="pre">&quot;electronics&quot;</span></code>, price <code class="docutils literal notranslate"><span class="pre">149.99</span></code>, condition <code class="docutils literal notranslate"><span class="pre">&quot;New&quot;</span></code>).
+Overrides replace specific fields.</p>
+<p><strong><code class="docutils literal notranslate"><span class="pre">_create_product(client,</span> <span class="pre">headers,</span> <span class="pre">**overrides)</span></code></strong> — calls <code class="docutils literal notranslate"><span class="pre">POST</span> <span class="pre">/api/v1/products</span></code> and returns the response.</p>
+<p><strong><code class="docutils literal notranslate"><span class="pre">_seed_catalog_products(client,</span> <span class="pre">headers,</span> <span class="pre">db_session)</span></code></strong> — creates 5 specific products
+(<code class="docutils literal notranslate"><span class="pre">Phone</span> <span class="pre">A</span></code>, <code class="docutils literal notranslate"><span class="pre">Laptop</span> <span class="pre">B</span></code>, <code class="docutils literal notranslate"><span class="pre">Chair</span> <span class="pre">C</span></code>, <code class="docutils literal notranslate"><span class="pre">Table</span> <span class="pre">D</span></code>, <code class="docutils literal notranslate"><span class="pre">Book</span> <span class="pre">E</span></code>) with different categories, prices,
+and conditions, then uses <code class="docutils literal notranslate"><span class="pre">db_session</span></code> to <strong>directly set</strong> Laptop B to <code class="docutils literal notranslate"><span class="pre">&quot;Sold&quot;</span></code> and
+Chair C to <code class="docutils literal notranslate"><span class="pre">&quot;Reserved&quot;</span></code>. This bypasses the API because the Inventory Service has no HTTP
+endpoint for changing state — state is only changed by the Transaction Service in production.</p>
+<section id="product-crud-tests">
+<h4>Product CRUD Tests<a class="headerlink" href="#product-crud-tests" title="Link to this heading"></a></h4>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Test</p></th>
+<th class="head"><p>What it asserts</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_create_product_success</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">POST</span> <span class="pre">/api/v1/products</span></code> returns 201 with all fields correct; also queries <code class="docutils literal notranslate"><span class="pre">db_session</span></code> directly to verify the row exists in SQLite</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">test_create_product_missing_required_field_returns_422</span></code></p></td>
+<td><p>Omitting <code class="docutils literal notranslate"><span class="pre">title</span></code> returns 422 with a validation error pointing to the <code class="docutils literal notranslate"><span class="pre">title</span></code> field</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_create_product_invalid_price_returns_422</span></code></p></td>
+<td><p>Price <code class="docutils literal notranslate"><span class="pre">-10</span></code> and <code class="docutils literal notranslate"><span class="pre">0</span></code> both return 422</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">test_create_product_without_token_returns_401</span></code></p></td>
+<td><p>No <code class="docutils literal notranslate"><span class="pre">Authorization</span></code> header returns 401</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_create_product_invalid_condition_returns_422</span></code></p></td>
+<td><p>Condition <code class="docutils literal notranslate"><span class="pre">&quot;refurbished&quot;</span></code> (not in the enum) returns 422</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">test_update_product_success_by_owner</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">PUT</span> <span class="pre">/api/v1/products/{id}</span></code> with all fields returns 200 with updated values</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_partial_update_only_changes_supplied_fields</span></code></p></td>
+<td><p>Updating only <code class="docutils literal notranslate"><span class="pre">description</span></code> leaves <code class="docutils literal notranslate"><span class="pre">title</span></code>, <code class="docutils literal notranslate"><span class="pre">category</span></code>, <code class="docutils literal notranslate"><span class="pre">price</span></code>, <code class="docutils literal notranslate"><span class="pre">condition</span></code> unchanged</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">test_update_product_forbidden_for_non_owner</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">other_seller_token</span></code> returns 403 with <code class="docutils literal notranslate"><span class="pre">&quot;Forbidden&quot;</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_delete_product_success_by_owner</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">DELETE</span></code> returns 204; <code class="docutils literal notranslate"><span class="pre">db_session</span></code> confirms the row is gone</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">test_delete_product_forbidden_for_non_owner</span></code></p></td>
+<td><p>Non-owner returns 403</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_update_missing_product_returns_404</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">PUT</span> <span class="pre">/api/v1/products/99999</span></code> returns 404</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">test_delete_missing_product_returns_404</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">DELETE</span> <span class="pre">/api/v1/products/99999</span></code> returns 404</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="filtering-tests">
+<h4>Filtering Tests<a class="headerlink" href="#filtering-tests" title="Link to this heading"></a></h4>
+<p>All filtering tests call <code class="docutils literal notranslate"><span class="pre">_seed_catalog_products()</span></code> first to create the 5 reference products
+with known states, categories, prices, and conditions.</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Test</p></th>
+<th class="head"><p>Filters exercised</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_catalog_filters_all_combinations_return_expected_products</span></code></p></td>
+<td><p>9 filter combinations: state-only, category-only, price range, condition-only, state+category, state+category+condition, all four filters simultaneously, state+category+price+condition with zero results</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">test_catalog_filters_reject_invalid_price_range</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">min_price=200,</span> <span class="pre">max_price=100</span></code> returns 422 with <code class="docutils literal notranslate"><span class="pre">&quot;min_price</span> <span class="pre">cannot</span> <span class="pre">be</span> <span class="pre">greater</span> <span class="pre">than</span> <span class="pre">max_price&quot;</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_filter_by_each_condition_value</span></code></p></td>
+<td><p>Each of the 5 condition values individually</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">test_condition_filter_combined_with_category_filter</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">category=electronics,</span> <span class="pre">condition=Like</span> <span class="pre">New</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_condition_filter_combined_with_state_filter</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">state=Reserved,</span> <span class="pre">condition=Good</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">test_condition_filter_combined_with_price_range</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">min_price=100,</span> <span class="pre">max_price=200,</span> <span class="pre">condition=New</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_condition_filter_combined_with_all_other_filters</span></code></p></td>
+<td><p>All 4 filters simultaneously</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">test_invalid_condition_filter_returns_422</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">condition=Refurbished</span></code> returns 422</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_condition_filter_individual_values</span></code></p></td>
+<td><p>All 5 conditions individually (duplicate of above — explicit regression guard)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">test_condition_and_state_filter_combination</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Good+Available</span></code> → empty set; <code class="docutils literal notranslate"><span class="pre">Good+Reserved</span></code> → Chair C</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="full-text-search-tests">
+<h4>Full-Text Search Tests<a class="headerlink" href="#full-text-search-tests" title="Link to this heading"></a></h4>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Test</p></th>
+<th class="head"><p>What it asserts</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_text_search_partial_word_match</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">q=cam</span></code> matches title <code class="docutils literal notranslate"><span class="pre">&quot;Vintage</span> <span class="pre">Camera&quot;</span></code> (partial word)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">test_text_search_case_insensitive</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">q=macbook</span></code> matches <code class="docutils literal notranslate"><span class="pre">&quot;MacBook</span> <span class="pre">Pro&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">q=MACBOOK</span></code> also matches</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_text_search_matches_description</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">q=office</span></code> matches a product with <code class="docutils literal notranslate"><span class="pre">&quot;office&quot;</span></code> in the description, not the title</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">test_text_search_combines_with_condition_and_state_filters</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">q=camera,</span> <span class="pre">condition=Like</span> <span class="pre">New,</span> <span class="pre">state=Reserved</span></code> returns only the specific matching product</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_text_search_empty_string_returns_all_products</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">q=&quot;</span> <span class="pre">&quot;</span></code> (space) returns all products</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="image-upload-tests">
+<h4>Image Upload Tests<a class="headerlink" href="#image-upload-tests" title="Link to this heading"></a></h4>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Test</p></th>
+<th class="head"><p>What it asserts</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_upload_image_success</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">POST</span> <span class="pre">/api/v1/products/{id}/images</span></code> with a PNG file returns 200 and an <code class="docutils literal notranslate"><span class="pre">image_url</span></code> starting with <code class="docutils literal notranslate"><span class="pre">&quot;/uploads/&quot;</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">test_uploaded_image_urls_appear_in_get_product_response</span></code></p></td>
+<td><p>Two images uploaded; <code class="docutils literal notranslate"><span class="pre">GET</span> <span class="pre">/api/v1/products/{id}</span></code> returns an <code class="docutils literal notranslate"><span class="pre">images</span></code> list containing both URLs</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_upload_invalid_format_returns_422</span></code></p></td>
+<td><p>A <code class="docutils literal notranslate"><span class="pre">.txt</span></code> file returns 422 with <code class="docutils literal notranslate"><span class="pre">&quot;Invalid</span> <span class="pre">file</span> <span class="pre">format&quot;</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">test_upload_oversized_file_returns_422</span></code></p></td>
+<td><p>A 6 MB file returns 422 with <code class="docutils literal notranslate"><span class="pre">&quot;File</span> <span class="pre">too</span> <span class="pre">large&quot;</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_upload_image_non_owner_forbidden</span></code></p></td>
+<td><p>Non-owner token returns 403</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">test_upload_exceed_image_limit</span></code></p></td>
+<td><p>Uploading 9 images (limit is 8) returns 400 with <code class="docutils literal notranslate"><span class="pre">&quot;Image</span> <span class="pre">limit</span> <span class="pre">exceeded&quot;</span></code></p></td>
+</tr>
+</tbody>
+</table>
+<p><strong>How image storage works in tests:</strong> The image is written to the local filesystem at
+<code class="docutils literal notranslate"><span class="pre">data/uploads/&lt;uuid&gt;.png</span></code> relative to the service’s working directory. These files are
+NOT cleaned up automatically — they persist on disk between test runs. The database row
+pointing to the file is cleaned up by <code class="docutils literal notranslate"><span class="pre">drop_all()</span></code>, but the physical file is not deleted.
+In CI, the workspace is ephemeral so this is not a problem.</p>
+</section>
+</section>
+</section>
+<hr class="docutils" />
+<section id="unit-tests-transaction-service">
+<h2>Unit Tests — Transaction Service<a class="headerlink" href="#unit-tests-transaction-service" title="Link to this heading"></a></h2>
+<p><strong>57 tests | 83% coverage | <code class="docutils literal notranslate"><span class="pre">backend/transaction-service/tests/</span></code></strong></p>
+<section id="test-state-transitions-py-9-direct-state-machine-tests">
+<h3><code class="docutils literal notranslate"><span class="pre">test_state_transitions.py</span></code> — 9 direct state machine tests<a class="headerlink" href="#test-state-transitions-py-9-direct-state-machine-tests" title="Link to this heading"></a></h3>
+<p>These tests import and call the state machine functions directly — <strong>no database, no HTTP,
+no fixtures required</strong>. The state machine (<code class="docutils literal notranslate"><span class="pre">app/services/state_machine.py</span></code>) is pure Python.</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Test</p></th>
+<th class="head"><p>What it asserts</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_available_to_reserved_is_valid</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">is_valid_transition(AVAILABLE,</span> <span class="pre">RESERVED)</span></code> returns <code class="docutils literal notranslate"><span class="pre">True</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">test_reserved_to_sold_is_valid</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">is_valid_transition(RESERVED,</span> <span class="pre">SOLD)</span></code> returns <code class="docutils literal notranslate"><span class="pre">True</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_available_to_sold_is_invalid</span></code></p></td>
+<td><p>Skipping Reserved is invalid — returns <code class="docutils literal notranslate"><span class="pre">False</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">test_reserved_to_available_is_invalid</span></code></p></td>
+<td><p>Going backwards is invalid — returns <code class="docutils literal notranslate"><span class="pre">False</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_sold_to_available_is_invalid</span></code></p></td>
+<td><p>Sold is final — <code class="docutils literal notranslate"><span class="pre">False</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">test_sold_to_reserved_is_invalid</span></code></p></td>
+<td><p>Sold is final — <code class="docutils literal notranslate"><span class="pre">False</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_sold_is_final_state</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">VALID_TRANSITIONS[SOLD]</span> <span class="pre">==</span> <span class="pre">[]</span></code> — no outgoing transitions</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">test_validate_transition_raises_on_invalid</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">validate_transition(AVAILABLE,</span> <span class="pre">SOLD)</span></code> raises <code class="docutils literal notranslate"><span class="pre">ValueError(&quot;Invalid</span> <span class="pre">transition&quot;)</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_validate_transition_does_not_raise_on_valid</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">validate_transition(AVAILABLE,</span> <span class="pre">RESERVED)</span></code> and <code class="docutils literal notranslate"><span class="pre">(RESERVED,</span> <span class="pre">SOLD)</span></code> do not raise</p></td>
+</tr>
+</tbody>
+</table>
+<p><strong>No data is created, no data is deleted.</strong> These tests are entirely in-memory.</p>
+<p>The remaining 48 tests out of 57 cover the routers and wallet/transaction endpoints via
+FastAPI <code class="docutils literal notranslate"><span class="pre">TestClient</span></code> against a SQLite database. Those follow the same drop-all/create-all
+lifecycle described for the auth and inventory services.</p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="unit-tests-agentic-service">
+<h2>Unit Tests — Agentic Service<a class="headerlink" href="#unit-tests-agentic-service" title="Link to this heading"></a></h2>
+<p><strong>75 tests | 87% coverage | <code class="docutils literal notranslate"><span class="pre">backend/agentic-service/test/</span></code></strong></p>
+<p>The agentic service tests <strong>never call OpenAI or Tavily</strong> (except the explicitly gated
+live tests). All LLM interaction is replaced with mock objects.</p>
+<section id="how-the-chain-is-replaced">
+<h3>How the Chain is Replaced<a class="headerlink" href="#how-the-chain-is-replaced" title="Link to this heading"></a></h3>
+<p>The LangChain LCEL chain (<code class="docutils literal notranslate"><span class="pre">prompt</span> <span class="pre">|</span> <span class="pre">llm</span> <span class="pre">|</span> <span class="pre">parser</span></code>) is a module-level singleton. Tests
+use <code class="docutils literal notranslate"><span class="pre">monkeypatch.setattr</span></code> to replace <code class="docutils literal notranslate"><span class="pre">category_agent._chain</span></code> (or <code class="docutils literal notranslate"><span class="pre">price_agent._chain</span></code>)
+with a mock object before calling the agent function:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">mock_chain</span> <span class="o">=</span> <span class="n">MockChainFromLlmText</span><span class="p">(</span><span class="n">parser</span><span class="p">,</span> <span class="s1">&#39;{&quot;suggested_category&quot;:&quot;Electronics&quot;,...}&#39;</span><span class="p">)</span>
+<span class="n">monkeypatch</span><span class="o">.</span><span class="n">setattr</span><span class="p">(</span><span class="n">category_agent_module</span><span class="p">,</span> <span class="s2">&quot;_chain&quot;</span><span class="p">,</span> <span class="n">mock_chain</span><span class="p">)</span>
+<span class="n">result</span> <span class="o">=</span> <span class="n">category_agent_module</span><span class="o">.</span><span class="n">suggest_category</span><span class="p">(</span><span class="n">request</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Because <code class="docutils literal notranslate"><span class="pre">monkeypatch</span></code> is a pytest fixture, the replacement is automatically undone after
+each test — the real <code class="docutils literal notranslate"><span class="pre">_chain</span></code> singleton is restored. Tests that import the module via
+<code class="docutils literal notranslate"><span class="pre">importlib.reload()</span></code> ensure a fresh module state (resetting the singleton to <code class="docutils literal notranslate"><span class="pre">None</span></code>) so
+that the <code class="docutils literal notranslate"><span class="pre">OPENAI_API_KEY=&quot;test-key&quot;</span></code> injected via <code class="docutils literal notranslate"><span class="pre">monkeypatch.setenv</span></code> is used instead
+of any real key in the environment.</p>
+</section>
+<section id="mock-classes">
+<h3>Mock Classes<a class="headerlink" href="#mock-classes" title="Link to this heading"></a></h3>
+<p>Three mock chain classes are defined in <code class="docutils literal notranslate"><span class="pre">test_category_agent.py</span></code> and reused with
+equivalent copies in <code class="docutils literal notranslate"><span class="pre">test_price_agent.py</span></code>:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Class</p></th>
+<th class="head"><p>Behaviour</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">MockChainFromLlmText</span></code></p></td>
+<td><p>Returns a fixed raw LLM text string parsed by the real <code class="docutils literal notranslate"><span class="pre">PydanticOutputParser</span></code>; captures the last payload for assertion</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">MockFailingChain</span></code></p></td>
+<td><p>Always raises the configured exception; counts calls (used to assert retry count = 3)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">MockFailThenSuccessChain</span></code></p></td>
+<td><p>Fails on attempt 1 with <code class="docutils literal notranslate"><span class="pre">OutputParserException</span></code>, succeeds on attempt 2</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">MockProviderFailingChain</span></code></p></td>
+<td><p>Raises a <code class="docutils literal notranslate"><span class="pre">RuntimeError</span></code> (simulates provider down, not a parse failure)</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="test-category-agent-py-9-tests">
+<h3><code class="docutils literal notranslate"><span class="pre">test_category_agent.py</span></code> — 9 tests<a class="headerlink" href="#test-category-agent-py-9-tests" title="Link to this heading"></a></h3>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Test</p></th>
+<th class="head"><p>What it asserts</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_suggest_category_accepts_valid_mocked_llm_response</span></code></p></td>
+<td><p>Valid JSON response is parsed into <code class="docutils literal notranslate"><span class="pre">CategorySuggestion</span></code>; payload fields (<code class="docutils literal notranslate"><span class="pre">title</span></code>, <code class="docutils literal notranslate"><span class="pre">description</span></code>, <code class="docutils literal notranslate"><span class="pre">available_categories</span></code> as comma string, <code class="docutils literal notranslate"><span class="pre">format_instructions</span></code>) are passed correctly</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">test_suggest_category_raises_on_malformed_json_llm_response</span></code></p></td>
+<td><p>Plain text response (not JSON) causes <code class="docutils literal notranslate"><span class="pre">OutputParserException</span></code> to propagate after 3 retries</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_suggest_category_raises_on_validation_failure_llm_response</span></code></p></td>
+<td><p>JSON with invalid fields (<code class="docutils literal notranslate"><span class="pre">confidence=1.5</span></code>, empty <code class="docutils literal notranslate"><span class="pre">suggested_category</span></code>) also raises <code class="docutils literal notranslate"><span class="pre">OutputParserException</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">test_suggest_category_retries_three_times_before_raising</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">MockFailingChain.call_count</span> <span class="pre">==</span> <span class="pre">3</span></code> after the function raises</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_suggest_category_injects_retry_feedback_after_first_failure</span></code></p></td>
+<td><p>After one failure, the second attempt’s payload contains <code class="docutils literal notranslate"><span class="pre">&quot;Previous</span> <span class="pre">response</span> <span class="pre">failed</span> <span class="pre">schema</span> <span class="pre">validation.&quot;</span></code> in <code class="docutils literal notranslate"><span class="pre">retry_feedback</span></code>; first attempt has <code class="docutils literal notranslate"><span class="pre">retry_feedback:</span> <span class="pre">&quot;&quot;</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">test_suggest_category_truncates_large_llm_output_in_retry_feedback</span></code></p></td>
+<td><p>LLM output &gt; 1000 chars is truncated with <code class="docutils literal notranslate"><span class="pre">&quot;...</span> <span class="pre">[truncated]&quot;</span></code> in the retry feedback</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_suggest_category_returns_other_fallback_on_provider_failure</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">RuntimeError</span></code> (not a parse error) returns <code class="docutils literal notranslate"><span class="pre">CategorySuggestion(suggested_category=&quot;Other&quot;,</span> <span class="pre">confidence=0.0)</span></code> without retrying</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">test_suggest_category_returns_first_category_when_other_not_present</span></code></p></td>
+<td><p>When <code class="docutils literal notranslate"><span class="pre">&quot;Other&quot;</span></code> is not in <code class="docutils literal notranslate"><span class="pre">available_categories</span></code>, fallback uses the first category in the list</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="test-category-endpoint-py-8-tests">
+<h3><code class="docutils literal notranslate"><span class="pre">test_category_endpoint.py</span></code> — 8 tests<a class="headerlink" href="#test-category-endpoint-py-8-tests" title="Link to this heading"></a></h3>
+<p>Tests the full HTTP stack via <code class="docutils literal notranslate"><span class="pre">FastAPI.TestClient</span></code>. Each test creates a fresh <code class="docutils literal notranslate"><span class="pre">TestClient</span></code>
+from the reloaded <code class="docutils literal notranslate"><span class="pre">app.main</span></code> module.</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Test</p></th>
+<th class="head"><p>What it asserts</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_known_product_electronics</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">POST</span> <span class="pre">/wallabot/category</span></code> with iPhone returns <code class="docutils literal notranslate"><span class="pre">{&quot;suggested_category&quot;:</span> <span class="pre">&quot;Electronics&quot;,</span> <span class="pre">...}</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">test_known_product_clothing</span></code></p></td>
+<td><p>Nike sneakers return <code class="docutils literal notranslate"><span class="pre">&quot;Clothing</span> <span class="pre">&amp;</span> <span class="pre">Accessories&quot;</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_missing_title_returns_422</span></code></p></td>
+<td><p>Request without <code class="docutils literal notranslate"><span class="pre">title</span></code> returns 422</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">test_empty_category_list_returns_422</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">available_categories:</span> <span class="pre">[]</span></code> returns 422</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_malformed_agent_response_retries_and_500</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">MockFailingChain</span></code> → all 3 retries fail → HTTP 500 with <code class="docutils literal notranslate"><span class="pre">error:</span> <span class="pre">&quot;agent_validation_failure&quot;</span></code>; confirms <code class="docutils literal notranslate"><span class="pre">call_count</span> <span class="pre">==</span> <span class="pre">3</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">test_provider_failure_returns_fallback_other</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">MockProviderFailingChain</span></code> → HTTP 200 with <code class="docutils literal notranslate"><span class="pre">confidence:</span> <span class="pre">0.0</span></code>, <code class="docutils literal notranslate"><span class="pre">suggested_category:</span> <span class="pre">&quot;Other&quot;</span></code>; confirms <code class="docutils literal notranslate"><span class="pre">call_count</span> <span class="pre">==</span> <span class="pre">1</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_price_endpoint_returns_recommendation</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">POST</span> <span class="pre">/wallabot/price</span></code> with mocked chain and Tavily returns correct price response</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">test_live_category_suggestion</span></code></p></td>
+<td><p><strong>Live test</strong> — skipped unless <code class="docutils literal notranslate"><span class="pre">RUN_LIVE_TESTS=true</span></code> (see below)</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="test-price-agent-py-22-tests">
+<h3><code class="docutils literal notranslate"><span class="pre">test_price_agent.py</span></code> — 22 tests<a class="headerlink" href="#test-price-agent-py-22-tests" title="Link to this heading"></a></h3>
+<p>Covers the price agent’s mock execution paths and Pydantic schema validators.</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Test group</p></th>
+<th class="head"><p>What it asserts</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_valid_request_with_tavily_data_returns_recommendation</span></code></p></td>
+<td><p>Mocked Tavily returns data; mocked chain returns valid response; result matches</p></td>
+</tr>
+<tr class="row-odd"><td><p>Schema rejection tests (5)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">PriceRecommendation</span></code> rejects negative prices, zero price, <code class="docutils literal notranslate"><span class="pre">min</span> <span class="pre">&gt;</span> <span class="pre">max</span></code>, <code class="docutils literal notranslate"><span class="pre">min</span> <span class="pre">==</span> <span class="pre">max</span></code>; <code class="docutils literal notranslate"><span class="pre">PriceRequest</span></code> rejects missing fields and invalid conditions</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_tavily_empty_result_*</span></code> (2)</p></td>
+<td><p>When <code class="docutils literal notranslate"><span class="pre">_search_tavily</span></code> returns <code class="docutils literal notranslate"><span class="pre">None</span></code>, result has <code class="docutils literal notranslate"><span class="pre">data_source:</span> <span class="pre">&quot;fallback:</span> <span class="pre">no</span> <span class="pre">market</span> <span class="pre">data</span> <span class="pre">found&quot;</span></code> and valid positive prices</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">test_price_request_accepts_all_valid_conditions</span></code></p></td>
+<td><p>All 5 condition values are accepted by <code class="docutils literal notranslate"><span class="pre">PriceRequest</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_condition_poor_is_passed_to_chain_payload</span></code></p></td>
+<td><p>The condition value appears in the payload sent to the chain</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">test_condition_is_included_in_tavily_search_query</span></code></p></td>
+<td><p>The search query includes both the product title and condition</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_provider_failure_returns_fallback_not_raises</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">RuntimeError</span></code> → hardcoded fallback returned, no exception propagated</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">test_validation_exhaustion_raises</span></code></p></td>
+<td><p>3 parse failures → <code class="docutils literal notranslate"><span class="pre">OutputParserException</span></code> propagates</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="test-price-live-py-live-tests-skipped-by-default">
+<h3><code class="docutils literal notranslate"><span class="pre">test_price_live.py</span></code> — Live Tests (Skipped by Default)<a class="headerlink" href="#test-price-live-py-live-tests-skipped-by-default" title="Link to this heading"></a></h3>
+<p>These tests make <strong>real HTTP calls to OpenAI and Tavily</strong> and verify that the price
+recommendations fall within human-defined sanity ranges for 12 well-known products.</p>
+<p><strong>They are skipped by default.</strong> They only run when:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">RUN_LIVE_TESTS</span><span class="o">=</span><span class="nb">true</span><span class="w"> </span>pytest<span class="w"> </span>backend/agentic-service/test/test_price_live.py<span class="w"> </span>-v
+</pre></div>
+</div>
+<p>Both <code class="docutils literal notranslate"><span class="pre">OPENAI_API_KEY</span></code> and <code class="docutils literal notranslate"><span class="pre">TAVILY_API_KEY</span></code> must also be set. If either is missing,
+the tests skip with <code class="docutils literal notranslate"><span class="pre">&quot;Missing</span> <span class="pre">env</span> <span class="pre">vars:</span> <span class="pre">OPENAI_API_KEY&quot;</span></code>.</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Test</p></th>
+<th class="head"><p>What it asserts</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_price_is_within_sane_range</span></code> (12 parametrised)</p></td>
+<td><p>Each of 12 real products (iPhone 13 Pro, MacBook Pro 14, Nike Air Max 90, IKEA KALLAX, PS5, Trek bike, Harry Potter books, Levi’s 501, Dyson V11, Lego Bugatti, Yamaha guitar, Samsung TV) returns a price within a deliberately wide but human-defined range. The floor/ceiling are not tight — they are designed to catch obvious LLM hallucinations (€1 or €1,000,000), not exact market accuracy</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">test_condition_affects_price_direction</span></code></p></td>
+<td><p>Calling the real agent for the same iPhone in <code class="docutils literal notranslate"><span class="pre">&quot;New&quot;</span></code> and <code class="docutils literal notranslate"><span class="pre">&quot;Poor&quot;</span></code> conditions — asserts <code class="docutils literal notranslate"><span class="pre">price_new</span> <span class="pre">&gt;</span> <span class="pre">price_poor</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_tavily_market_data_is_used_when_key_is_set</span></code></p></td>
+<td><p>When <code class="docutils literal notranslate"><span class="pre">TAVILY_API_KEY</span></code> is set, <code class="docutils literal notranslate"><span class="pre">data_source</span></code> must not be <code class="docutils literal notranslate"><span class="pre">&quot;fallback:</span> <span class="pre">no</span> <span class="pre">market</span> <span class="pre">data</span> <span class="pre">found&quot;</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">test_price_range_is_not_absurdly_wide</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">price_range_max</span> <span class="pre">/</span> <span class="pre">price_range_min</span> <span class="pre">&lt;=</span> <span class="pre">10.0</span></code> — a range wider than 10× is considered a hallucination</p></td>
+</tr>
+</tbody>
+</table>
+<p><strong>These tests account for most of the ~105 second test suite duration</strong> when they run.</p>
+</section>
+<section id="test-tracing-py-21-tests">
+<h3><code class="docutils literal notranslate"><span class="pre">test_tracing.py</span></code> — 21 tests<a class="headerlink" href="#test-tracing-py-21-tests" title="Link to this heading"></a></h3>
+<p>Tests the LangSmith tracing module without ever connecting to LangSmith. All tests use
+<code class="docutils literal notranslate"><span class="pre">monkeypatch</span></code> to control environment variables and replace the <code class="docutils literal notranslate"><span class="pre">LangSmithClient</span></code> with a
+<code class="docutils literal notranslate"><span class="pre">MagicMock</span></code>.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">tracing_module</span></code> fixture:</p>
+<ol class="arabic simple">
+<li><p>Deletes all tracing-related env vars (<code class="docutils literal notranslate"><span class="pre">LANGSMITH_TRACING</span></code>, <code class="docutils literal notranslate"><span class="pre">LANGCHAIN_TRACING_V2</span></code>,
+<code class="docutils literal notranslate"><span class="pre">LANGCHAIN_API_KEY</span></code>, <code class="docutils literal notranslate"><span class="pre">LANGSMITH_API_KEY</span></code>) so each test starts with tracing disabled</p></li>
+<li><p>Reloads the module to reset the <code class="docutils literal notranslate"><span class="pre">_client</span></code> singleton to <code class="docutils literal notranslate"><span class="pre">None</span></code></p></li>
+</ol>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Test group</p></th>
+<th class="head"><p>What it asserts</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">is_tracing_enabled</span></code> (4)</p></td>
+<td><p>Disabled when no vars set; enabled by either <code class="docutils literal notranslate"><span class="pre">LANGSMITH_TRACING=true</span></code> or <code class="docutils literal notranslate"><span class="pre">LANGCHAIN_TRACING_V2=true</span></code>; disabled when set to <code class="docutils literal notranslate"><span class="pre">&quot;false&quot;</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">get_project_name</span></code> (3)</p></td>
+<td><p>Defaults to <code class="docutils literal notranslate"><span class="pre">&quot;wallabot&quot;</span></code>; prefers <code class="docutils literal notranslate"><span class="pre">LANGCHAIN_PROJECT</span></code> over <code class="docutils literal notranslate"><span class="pre">LANGSMITH_PROJECT</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">get_client</span></code> (2)</p></td>
+<td><p>Returns <code class="docutils literal notranslate"><span class="pre">None</span></code> when tracing disabled; returns <code class="docutils literal notranslate"><span class="pre">None</span></code> when <code class="docutils literal notranslate"><span class="pre">LangSmithClient</span></code> is patched to <code class="docutils literal notranslate"><span class="pre">None</span></code> (not installed)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">log_validation_failure</span></code> (4)</p></td>
+<td><p>Calls <code class="docutils literal notranslate"><span class="pre">create_run</span></code> with correct <code class="docutils literal notranslate"><span class="pre">name</span></code>, <code class="docutils literal notranslate"><span class="pre">run_type</span></code>, <code class="docutils literal notranslate"><span class="pre">inputs</span></code>, <code class="docutils literal notranslate"><span class="pre">error</span></code>; includes <code class="docutils literal notranslate"><span class="pre">extra_inputs</span></code> when provided; is a no-op when client is <code class="docutils literal notranslate"><span class="pre">None</span></code>; does not raise when <code class="docutils literal notranslate"><span class="pre">create_run</span></code> itself raises</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">log_latency_exceeded</span></code> (4)</p></td>
+<td><p>Always emits a <code class="docutils literal notranslate"><span class="pre">WARNING</span></code> log entry (regardless of LangSmith); calls <code class="docutils literal notranslate"><span class="pre">create_run</span></code> with elapsed and threshold in <code class="docutils literal notranslate"><span class="pre">outputs</span></code>; is a no-op when client is <code class="docutils literal notranslate"><span class="pre">None</span></code>; does not raise when <code class="docutils literal notranslate"><span class="pre">create_run</span></code> raises</p></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Key safety property verified:</strong> Every test that simulates a LangSmith failure
+(<code class="docutils literal notranslate"><span class="pre">create_run.side_effect</span> <span class="pre">=</span> <span class="pre">RuntimeError(...)</span></code>) asserts that <strong>no exception propagates</strong>
+to the caller. Telemetry failures must never break the request.</p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="integration-tests">
+<h2>Integration Tests<a class="headerlink" href="#integration-tests" title="Link to this heading"></a></h2>
+<p><strong>Location:</strong> <code class="docutils literal notranslate"><span class="pre">tests/integration/</span></code></p>
+<p><strong>Activation:</strong> Integration tests are <strong>skipped by default</strong>. Each file guards itself with a
+<code class="docutils literal notranslate"><span class="pre">pytest.mark.skipif</span></code> that checks a specific environment variable:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>File</p></th>
+<th class="head"><p>Environment variable to set</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_product_crud_integration.py</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">RUN_PRODUCT_INTEGRATION=1</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">test_protected_endpoints_integration.py</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">RUN_PRODUCT_INTEGRATION=1</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">test_purchase_flow_integration.py</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">RUN_PURCHASE_FLOW_INTEGRATION=1</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">test_state_machine_integration.py</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">RUN_STATE_MACHINE_INTEGRATION=1</span></code></p></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Prerequisites:</strong> The services must be running (either via <code class="docutils literal notranslate"><span class="pre">docker</span> <span class="pre">compose</span> <span class="pre">up</span> <span class="pre">--build</span></code>
+or started individually with <code class="docutils literal notranslate"><span class="pre">uvicorn</span></code>). Tests connect over real HTTP using <code class="docutils literal notranslate"><span class="pre">httpx</span></code>.</p>
+<p>Run all integration tests:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>--build<span class="w"> </span>-d
+<span class="nv">$env</span>:RUN_PRODUCT_INTEGRATION<span class="o">=</span><span class="m">1</span>
+<span class="nv">$env</span>:RUN_PURCHASE_FLOW_INTEGRATION<span class="o">=</span><span class="m">1</span>
+<span class="nv">$env</span>:RUN_STATE_MACHINE_INTEGRATION<span class="o">=</span><span class="m">1</span>
+pytest<span class="w"> </span>tests/integration/<span class="w"> </span>-v
+</pre></div>
+</div>
+<section id="what-happens-when-a-service-is-unreachable">
+<h3>What Happens When a Service is Unreachable<a class="headerlink" href="#what-happens-when-a-service-is-unreachable" title="Link to this heading"></a></h3>
+<p>Every helper function in the integration tests catches connection errors:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">_CONNECT_ERRORS</span> <span class="o">=</span> <span class="p">(</span><span class="n">httpx</span><span class="o">.</span><span class="n">ConnectError</span><span class="p">,</span> <span class="n">httpx</span><span class="o">.</span><span class="n">TimeoutException</span><span class="p">,</span> <span class="n">httpx</span><span class="o">.</span><span class="n">TransportError</span><span class="p">)</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="n">response</span> <span class="o">=</span> <span class="n">client</span><span class="o">.</span><span class="n">post</span><span class="p">(</span><span class="o">...</span><span class="p">)</span>
+<span class="k">except</span> <span class="n">_CONNECT_ERRORS</span> <span class="k">as</span> <span class="n">exc</span><span class="p">:</span>
+    <span class="n">pytest</span><span class="o">.</span><span class="n">skip</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Service unreachable at </span><span class="si">{</span><span class="n">URL</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">exc</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>If a required service is not running, the test is <strong>skipped</strong> (not failed). This prevents
+false failures when running the integration suite with only a subset of services up.</p>
+</section>
+<section id="test-data-lifecycle-integration-tests">
+<h3>Test Data Lifecycle — Integration Tests<a class="headerlink" href="#test-data-lifecycle-integration-tests" title="Link to this heading"></a></h3>
+<p><strong>Integration test data is never automatically deleted.</strong> This is the most important
+distinction from unit tests.</p>
+<p>Each integration test creates <strong>real users with UUID-suffixed emails</strong>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span><span class="w"> </span><span class="nf">_user_credentials</span><span class="p">(</span><span class="n">prefix</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">tuple</span><span class="p">[</span><span class="nb">str</span><span class="p">,</span> <span class="nb">str</span><span class="p">]:</span>
+    <span class="n">suffix</span> <span class="o">=</span> <span class="n">uuid4</span><span class="p">()</span><span class="o">.</span><span class="n">hex</span><span class="p">[:</span><span class="mi">8</span><span class="p">]</span>
+    <span class="k">return</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">prefix</span><span class="si">}</span><span class="s2">_</span><span class="si">{</span><span class="n">suffix</span><span class="si">}</span><span class="s2">@example.com&quot;</span><span class="p">,</span> <span class="s2">&quot;StrongPass123!&quot;</span>
+</pre></div>
+</div>
+<p>For example, a typical run creates users like:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">seller</span><span class="o">-</span><span class="n">purchase_3f8a1c2d</span><span class="nd">@example</span><span class="o">.</span><span class="n">com</span>
+<span class="n">buyer</span><span class="o">-</span><span class="n">purchase_9b4e7f1a</span><span class="nd">@example</span><span class="o">.</span><span class="n">com</span>
+<span class="n">owner</span><span class="o">-</span><span class="n">state_a2c5d8e1</span><span class="nd">@example</span><span class="o">.</span><span class="n">com</span>
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">uuid4().hex[:8]</span></code> suffix ensures that <strong>each test run creates fresh users</strong> that never
+collide with users from previous runs. However, these users accumulate in the database:</p>
+<ul class="simple">
+<li><p>In <strong>local development</strong> (SQLite): old users remain in <code class="docutils literal notranslate"><span class="pre">backend/auth-service/auth.db</span></code>
+and <code class="docutils literal notranslate"><span class="pre">backend/transaction-service/transactions.db</span></code> until you delete these files manually
+or recreate the Docker volume</p></li>
+<li><p>In <strong>production</strong> (PostgreSQL on Supabase): old test users persist indefinitely unless
+manually purged</p></li>
+</ul>
+<p><strong>Products, wallet ledger entries, and transactions</strong> created by integration tests also
+persist. A failed-purchase test creates a <code class="docutils literal notranslate"><span class="pre">WalletLedger</span></code> entry for the top-up but no
+purchase entry — exactly the state it is designed to assert.</p>
+</section>
+<section id="how-to-clean-up-integration-test-data">
+<h3>How to Clean Up Integration Test Data<a class="headerlink" href="#how-to-clean-up-integration-test-data" title="Link to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Recreate local SQLite databases (wipes all data)</span>
+docker<span class="w"> </span>compose<span class="w"> </span>down<span class="w"> </span>-v<span class="w">   </span><span class="c1"># removes named volumes</span>
+docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>--build<span class="w"> </span>-d
+
+<span class="c1"># Or individually delete the database files</span>
+Remove-Item<span class="w"> </span>backend/auth-service/auth.db<span class="w"> </span>-ErrorAction<span class="w"> </span>SilentlyContinue
+Remove-Item<span class="w"> </span>backend/transaction-service/transactions.db<span class="w"> </span>-ErrorAction<span class="w"> </span>SilentlyContinue
+</pre></div>
+</div>
+</section>
+<section id="test-purchase-flow-integration-py">
+<h3><code class="docutils literal notranslate"><span class="pre">test_purchase_flow_integration.py</span></code><a class="headerlink" href="#test-purchase-flow-integration-py" title="Link to this heading"></a></h3>
+<p>Tests the complete buyer-seller purchase lifecycle end-to-end.</p>
+<p><strong>Setup (fixtures):</strong></p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">api_client</span></code>: <code class="docutils literal notranslate"><span class="pre">httpx.Client</span></code> with 20s timeout — shared across all tests in a module run</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">seller</span></code>: registers + logs in a new user via <code class="docutils literal notranslate"><span class="pre">POST</span> <span class="pre">/auth/register</span></code> and <code class="docutils literal notranslate"><span class="pre">POST</span> <span class="pre">/auth/login</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">buyer</span></code>: same for a different user</p></li>
+</ul>
+<p><strong><code class="docutils literal notranslate"><span class="pre">test_full_purchase_flow_records_reservation_purchase_and_wallet_ledger_entries</span></code>:</strong></p>
+<p>Step-by-step flow exercised:</p>
+<ol class="arabic simple">
+<li><p>Seller creates a product (price €125) in the Transaction Service</p></li>
+<li><p>Buyer tops up wallet by €250 (<code class="docutils literal notranslate"><span class="pre">POST</span> <span class="pre">/wallet/topup</span></code>) — asserts <code class="docutils literal notranslate"><span class="pre">balance</span> <span class="pre">==</span> <span class="pre">250.0</span></code></p></li>
+<li><p>Buyer reserves the product (<code class="docutils literal notranslate"><span class="pre">POST</span> <span class="pre">/products/{id}/reserve</span></code>) — asserts state <code class="docutils literal notranslate"><span class="pre">&quot;reserved&quot;</span></code> and <code class="docutils literal notranslate"><span class="pre">reserved_by</span> <span class="pre">==</span> <span class="pre">buyer.email</span></code></p></li>
+<li><p>Buyer purchases the product (<code class="docutils literal notranslate"><span class="pre">POST</span> <span class="pre">/products/{id}/buy</span></code>) — asserts status <code class="docutils literal notranslate"><span class="pre">&quot;completed&quot;</span></code>, correct <code class="docutils literal notranslate"><span class="pre">buyer_id</span></code>, <code class="docutils literal notranslate"><span class="pre">seller_id</span></code>, <code class="docutils literal notranslate"><span class="pre">amount</span></code></p></li>
+<li><p>Buyer wallet history verified: 2 entries — TOP_UP (+€250) then PURCHASE (-€125), balance €125</p></li>
+<li><p>Seller wallet history verified: 1 entry — SALE (+€125), balance €125</p></li>
+<li><p>Product state history verified: 3 entries — <code class="docutils literal notranslate"><span class="pre">available</span> <span class="pre">→</span> <span class="pre">reserved</span> <span class="pre">→</span> <span class="pre">sold</span></code></p></li>
+</ol>
+<p><strong><code class="docutils literal notranslate"><span class="pre">test_purchase_flow_rejects_insufficient_funds_without_creating_purchase_ledger_entries</span></code>:</strong></p>
+<p>Asserts that a failed purchase (€300 product, €50 wallet) returns 402, leaves the wallet
+with only the top-up entry, leaves the seller wallet empty, and leaves the product in
+<code class="docutils literal notranslate"><span class="pre">&quot;reserved&quot;</span></code> state (not rolled back to <code class="docutils literal notranslate"><span class="pre">&quot;available&quot;</span></code>).</p>
+</section>
+<section id="test-state-machine-integration-py">
+<h3><code class="docutils literal notranslate"><span class="pre">test_state_machine_integration.py</span></code><a class="headerlink" href="#test-state-machine-integration-py" title="Link to this heading"></a></h3>
+<p>Tests state machine transitions via real HTTP calls to the Transaction Service’s
+<code class="docutils literal notranslate"><span class="pre">PATCH</span> <span class="pre">/products/{id}/state</span></code> endpoint.</p>
+<p>Key scenarios:</p>
+<ul class="simple">
+<li><p>Product starts in <code class="docutils literal notranslate"><span class="pre">&quot;available&quot;</span></code> state; first <code class="docutils literal notranslate"><span class="pre">ProductStateHistory</span></code> entry has <code class="docutils literal notranslate"><span class="pre">from_state:</span> <span class="pre">null</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">available</span> <span class="pre">→</span> <span class="pre">reserved</span></code>: 200 response; history entry with correct <code class="docutils literal notranslate"><span class="pre">from_state</span></code>/<code class="docutils literal notranslate"><span class="pre">to_state</span></code>/<code class="docutils literal notranslate"><span class="pre">changed_by</span></code>/<code class="docutils literal notranslate"><span class="pre">changed_at</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">reserved</span> <span class="pre">→</span> <span class="pre">sold</span></code>: 200; full 3-entry history</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">available</span> <span class="pre">→</span> <span class="pre">sold</span></code> (invalid): 422</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">reserved</span> <span class="pre">→</span> <span class="pre">available</span></code> (backwards): 422</p></li>
+<li><p>From <code class="docutils literal notranslate"><span class="pre">sold</span></code> to anything: 422 (final state)</p></li>
+<li><p>Non-owner attempt: 403</p></li>
+<li><p>Unauthenticated attempt: 401</p></li>
+</ul>
+</section>
+<section id="test-product-crud-integration-py">
+<h3><code class="docutils literal notranslate"><span class="pre">test_product_crud_integration.py</span></code><a class="headerlink" href="#test-product-crud-integration-py" title="Link to this heading"></a></h3>
+<p>Tests product CRUD ownership rules across the Inventory and Auth services.</p>
+<p>Key scenario (<code class="docutils literal notranslate"><span class="pre">test_create_rejects_owner_spoofing_when_owner_field_is_client_settable</span></code>):
+creates a product as <code class="docutils literal notranslate"><span class="pre">owner</span></code>, then an <code class="docutils literal notranslate"><span class="pre">outsider</span></code> attempts to create a product with
+<code class="docutils literal notranslate"><span class="pre">seller_id</span></code> set to <code class="docutils literal notranslate"><span class="pre">owner</span></code>’s ID in the request body. The test asserts that the server
+ignores the spoofed field and assigns <code class="docutils literal notranslate"><span class="pre">seller_id</span></code> from the JWT’s <code class="docutils literal notranslate"><span class="pre">sub</span></code> claim instead.</p>
+</section>
+<section id="test-protected-endpoints-integration-py">
+<h3><code class="docutils literal notranslate"><span class="pre">test_protected_endpoints_integration.py</span></code><a class="headerlink" href="#test-protected-endpoints-integration-py" title="Link to this heading"></a></h3>
+<p>Parametrised test over <code class="docutils literal notranslate"><span class="pre">GET</span></code>, <code class="docutils literal notranslate"><span class="pre">PUT</span></code>, <code class="docutils literal notranslate"><span class="pre">DELETE</span></code> methods. For each method:</p>
+<ul class="simple">
+<li><p>No token → 401</p></li>
+<li><p>Other user’s token → 403</p></li>
+</ul>
+</section>
+</section>
+<hr class="docutils" />
+<section id="performance-load-tests">
+<h2>Performance / Load Tests<a class="headerlink" href="#performance-load-tests" title="Link to this heading"></a></h2>
+<p><strong>Location:</strong> <code class="docutils literal notranslate"><span class="pre">tests/performance/</span></code></p>
+<p><strong>Activation:</strong> Locust is started manually — not via pytest. These tests are <strong>never run
+in CI</strong>.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>tests/performance
+pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements.txt
+
+<span class="c1"># Basic run: 10 users, 2 spawned per second, 60 seconds</span>
+locust<span class="w"> </span>-f<span class="w"> </span>locustfile.py<span class="w"> </span>--headless<span class="w"> </span>-u<span class="w"> </span><span class="m">10</span><span class="w"> </span>-r<span class="w"> </span><span class="m">2</span><span class="w"> </span>-t<span class="w"> </span>60s
+
+<span class="c1"># With Locust web UI (interactive)</span>
+locust<span class="w"> </span>-f<span class="w"> </span>locustfile.py<span class="w"> </span>--host<span class="w"> </span>http://localhost:8003
+<span class="c1"># Open http://localhost:8089</span>
+</pre></div>
+</div>
+<section id="user-types">
+<h3>User Types<a class="headerlink" href="#user-types" title="Link to this heading"></a></h3>
+<p>Three simulated user roles, weighted to reflect realistic traffic:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Class</p></th>
+<th class="head"><p>Weight</p></th>
+<th class="head"><p>On-start actions</p></th>
+<th class="head"><p>Repeated tasks</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">SellerJourneyUser</span></code></p></td>
+<td><p>2</p></td>
+<td><p>Register + login; create one product</p></td>
+<td><p>create listings (×4), update listing (×2), upload image (×2), read listing (×1)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">BuyerJourneyUser</span></code></p></td>
+<td><p>3</p></td>
+<td><p>Register + login; top up wallet by €500</p></td>
+<td><p>check wallet balance (×3), browse wallet history (×2), reserve + buy (×5), browse transaction history (×1)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">WallabotUser</span></code></p></td>
+<td><p>1</p></td>
+<td><p>Register + login</p></td>
+<td><p>POST /wallabot/category (×1)</p></td>
+</tr>
+</tbody>
+</table>
+<p><code class="docutils literal notranslate"><span class="pre">WallabotUser</span></code> is only instantiated when <code class="docutils literal notranslate"><span class="pre">PERF_ENABLE_WALLABOT=true</span></code>. Inventory flow
+(<code class="docutils literal notranslate"><span class="pre">SellerJourneyUser.update_my_listing</span></code>, <code class="docutils literal notranslate"><span class="pre">upload_image</span></code>) is only active when
+<code class="docutils literal notranslate"><span class="pre">PERF_ENABLE_INVENTORY_FLOW=true</span></code>.</p>
+</section>
+<section id="test-data-lifecycle-performance-tests">
+<h3>Test Data Lifecycle — Performance Tests<a class="headerlink" href="#test-data-lifecycle-performance-tests" title="Link to this heading"></a></h3>
+<p><strong>Performance test data is never deleted.</strong> Users are created with:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">email</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;perf-</span><span class="si">{</span><span class="n">run_id</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">role</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">index</span><span class="si">}</span><span class="s2">@example.com&quot;</span>
+<span class="c1"># e.g. perf-3f8a1c2d-seller-a1b2c3d4@example.com</span>
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">run_id</span></code> is either set via <code class="docutils literal notranslate"><span class="pre">PERF_RUN_ID</span></code> or generated as <code class="docutils literal notranslate"><span class="pre">uuid4().hex[:8]</span></code> at
+startup. Every Locust run creates new users. Over multiple runs these accumulate.</p>
+<p><strong>What persists after a performance test:</strong></p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">User</span></code> rows in the Auth Service database (one per virtual user spawned)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">WalletLedger</span></code> rows (top-ups, purchases, sales) in the Transaction Service database</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Product</span></code> rows in the Transaction Service database (most will be in <code class="docutils literal notranslate"><span class="pre">&quot;Sold&quot;</span></code> state after a buy cycle; unsold products remain <code class="docutils literal notranslate"><span class="pre">&quot;Reserved&quot;</span></code> if a buyer reserved but the run ended before purchase)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Transaction</span></code> records for each completed purchase</p></li>
+</ul>
+<p>Products created by <code class="docutils literal notranslate"><span class="pre">SellerJourneyUser</span></code> are pushed onto a global <code class="docutils literal notranslate"><span class="pre">PRODUCT_QUEUE</span></code>. Buyers
+pop from this queue with a <code class="docutils literal notranslate"><span class="pre">Semaphore</span></code> lock for concurrency safety. If the run ends while
+products are still in the queue, those products remain in whatever state they were when
+the test stopped.</p>
+</section>
+<section id="reports">
+<h3>Reports<a class="headerlink" href="#reports" title="Link to this heading"></a></h3>
+<p>After each run, two files are written to <code class="docutils literal notranslate"><span class="pre">tests/performance/reports/</span></code>:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">contiperf-report-summary-{run_id}.json</span></code> — structured summary with all KPIs</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">contiperf-report-{success|failed}-{run_id}.html</span></code> — a ContiPerf-compatible HTML report</p></li>
+</ul>
+<p>The <code class="docutils literal notranslate"><span class="pre">reports/</span></code> directory is committed to the repository so that the most recent run’s
+results are always available without re-running the tests.</p>
+</section>
+<section id="configuration">
+<h3>Configuration<a class="headerlink" href="#configuration" title="Link to this heading"></a></h3>
+<p>All Locust behaviour is controlled via environment variables in <code class="docutils literal notranslate"><span class="pre">perf_config.py</span></code>:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Variable</p></th>
+<th class="head"><p>Default</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">PERF_AUTH_BASE_URL</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">http://localhost:8001</span></code></p></td>
+<td><p>Auth Service URL</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">PERF_INVENTORY_BASE_URL</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">http://localhost:8002</span></code></p></td>
+<td><p>Inventory Service URL</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">PERF_TRANSACTION_BASE_URL</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">http://localhost:8003</span></code></p></td>
+<td><p>Transaction Service URL</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">PERF_WALLABOT_BASE_URL</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">http://localhost:8004</span></code></p></td>
+<td><p>Agentic Service URL</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">PERF_RUN_ID</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">uuid4().hex[:8]</span></code></p></td>
+<td><p>Unique run identifier (used in user emails and report filenames)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">PERF_SELLER_PASSWORD</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">PerfSeller!123</span></code></p></td>
+<td><p>Password for all seller users</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">PERF_BUYER_PASSWORD</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">PerfBuyer!123</span></code></p></td>
+<td><p>Password for all buyer users</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">PERF_TOPUP_AMOUNT</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">500.0</span></code></p></td>
+<td><p>EUR topped up on buyer wallet at start</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">PERF_PRODUCT_PRICE</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">49.90</span></code></p></td>
+<td><p>Price of all synthetic products</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">PERF_UPLOAD_IMAGES</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">true</span></code></p></td>
+<td><p>Whether SellerJourneyUser uploads images</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">PERF_ENABLE_INVENTORY_FLOW</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">false</span></code></p></td>
+<td><p>Whether Inventory Service is exercised</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">PERF_ENABLE_WALLABOT</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">false</span></code></p></td>
+<td><p>Whether WallabotUser is instantiated</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<hr class="docutils" />
+<section id="smoke-tests">
+<h2>Smoke Tests<a class="headerlink" href="#smoke-tests" title="Link to this heading"></a></h2>
+<p><strong>Location:</strong> <code class="docutils literal notranslate"><span class="pre">tests/smoke/test_docker_smoke.py</span></code></p>
+<p><strong>Activation:</strong> Skipped by default. Run with <code class="docutils literal notranslate"><span class="pre">RUN_DOCKER_SMOKE=1</span></code>.</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>--build<span class="w"> </span>-d
+<span class="nv">$env</span>:RUN_DOCKER_SMOKE<span class="o">=</span><span class="m">1</span><span class="p">;</span><span class="w"> </span>pytest<span class="w"> </span>tests/smoke/test_docker_smoke.py<span class="w"> </span>-v
+</pre></div>
+</div>
+<section id="what-smoke-tests-do">
+<h3>What Smoke Tests Do<a class="headerlink" href="#what-smoke-tests-do" title="Link to this heading"></a></h3>
+<p>Smoke tests verify <strong>only that each service is alive</strong> — they make no writes and create
+no data. For each service, they call:</p>
+<ol class="arabic simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">GET</span> <span class="pre">/health</span></code> → must return HTTP 200</p></li>
+<li><p>A second endpoint (varies by service) to confirm the API layer is responding</p></li>
+</ol>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Service</p></th>
+<th class="head"><p>Health endpoint</p></th>
+<th class="head"><p>Second check</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>auth-service</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">GET</span> <span class="pre">/health</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">GET</span> <span class="pre">/auth/test</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>inventory-service</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">GET</span> <span class="pre">/health</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">GET</span> <span class="pre">/openapi.json</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>transaction-service</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">GET</span> <span class="pre">/health</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">GET</span> <span class="pre">/openapi.json</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>agentic-service</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">GET</span> <span class="pre">/health</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">GET</span> <span class="pre">/openapi.json</span></code></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="required-vs-optional-services">
+<h3>Required vs Optional Services<a class="headerlink" href="#required-vs-optional-services" title="Link to this heading"></a></h3>
+<p>Services are classified via environment variables:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Default required (all three must respond or the test fails)</span>
+<span class="nv">SMOKE_REQUIRED_SERVICES</span><span class="o">=</span>auth-service,transaction-service,inventory-service
+
+<span class="c1"># Default optional (skipped — not failed — if unreachable)</span>
+<span class="nv">SMOKE_OPTIONAL_SERVICES</span><span class="o">=</span>agentic-service
+</pre></div>
+</div>
+<p>Override with:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">$env</span>:SMOKE_REQUIRED_SERVICES<span class="o">=</span><span class="s2">&quot;auth-service,transaction-service&quot;</span>
+<span class="nv">$env</span>:SMOKE_OPTIONAL_SERVICES<span class="o">=</span><span class="s2">&quot;inventory-service,agentic-service&quot;</span>
+</pre></div>
+</div>
+<p>Individual service URLs can also be overridden:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nv">$env</span>:SMOKE_URL_AUTH_SERVICE<span class="o">=</span><span class="s2">&quot;http://wallabot-auth.onrender.com&quot;</span>
+</pre></div>
+</div>
+</section>
+<section id="data-lifecycle-smoke-tests">
+<h3>Data Lifecycle — Smoke Tests<a class="headerlink" href="#data-lifecycle-smoke-tests" title="Link to this heading"></a></h3>
+<p><strong>No data is created, modified, or deleted.</strong> All requests are <code class="docutils literal notranslate"><span class="pre">GET</span></code> only.</p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="running-everything-locally">
+<h2>Running Everything Locally<a class="headerlink" href="#running-everything-locally" title="Link to this heading"></a></h2>
+<section id="unit-tests-only-no-docker-required">
+<h3>Unit tests only (no Docker required)<a class="headerlink" href="#unit-tests-only-no-docker-required" title="Link to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Auth service</span>
+<span class="nb">cd</span><span class="w"> </span>backend/auth-service
+pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements.txt
+pytest<span class="w"> </span>--cov<span class="o">=</span>app<span class="w"> </span>--cov-report<span class="o">=</span>term-missing<span class="w"> </span>--cov-fail-under<span class="o">=</span><span class="m">50</span>
+
+<span class="c1"># Inventory service</span>
+<span class="nb">cd</span><span class="w"> </span>backend/inventory-service
+pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements.txt
+pytest<span class="w"> </span>--cov<span class="o">=</span>app<span class="w"> </span>--cov-report<span class="o">=</span>term-missing<span class="w"> </span>--cov-fail-under<span class="o">=</span><span class="m">50</span>
+
+<span class="c1"># Transaction service</span>
+<span class="nb">cd</span><span class="w"> </span>backend/transaction-service
+pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements.txt
+pytest<span class="w"> </span>--cov<span class="o">=</span>app<span class="w"> </span>--cov-report<span class="o">=</span>term-missing<span class="w"> </span>--cov-fail-under<span class="o">=</span><span class="m">50</span>
+
+<span class="c1"># Agentic service (mocked — no API keys needed)</span>
+<span class="nb">cd</span><span class="w"> </span>backend/agentic-service
+pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements.txt
+pytest<span class="w"> </span>--cov<span class="o">=</span>app<span class="w"> </span>--cov-report<span class="o">=</span>term-missing<span class="w"> </span>--cov-fail-under<span class="o">=</span><span class="m">50</span>
+</pre></div>
+</div>
+</section>
+<section id="live-agentic-tests-requires-openai-tavily-keys">
+<h3>Live agentic tests (requires OpenAI + Tavily keys)<a class="headerlink" href="#live-agentic-tests-requires-openai-tavily-keys" title="Link to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">cd</span><span class="w"> </span>backend/agentic-service
+<span class="nv">$env</span>:OPENAI_API_KEY<span class="o">=</span><span class="s2">&quot;sk-...&quot;</span>
+<span class="nv">$env</span>:TAVILY_API_KEY<span class="o">=</span><span class="s2">&quot;tvly-...&quot;</span>
+<span class="nv">$env</span>:RUN_LIVE_TESTS<span class="o">=</span><span class="nb">true</span>
+pytest<span class="w"> </span>test/test_price_live.py<span class="w"> </span>-v
+</pre></div>
+</div>
+</section>
+<section id="integration-tests-requires-docker-compose">
+<h3>Integration tests (requires Docker Compose)<a class="headerlink" href="#integration-tests-requires-docker-compose" title="Link to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>--build<span class="w"> </span>-d
+
+<span class="nv">$env</span>:RUN_PRODUCT_INTEGRATION<span class="o">=</span><span class="m">1</span>
+<span class="nv">$env</span>:RUN_PURCHASE_FLOW_INTEGRATION<span class="o">=</span><span class="m">1</span>
+<span class="nv">$env</span>:RUN_STATE_MACHINE_INTEGRATION<span class="o">=</span><span class="m">1</span>
 pytest<span class="w"> </span>tests/integration/<span class="w"> </span>-v
 </pre></div>
 </div>
 </section>
-<section id="performance-load-tests">
-<h3>Performance / Load Tests<a class="headerlink" href="#performance-load-tests" title="Link to this heading"></a></h3>
-<p>Located in <code class="docutils literal notranslate"><span class="pre">tests/performance/</span></code>, these use <a class="reference external" href="https://locust.io/">Locust</a> to simulate
-concurrent user traffic and measure response latency under load.</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>locust<span class="w"> </span>-f<span class="w"> </span>tests/performance/locustfile.py<span class="w"> </span>--host<span class="w"> </span>http://localhost:8001
+<section id="smoke-tests-requires-docker-compose">
+<h3>Smoke tests (requires Docker Compose)<a class="headerlink" href="#smoke-tests-requires-docker-compose" title="Link to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>--build<span class="w"> </span>-d
+<span class="nv">$env</span>:RUN_DOCKER_SMOKE<span class="o">=</span><span class="m">1</span><span class="p">;</span><span class="w"> </span>pytest<span class="w"> </span>tests/smoke/<span class="w"> </span>-v
 </pre></div>
 </div>
-<p>The Locust web UI is available at <code class="docutils literal notranslate"><span class="pre">http://localhost:8089</span></code>. Use it to configure the number
-of users and spawn rate interactively.</p>
 </section>
-<section id="smoke-tests">
-<h3>Smoke Tests<a class="headerlink" href="#smoke-tests" title="Link to this heading"></a></h3>
-<p>Located in <code class="docutils literal notranslate"><span class="pre">tests/smoke/</span></code>, these verify that all services in the Docker Compose stack
-respond to their <code class="docutils literal notranslate"><span class="pre">/health</span></code> endpoint after startup. Run automatically in CI after the
-Docker image build job completes.</p>
-</section>
-</section>
-<hr class="docutils" />
-<section id="running-all-tests-locally">
-<h2>Running All Tests Locally<a class="headerlink" href="#running-all-tests-locally" title="Link to this heading"></a></h2>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Start dependencies</span>
-docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>-d
-
-<span class="c1"># Backend unit tests (all services)</span>
-<span class="k">for</span><span class="w"> </span>svc<span class="w"> </span><span class="k">in</span><span class="w"> </span>auth-service<span class="w"> </span>inventory-service<span class="w"> </span>transaction-service<span class="w"> </span>agentic-service<span class="p">;</span><span class="w"> </span><span class="k">do</span>
-<span class="w">  </span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;=== </span><span class="nv">$svc</span><span class="s2"> ===&quot;</span>
-<span class="w">  </span><span class="nb">cd</span><span class="w"> </span>backend/<span class="nv">$svc</span>
-<span class="w">  </span>pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements.txt
-<span class="w">  </span>pytest<span class="w"> </span>--cov<span class="o">=</span>app<span class="w"> </span>--cov-fail-under<span class="o">=</span><span class="m">50</span>
-<span class="w">  </span><span class="nb">cd</span><span class="w"> </span>../..
-<span class="k">done</span>
-
-<span class="c1"># Frontend unit tests</span>
-<span class="nb">cd</span><span class="w"> </span>frontend
-npm<span class="w"> </span>ci
-npm<span class="w"> </span>run<span class="w"> </span><span class="nb">test</span>
+<section id="performance-tests-requires-docker-compose">
+<h3>Performance tests (requires Docker Compose)<a class="headerlink" href="#performance-tests-requires-docker-compose" title="Link to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>--build<span class="w"> </span>-d
+<span class="nb">cd</span><span class="w"> </span>tests/performance
+pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements.txt
+locust<span class="w"> </span>-f<span class="w"> </span>locustfile.py<span class="w"> </span>--headless<span class="w"> </span>-u<span class="w"> </span><span class="m">20</span><span class="w"> </span>-r<span class="w"> </span><span class="m">5</span><span class="w"> </span>-t<span class="w"> </span>120s
 </pre></div>
 </div>
+</section>
 </section>
 <hr class="docutils" />
 <section id="coverage-reports">
 <h2>Coverage Reports<a class="headerlink" href="#coverage-reports" title="Link to this heading"></a></h2>
-<p>HTML coverage reports are generated as CI artifacts for each service. The CI pipeline
-runs:</p>
+<p>The CI pipeline runs:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pytest<span class="w"> </span>--cov<span class="o">=</span>app<span class="w"> </span>--cov-report<span class="o">=</span>xml<span class="w"> </span>--cov-report<span class="o">=</span>html<span class="w"> </span>--cov-fail-under<span class="o">=</span><span class="m">50</span>
 </pre></div>
 </div>
-<p>Reports are uploaded as GitHub Actions artifacts named <code class="docutils literal notranslate"><span class="pre">coverage-{service-name}</span></code> and
-are available for download from the Actions run summary page.</p>
+<p>HTML and XML coverage reports are uploaded as GitHub Actions artifacts named
+<code class="docutils literal notranslate"><span class="pre">coverage-{service-name}</span></code>. They are available for download from the Actions run summary
+page for 90 days.</p>
 </section>
 <hr class="docutils" />
 <section id="linting">
@@ -646,29 +1516,30 @@ are available for download from the Actions run summary page.</p>
 <tr class="row-odd"><th class="head"><p>Language</p></th>
 <th class="head"><p>Tool</p></th>
 <th class="head"><p>Config file</p></th>
+<th class="head"><p>What it checks</p></th>
 </tr>
 </thead>
 <tbody>
 <tr class="row-even"><td><p>Python</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">ruff</span></code></p></td>
-<td><p><code class="docutils literal notranslate"><span class="pre">pyproject.toml</span></code> in each service</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">pyproject.toml</span></code></p></td>
+<td><p>PEP 8 style, import ordering, pyflakes unused imports/variables, pycodestyle line length</p></td>
 </tr>
 <tr class="row-odd"><td><p>JavaScript</p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">ESLint</span></code></p></td>
 <td><p><code class="docutils literal notranslate"><span class="pre">frontend/.eslintrc.*</span></code></p></td>
+<td><p>Vue 3 style rules, unused variables, no-console in production code</p></td>
 </tr>
 </tbody>
 </table>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Python (all services)</span>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Python (all backend services at once)</span>
 ruff<span class="w"> </span>check<span class="w"> </span>backend/
 
 <span class="c1"># JavaScript</span>
 <span class="nb">cd</span><span class="w"> </span>frontend<span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span>npm<span class="w"> </span>run<span class="w"> </span>lint
 </pre></div>
 </div>
-<p><code class="docutils literal notranslate"><span class="pre">ruff</span></code> is configured to enforce PEP 8 style, import ordering, and a set of
-pyflakes and pycodestyle rules. The CI pipeline fails the <code class="docutils literal notranslate"><span class="pre">lint-python</span></code> job on any
-<code class="docutils literal notranslate"><span class="pre">ruff</span></code> error.</p>
+<p>The CI <code class="docutils literal notranslate"><span class="pre">lint-python</span></code> job fails on any <code class="docutils literal notranslate"><span class="pre">ruff</span></code> error. Warnings do not block the build.</p>
 </section>
 </section>
 

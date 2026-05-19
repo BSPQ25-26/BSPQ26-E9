@@ -4,57 +4,25 @@ from uuid import uuid4
 import httpx
 import pytest
 
+from tests.support.integration_helpers import (
+    PRODUCTS_PATH,
+    PRODUCT_ID_FIELD,
+    TRANSACTION_BASE_URL,
+    _CONNECT_ERRORS,
+    create_and_login_user,
+    headers as _headers,
+)
+
 # running auth-service in 8001 & transaction-service in 8003 is required for these tests to work
 # $env:RUN_STATE_MACHINE_INTEGRATION="1"; python.exe -m pytest tests/integration/test_state_machine_integration.py -v
 
 
 RUN_INTEGRATION = os.getenv("RUN_STATE_MACHINE_INTEGRATION") == "1"
-AUTH_BASE_URL = os.getenv("AUTH_BASE_URL", "http://localhost:8001")
-TRANSACTION_BASE_URL = os.getenv("TRANSACTION_BASE_URL", "http://localhost:8003")
-PRODUCTS_PATH = os.getenv("PRODUCTS_PATH", "/products")
-PRODUCT_ID_FIELD = os.getenv("PRODUCT_ID_FIELD", "id")
 
 pytestmark = pytest.mark.skipif(
     not RUN_INTEGRATION,
     reason="Set RUN_STATE_MACHINE_INTEGRATION=1 to run state machine integration tests.",
 )
-
-_CONNECT_ERRORS = (httpx.ConnectError, httpx.TimeoutException, httpx.TransportError)
-
-
-def _headers(token: str) -> dict:
-    return {"Authorization": f"Bearer {token}"}
-
-
-def _user_credentials(prefix: str) -> tuple[str, str]:
-    suffix = uuid4().hex[:8]
-    return f"{prefix}_{suffix}@example.com", "StrongPass123!"
-
-
-def _create_and_login_user(client: httpx.Client, prefix: str) -> dict:
-    email, password = _user_credentials(prefix)
-
-    try:
-        register_response = client.post(
-            f"{AUTH_BASE_URL}/auth/register",
-            json={"email": email, "password": password},
-        )
-        assert register_response.status_code == 200, (
-            f"Register failed [{register_response.status_code}]: {register_response.text}"
-        )
-
-        login_response = client.post(
-            f"{AUTH_BASE_URL}/auth/login",
-            json={"email": email, "password": password},
-        )
-        assert login_response.status_code == 200, (
-            f"Login failed [{login_response.status_code}]: {login_response.text}"
-        )
-    except _CONNECT_ERRORS as exc:
-        pytest.skip(f"Auth service unreachable at {AUTH_BASE_URL}: {exc}")
-
-    token = login_response.json()["access_token"]
-    return {"email": email, "token": token}
 
 
 def _create_product(client: httpx.Client, owner_token: str) -> dict:
@@ -115,18 +83,12 @@ def api_client():
 
 @pytest.fixture()
 def owner(api_client):
-    try:
-        return _create_and_login_user(api_client, "owner-state")
-    except _CONNECT_ERRORS as exc:
-        pytest.skip(f"Auth service unreachable: {exc}")
+    return create_and_login_user(api_client, "owner-state")
 
 
 @pytest.fixture()
 def other_user(api_client):
-    try:
-        return _create_and_login_user(api_client, "other-user-state")
-    except _CONNECT_ERRORS as exc:
-        pytest.skip(f"Auth service unreachable: {exc}")
+    return create_and_login_user(api_client, "other-user-state")
 
 
 @pytest.fixture()

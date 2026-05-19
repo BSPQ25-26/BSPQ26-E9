@@ -6,7 +6,9 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from app.api.v1.product_router import UPLOAD_DIR, router as product_router
+from app.api.v1.test_cleanup_router import router as test_cleanup_router
 from app.db.init_db import init_db
+from app.services.test_cleanup_service import is_test_cleanup_enabled
 
 LEGACY_UPLOAD_DIR = "uploads"
 
@@ -48,6 +50,8 @@ app.add_middleware(
 )
 
 app.include_router(product_router, prefix="/api/v1")
+if is_test_cleanup_enabled():
+    app.include_router(test_cleanup_router)
 app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 # Healthcheck endpoint igual que en auth-service

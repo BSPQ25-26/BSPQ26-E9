@@ -74,11 +74,14 @@ async def lifespan(app: FastAPI):
 
 
 def _register_routers(application: FastAPI) -> None:
-    from app.routers import products, wallet, transactions
+    from app.routers import products, wallet, transactions, test_cleanup
+    from app.services.test_cleanup_service import is_test_cleanup_enabled
 
     application.include_router(products.router)
     application.include_router(wallet.router)
     application.include_router(transactions.router)
+    if is_test_cleanup_enabled():
+        application.include_router(test_cleanup.router)
 
 
 configure_logging()
