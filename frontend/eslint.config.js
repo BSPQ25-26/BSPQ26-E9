@@ -18,6 +18,8 @@ export default [
       'coverage/**',
       'dist/**',
       'node_modules/**',
+      'playwright-report/**',
+      'test-results/**',
     ],
   },
   js.configs.recommended,
@@ -53,10 +55,22 @@ export default [
   {
     files: [
       'eslint.config.js',
+      'playwright.config.js',
       'vite.config.js',
     ],
     languageOptions: {
       globals: nodeGlobals,
+    },
+  },
+  {
+    files: [
+      'e2e/**/*.js',
+    ],
+    languageOptions: {
+      globals: {
+        ...browserGlobals,
+        ...nodeGlobals,
+      },
     },
   },
   {

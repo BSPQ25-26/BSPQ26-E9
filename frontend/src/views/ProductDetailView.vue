@@ -4,6 +4,8 @@ import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseCard from '@/components/base/BaseCard.vue'
+import RatingSubmissionModal from '@/components/profile/RatingSubmissionModal.vue'
+import StarRating from '@/components/profile/StarRating.vue'
 import { useAuth } from '@/composables/useAuth'
 import {
   buyProduct,
@@ -12,8 +14,16 @@ import {
   reserveProduct,
   resolveProductImageUrl,
 } from '@/services/product.service'
+import {
+  createUserRating,
+  resolveUserProfile,
+} from '@/services/user.service'
 import { useToastStore } from '@/stores/toast'
 import { useWalletStore } from '@/stores/wallet'
+import {
+  getConditionBadgeClass,
+  getProductCondition,
+} from '@/utils/product-condition'
 
 const { t } = useI18n()
 const route = useRoute()
@@ -28,13 +38,18 @@ const stateLabelByKey = {
 }
 
 const product = ref(null)
+const sellerProfile = ref(null)
 const selectedImageIndex = ref(0)
 const failedImageUrls = ref({})
 const isLoading = ref(true)
 const isUpdating = ref(false)
 const isBuyDialogOpen = ref(false)
+const isRatingDialogOpen = ref(false)
+const isSubmittingRating = ref(false)
 const loadError = ref('')
 const actionError = ref('')
+const ratingError = ref('')
+const completedPurchase = ref(null)
 
 const currencyFormatter = new Intl.NumberFormat('en-US', {
   currency: 'USD',
@@ -54,6 +69,41 @@ const selectedImage = computed(() => {
   return productImages.value[fallbackIndex] || ''
 })
 const sellerEmail = computed(() => product.value?.seller_id || '')
+const normalizeSellerIdentifier = (value) => String(value ?? '').trim()
+const isNumericSellerIdentifier = (value) => /^\d+$/.test(normalizeSellerIdentifier(value))
+const sellerProfileLookupId = computed(() => {
+  const sellerUserId = normalizeSellerIdentifier(product.value?.seller_user_id)
+
+  if (sellerUserId) {
+    return sellerUserId
+  }
+
+  return normalizeSellerIdentifier(sellerEmail.value)
+})
+const sellerProfileId = computed(() => {
+  const sellerUserId = normalizeSellerIdentifier(product.value?.seller_user_id)
+
+  if (isNumericSellerIdentifier(sellerUserId)) {
+    return sellerUserId
+  }
+
+  if (sellerProfile.value?.id !== null && sellerProfile.value?.id !== undefined) {
+    return String(sellerProfile.value.id)
+  }
+
+  const sellerId = normalizeSellerIdentifier(sellerEmail.value)
+
+  return isNumericSellerIdentifier(sellerId) ? sellerId : ''
+})
+const sellerProfileHref = computed(() => {
+  const identifier = sellerProfileId.value || sellerProfileLookupId.value
+
+  if (!identifier) {
+    return ''
+  }
+
+  return `#/users/${encodeURIComponent(identifier)}/profile`
+})
 const sellerInitial = computed(() => sellerEmail.value.trim().charAt(0).toUpperCase() || 'S')
 const normalizeProductState = (value) => {
   const key = String(value || 'Available').trim().toLowerCase()
@@ -113,8 +163,13 @@ const inactiveActionLabel = computed(() => {
   return normalizedState.value === 'sold' ? t('detail.sold') : t('detail.unavailable')
 })
 const formattedProductPrice = computed(() => currencyFormatter.format(product.value?.price || 0))
-const imageCountLabel = computed(() =>
-  t('detail.imageCount', { count: productImages.value.length }),
+const productCondition = computed(() => getProductCondition(product.value))
+const productConditionClass = computed(() => getConditionBadgeClass(productCondition.value))
+const sellerRating = computed(() =>
+  product.value?.seller_avg_rating ?? sellerProfile.value?.avg_rating ?? null
+)
+const sellerDisplayName = computed(() =>
+  sellerProfile.value?.username || sellerEmail.value || t('detail.unknownSeller')
 )
 const editRoute = computed(() => ({
   name: 'product-edit',
@@ -122,6 +177,22 @@ const editRoute = computed(() => ({
     id: product.value?.id || productId.value,
   },
 }))
+
+const resolveSellerProfileForProduct = async () => {
+  const identifier = sellerProfileLookupId.value
+
+  sellerProfile.value = null
+
+  if (!identifier) {
+    return
+  }
+
+  try {
+    sellerProfile.value = await resolveUserProfile(identifier)
+  } catch {
+    sellerProfile.value = null
+  }
+}
 
 const loadProduct = async () => {
   isLoading.value = true
@@ -132,6 +203,7 @@ const loadProduct = async () => {
 
   try {
     product.value = await getProductById(productId.value)
+    void resolveSellerProfileForProduct()
   } catch {
     product.value = null
     loadError.value = t('detail.errorLoad')
@@ -215,19 +287,60 @@ const confirmBuy = async () => {
   actionError.value = ''
 
   try {
-    await buyProduct(product.value)
+    const transaction = await buyProduct(product.value)
     await walletStore.fetchBalance().catch(() => {})
     product.value = {
       ...product.value,
       state: 'Sold',
     }
+    completedPurchase.value = transaction
     isBuyDialogOpen.value = false
+    isRatingDialogOpen.value = true
     toastStore.success(t('detail.purchaseCompleted'))
   } catch (error) {
     actionError.value =
       error?.response?.data?.detail || t('detail.errorBuy')
   } finally {
     isUpdating.value = false
+  }
+}
+
+const closeRatingDialog = () => {
+  if (isSubmittingRating.value) {
+    return
+  }
+
+  isRatingDialogOpen.value = false
+  ratingError.value = ''
+}
+
+const submitRating = async ({ reviewText, stars }) => {
+  const toUserId = Number(sellerProfileId.value)
+  const transactionId = Number(completedPurchase.value?.id)
+
+  if (!Number.isFinite(toUserId) || !Number.isFinite(transactionId)) {
+    ratingError.value = t('detail.errorRatingMissingSeller')
+    return
+  }
+
+  isSubmittingRating.value = true
+  ratingError.value = ''
+
+  try {
+    await createUserRating({
+      reviewText,
+      stars,
+      toUserId,
+      transactionId,
+    })
+    isRatingDialogOpen.value = false
+    toastStore.success(t('detail.ratingSubmitted'))
+    await resolveSellerProfileForProduct()
+  } catch (error) {
+    ratingError.value =
+      error?.response?.data?.detail || t('detail.errorRating')
+  } finally {
+    isSubmittingRating.value = false
   }
 }
 
@@ -316,23 +429,15 @@ loadProduct()
             </div>
             <div>
               <dt>{{ $t('detail.condition') }}</dt>
-              <dd>{{ product.condition || $t('detail.unspecified') }}</dd>
+              <dd>
+                <span class="condition-badge" :class="productConditionClass">
+                  {{ productCondition }}
+                </span>
+              </dd>
             </div>
             <div>
               <dt>{{ $t('detail.state') }}</dt>
               <dd>{{ $t(`products.states.${normalizedState}`) }}</dd>
-            </div>
-            <div>
-              <dt>{{ $t('detail.seller') }}</dt>
-              <dd>{{ sellerEmail || $t('detail.unknownSeller') }}</dd>
-            </div>
-            <div>
-              <dt>{{ $t('detail.productId') }}</dt>
-              <dd>{{ product.id }}</dd>
-            </div>
-            <div>
-              <dt>{{ $t('detail.images') }}</dt>
-              <dd>{{ imageCountLabel }}</dd>
             </div>
             <div>
               <dt>{{ $t('detail.listed') }}</dt>
@@ -340,19 +445,30 @@ loadProduct()
             </div>
           </dl>
 
-          <section class="seller-panel" :aria-label="$t('detail.seller')">
+          <component
+            :is="sellerProfileHref ? 'a' : 'section'"
+            class="seller-panel"
+            :class="{ 'seller-panel--link': sellerProfileHref }"
+            :href="sellerProfileHref || undefined"
+            :aria-label="$t('detail.seller')"
+          >
             <div class="seller-avatar" aria-hidden="true">
               {{ sellerInitial }}
             </div>
             <div class="seller-copy">
               <p class="seller-title">
-                {{ sellerEmail || $t('detail.unknownSeller') }}
+                {{ sellerDisplayName }}
               </p>
+              <StarRating
+                :value="sellerRating"
+                size="sm"
+                :empty-label="$t('rating.noRatings')"
+              />
               <p class="muted">
                 {{ isSeller ? $t('detail.youAreSeller') : $t('detail.marketplaceSeller') }}
               </p>
             </div>
-          </section>
+          </component>
 
           <div class="detail-actions">
             <BaseButton v-if="isSeller" :to="editRoute" variant="secondary">
@@ -454,6 +570,15 @@ loadProduct()
         </div>
       </section>
     </div>
+
+    <RatingSubmissionModal
+      v-if="isRatingDialogOpen"
+      :error="ratingError"
+      :is-submitting="isSubmittingRating"
+      :seller-name="sellerDisplayName"
+      @close="closeRatingDialog"
+      @submit="submitRating"
+    />
   </section>
 </template>
 
@@ -672,6 +797,21 @@ loadProduct()
   border: 1px solid rgba(17, 17, 17, 0.08);
   border-radius: 0.5rem;
   background: rgba(255, 255, 255, 0.68);
+}
+
+.seller-panel--link {
+  color: inherit;
+  cursor: pointer;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    transform 0.2s ease;
+}
+
+.seller-panel--link:hover {
+  border-color: rgba(17, 17, 17, 0.22);
+  box-shadow: 0 16px 34px rgba(17, 17, 17, 0.08);
+  transform: translateY(-1px);
 }
 
 .seller-avatar {

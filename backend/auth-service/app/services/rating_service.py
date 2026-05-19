@@ -44,6 +44,7 @@ def _check_transaction_eligibility(transaction_id: int, from_user_email: str):
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="No eres parte de esta transacción"
             )
+        return transaction
     except HTTPException:
         raise
     except Exception:
@@ -73,7 +74,31 @@ class RatingService:
                 detail="Usuario no encontrado"
             )
 
-        _check_transaction_eligibility(transaction_id, from_user_email)
+        to_user = self.user_repository.get_user_by_id(db, to_user_id)
+        if not to_user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Usuario valorado no encontrado"
+            )
+
+        if to_user.id == from_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="No puedes valorarte a ti mismo"
+            )
+
+        transaction = _check_transaction_eligibility(transaction_id, from_user_email)
+        if transaction:
+            counterparty_email = (
+                transaction.get("seller_id")
+                if transaction.get("buyer_id") == from_user_email
+                else transaction.get("buyer_id")
+            )
+            if to_user.email != counterparty_email:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Solo puedes valorar a la otra parte de la transacción"
+                )
 
         existing = self.rating_repository.get_rating_by_user_and_transaction(db, from_user.id, transaction_id)
         if existing:

@@ -1,5 +1,6 @@
 import { mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { i18n } from '@/i18n'
 import {
   BaseButtonStub,
   BaseCardStub,
@@ -65,6 +66,7 @@ vi.mock('@/stores/toast', () => ({
 const mountView = () =>
   mount(ProductCreateView, {
     global: {
+      plugins: [i18n],
       stubs: {
         BaseButton: BaseButtonStub,
         BaseCard: BaseCardStub,
@@ -89,6 +91,7 @@ const findButtonByText = (wrapper, text) =>
 describe('ProductCreateView', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    i18n.global.locale.value = 'en'
     routerState.route = {
       fullPath: '/products/new/create',
       name: 'product-create',

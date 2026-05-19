@@ -30,10 +30,22 @@ const normalizeImages = (images, fallbackImage) => {
     .filter(Boolean)
 }
 
+const toNumberOrNull = (value) => {
+  if (value === null || value === undefined || value === '') {
+    return null
+  }
+
+  const numberValue = Number(value)
+
+  return Number.isFinite(numberValue) ? numberValue : null
+}
+
 export const normalizeProduct = (product) => {
   if (!product || typeof product !== 'object') {
     return null
   }
+
+  const seller = product.seller && typeof product.seller === 'object' ? product.seller : {}
 
   return {
     id: product.id ?? null,
@@ -43,7 +55,26 @@ export const normalizeProduct = (product) => {
     price: typeof product.price === 'number' ? product.price : Number(product.price) || 0,
     condition: product.condition ?? '',
     state: normalizeProductState(product.checkout_state ?? product.state),
-    seller_id: product.seller_id ?? product.owner_id ?? '',
+    seller_id: product.seller_id ?? product.owner_id ?? seller.email ?? seller.username ?? '',
+    seller_user_id:
+      product.seller_user_id ??
+      product.sellerUserId ??
+      product.owner_user_id ??
+      product.ownerUserId ??
+      seller.id ??
+      null,
+    seller_avg_rating: toNumberOrNull(
+      product.seller_avg_rating ??
+      product.sellerAvgRating ??
+      product.avg_rating ??
+      seller.avg_rating ??
+      seller.average_rating,
+    ),
+    seller_rating_count: toNumberOrNull(
+      product.seller_rating_count ??
+      product.sellerRatingCount ??
+      seller.rating_count,
+    ),
     reserved_by: product.reserved_by ?? null,
     transaction_product_id:
       product.transaction_product_id ??
@@ -76,6 +107,18 @@ const addStringFilter = (params, key, value) => {
   }
 }
 
+const addStringListFilter = (params, key, value) => {
+  const values = (Array.isArray(value) ? value : [value])
+    .map((entry) => String(entry ?? '').trim())
+    .filter(Boolean)
+
+  if (values.length === 1) {
+    params[key] = values[0]
+  } else if (values.length > 1) {
+    params[key] = values
+  }
+}
+
 const addPriceFilter = (params, key, value) => {
   if (value === '' || value === null || value === undefined) {
     return
@@ -93,16 +136,35 @@ export const normalizeProductFilters = (filters = {}) => {
 
   addStringFilter(params, 'state', filters.state)
   addStringFilter(params, 'category', filters.category)
-  addStringFilter(params, 'condition', filters.condition)
+  addStringListFilter(params, 'condition', filters.conditions ?? filters.condition)
   addPriceFilter(params, 'min_price', filters.min_price ?? filters.minPrice)
   addPriceFilter(params, 'max_price', filters.max_price ?? filters.maxPrice)
 
   return params
 }
 
+const serializeRepeatedParams = (params) => {
+  const searchParams = new URLSearchParams()
+
+  Object.entries(params).forEach(([key, value]) => {
+    const values = Array.isArray(value) ? value : [value]
+
+    values.forEach((entry) => {
+      if (entry !== '' && entry !== null && entry !== undefined) {
+        searchParams.append(key, entry)
+      }
+    })
+  })
+
+  return searchParams.toString()
+}
+
 export const listProducts = async (filters = {}) => {
   const { data } = await inventoryApiClient.get('/products', {
     params: normalizeProductFilters(filters),
+    paramsSerializer: {
+      serialize: serializeRepeatedParams,
+    },
   })
 
   const products = normalizeProducts(data)

@@ -43,4 +43,10 @@ describe('router auth guard', () => {
 
     expect(router.currentRoute.value.path).toBe('/products')
   })
+
+  it('allows public user profile pages without a token', async () => {
+    await router.push('/users/7/profile')
+
+    expect(router.currentRoute.value.path).toBe('/users/7/profile')
+  })
 })

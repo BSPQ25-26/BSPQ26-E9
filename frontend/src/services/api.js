@@ -143,6 +143,9 @@ const createApiClient = ({ baseURL = defaultBaseUrl, pathPrefix = '' } = {}) => 
 }
 
 export const apiClient = createApiClient()
+export const authRootApiClient = createApiClient({
+  baseURL: import.meta.env.VITE_API_AUTH_URL || defaultBaseUrl,
+})
 export const authApiClient = createApiClient({
   baseURL: import.meta.env.VITE_API_AUTH_URL || defaultBaseUrl,
   pathPrefix: 'auth',

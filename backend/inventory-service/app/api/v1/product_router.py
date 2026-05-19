@@ -66,7 +66,7 @@ def list_products(
         description="Maximum product price.",
         examples=[300],
     ),
-    condition: ProductCondition | None = Query(
+    condition: list[ProductCondition] | None = Query(
         default=None,
         description="Filter products by item condition.",
         examples=["Like New"],
@@ -100,8 +100,8 @@ def list_products(
     if max_price is not None:
         query = query.filter(Product.price <= max_price)
 
-    if condition is not None:
-        query = query.filter(Product.condition == condition.value)
+    if condition:
+        query = query.filter(Product.condition.in_([item.value for item in condition]))
 
     # Keyword text search
     if q is not None and q.strip():

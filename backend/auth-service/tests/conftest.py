@@ -4,19 +4,18 @@ import sys
 
 # Add service root first so this service's `app` package wins in multi-service runs.
 service_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-if service_root not in sys.path:
-    sys.path.insert(0, service_root)
+if service_root in sys.path:
+    sys.path.remove(service_root)
+sys.path.insert(0, service_root)
+
+for module_name in list(sys.modules):
+    if module_name == "app" or module_name.startswith("app."):
+        del sys.modules[module_name]
 
 import pytest  # noqa: E402
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-
-from app.main import app
-from app.db.base import Base
-from app.db.session import get_db
-
-
 
 TEST_DATABASE_URL = os.getenv(
     "TEST_DATABASE_URL",
@@ -36,6 +35,22 @@ TestingSessionLocal = sessionmaker(
 )
 
 
+def _load_service_modules():
+    if service_root in sys.path:
+        sys.path.remove(service_root)
+    sys.path.insert(0, service_root)
+
+    for module_name in list(sys.modules):
+        if module_name == "app" or module_name.startswith("app."):
+            del sys.modules[module_name]
+
+    from app.db.base import Base
+    from app.db.session import get_db
+    from app.main import app
+
+    return app, Base, get_db
+
+
 def override_get_db():
     db = TestingSessionLocal()
     try:
@@ -46,6 +61,8 @@ def override_get_db():
 
 @pytest.fixture()
 def db():
+    _app, Base, _get_db = _load_service_modules()
+
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
     session = TestingSessionLocal()
@@ -58,6 +75,8 @@ def db():
 
 @pytest.fixture()
 def client():
+    app, Base, get_db = _load_service_modules()
+
     # Crear tablas limpias antes de cada test
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)

@@ -2,8 +2,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const apiState = vi.hoisted(() => ({
   inventoryApiClient: {
+    delete: vi.fn(),
     get: vi.fn(),
     post: vi.fn(),
+    put: vi.fn(),
   },
   transactionApiClient: {
     get: vi.fn(),
@@ -18,6 +20,15 @@ describe('product service', () => {
     vi.resetModules()
     vi.clearAllMocks()
     window.localStorage.clear()
+    apiState.inventoryApiClient.delete.mockResolvedValue({})
+    apiState.inventoryApiClient.put.mockImplementation((url, payload) => Promise.resolve({
+      data: {
+        id: Number(String(url).split('/').pop()),
+        title: 'Camera',
+        price: 120,
+        ...payload,
+      },
+    }))
   })
 
   it('loads product detail from the catalog first to avoid forbidden detail requests', async () => {
@@ -41,9 +52,12 @@ describe('product service', () => {
     })
 
     expect(apiState.inventoryApiClient.get).toHaveBeenCalledTimes(1)
-    expect(apiState.inventoryApiClient.get).toHaveBeenCalledWith('/products', {
-      params: {},
-    })
+    expect(apiState.inventoryApiClient.get).toHaveBeenCalledWith(
+      '/products',
+      expect.objectContaining({
+        params: {},
+      }),
+    )
   })
 
   it('falls back to the detail endpoint only when the product is missing from the catalog', async () => {
@@ -68,9 +82,13 @@ describe('product service', () => {
       seller_id: 'seller@example.com',
     })
 
-    expect(apiState.inventoryApiClient.get).toHaveBeenNthCalledWith(1, '/products', {
-      params: {},
-    })
+    expect(apiState.inventoryApiClient.get).toHaveBeenNthCalledWith(
+      1,
+      '/products',
+      expect.objectContaining({
+        params: {},
+      }),
+    )
     expect(apiState.inventoryApiClient.get).toHaveBeenNthCalledWith(2, '/products/2')
   })
 
@@ -107,6 +125,7 @@ describe('product service', () => {
           id: 7,
           title: 'Camera',
           price: 120,
+          transaction_product_id: 15,
         },
       ],
     })
@@ -145,6 +164,39 @@ describe('product service', () => {
       price: 120,
     })
     expect(apiState.transactionApiClient.get).toHaveBeenCalledWith('/products/15')
+  })
+
+  it('normalizes repeated condition filters for catalog requests', async () => {
+    const { listProducts } = await import('@/services/product.service')
+
+    apiState.inventoryApiClient.get.mockResolvedValueOnce({
+      data: [],
+    })
+
+    await listProducts({
+      category: 'Furniture',
+      condition: ['Good', 'Poor'],
+      maxPrice: '100',
+      minPrice: '10',
+    })
+
+    expect(apiState.inventoryApiClient.get).toHaveBeenCalledWith(
+      '/products',
+      expect.objectContaining({
+        params: {
+          category: 'Furniture',
+          condition: ['Good', 'Poor'],
+          max_price: 100,
+          min_price: 10,
+        },
+      }),
+    )
+
+    const requestConfig = apiState.inventoryApiClient.get.mock.calls[0][1]
+
+    expect(requestConfig.paramsSerializer.serialize(requestConfig.params)).toBe(
+      'category=Furniture&condition=Good&condition=Poor&min_price=10&max_price=100',
+    )
   })
 
   it('uses the mapped transaction product ID for reserve, buy, and cancellation', async () => {
@@ -219,6 +271,7 @@ describe('product service', () => {
           id: 7,
           title: 'Camera',
           state: 'Available',
+          transaction_product_id: 15,
         },
       ],
     })
