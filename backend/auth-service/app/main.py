@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from app.api.v1.auth_router import router as auth_router
 from app.api.v1.social_auth_router import router as social_auth_router
+from app.api.v1.rating_router import router as rating_router
+from app.api.v1.user_router import router as user_router
 from app.db.init_db import init_db
 
 app = FastAPI()
@@ -18,3 +20,5 @@ def health():
 
 app.include_router(auth_router)
 app.include_router(social_auth_router)
+app.include_router(rating_router)
+app.include_router(user_router)
