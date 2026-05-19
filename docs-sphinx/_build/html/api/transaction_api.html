@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Transaction Service API &mdash; Wallabot 3.0.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=e8a114e6" />
+
+  
+  <!--[if lt IE 9]>
+    <script src="../_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="../_static/jquery.js?v=5d32c60e"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../_static/documentation_options.js?v=acc74ff5"></script>
+        <script src="../_static/doctools.js?v=888ff710"></script>
+        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Agentic Service API (Wallabot)" href="agentic_api.html" />
+    <link rel="prev" title="Inventory Service API" href="inventory_api.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            Wallabot
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Project Overview</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../overview.html">Project Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../architecture.html">System Architecture</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">REST API Reference</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">REST API Reference</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="auth_api.html">Auth Service API</a></li>
+<li class="toctree-l2"><a class="reference internal" href="inventory_api.html">Inventory Service API</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">Transaction Service API</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#health-check">Health Check</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#get-health"><code class="docutils literal notranslate"><span class="pre">GET</span> <span class="pre">/health</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#wallet">Wallet</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#get-wallet-balance"><code class="docutils literal notranslate"><span class="pre">GET</span> <span class="pre">/wallet/balance</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#post-wallet-deposit"><code class="docutils literal notranslate"><span class="pre">POST</span> <span class="pre">/wallet/deposit</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#products-transaction-view">Products (Transaction View)</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#get-products"><code class="docutils literal notranslate"><span class="pre">GET</span> <span class="pre">/products</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#post-products-product-id-reserve"><code class="docutils literal notranslate"><span class="pre">POST</span> <span class="pre">/products/{product_id}/reserve</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#delete-products-product-id-reserve"><code class="docutils literal notranslate"><span class="pre">DELETE</span> <span class="pre">/products/{product_id}/reserve</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#post-products-product-id-purchase"><code class="docutils literal notranslate"><span class="pre">POST</span> <span class="pre">/products/{product_id}/purchase</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#transactions">Transactions</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#get-transactions"><code class="docutils literal notranslate"><span class="pre">GET</span> <span class="pre">/transactions</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="#error-reference">Error Reference</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#reservation-cleanup-daemon">Reservation Cleanup Daemon</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="agentic_api.html">Agentic Service API (Wallabot)</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Testing &amp; Quality</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../testing.html">Testing &amp; Quality</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">DevOps &amp; CI/CD</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../devops.html">DevOps &amp; CI/CD</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">Wallabot</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">REST API Reference</a></li>
+      <li class="breadcrumb-item active">Transaction Service API</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/api/transaction_api.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="transaction-service-api">
+<h1>Transaction Service API<a class="headerlink" href="#transaction-service-api" title="Link to this heading"></a></h1>
+<p><strong>Base URL (local):</strong> <code class="docutils literal notranslate"><span class="pre">http://localhost:8003</span></code></p>
+<p>The Transaction Service owns the commerce domain. It manages a digital wallet per user,
+coordinates product reservations (with automatic timeout expiry), and processes purchases
+via atomic wallet debit operations. It also exposes transaction history.</p>
+<p>All endpoints require authentication (<code class="docutils literal notranslate"><span class="pre">Authorization:</span> <span class="pre">Bearer</span> <span class="pre">&lt;token&gt;</span></code>).</p>
+<hr class="docutils" />
+<section id="health-check">
+<h2>Health Check<a class="headerlink" href="#health-check" title="Link to this heading"></a></h2>
+<section id="get-health">
+<h3><code class="docutils literal notranslate"><span class="pre">GET</span> <span class="pre">/health</span></code><a class="headerlink" href="#get-health" title="Link to this heading"></a></h3>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ok&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;service&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;transaction-service&quot;</span><span class="w"> </span><span class="p">}</span>
+</pre></div>
+</div>
+</section>
+</section>
+<hr class="docutils" />
+<section id="wallet">
+<h2>Wallet<a class="headerlink" href="#wallet" title="Link to this heading"></a></h2>
+<section id="get-wallet-balance">
+<h3><code class="docutils literal notranslate"><span class="pre">GET</span> <span class="pre">/wallet/balance</span></code><a class="headerlink" href="#get-wallet-balance" title="Link to this heading"></a></h3>
+<p>Returns the authenticated user’s current wallet balance in EUR.</p>
+<p><strong>Response 200</strong></p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;balance&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">250.00</span><span class="w"> </span><span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<hr class="docutils" />
+<section id="post-wallet-deposit">
+<h3><code class="docutils literal notranslate"><span class="pre">POST</span> <span class="pre">/wallet/deposit</span></code><a class="headerlink" href="#post-wallet-deposit" title="Link to this heading"></a></h3>
+<p>Adds funds to the authenticated user’s wallet.</p>
+<p><strong>Request body</strong></p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Field</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Required</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">amount</span></code></p></td>
+<td><p>float (&gt; 0)</p></td>
+<td><p>yes</p></td>
+<td><p>Amount in EUR to deposit</p></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Request example</strong></p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;amount&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">100.00</span><span class="w"> </span><span class="p">}</span>
+</pre></div>
+</div>
+<p><strong>Response 200</strong></p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;balance&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">350.00</span><span class="w"> </span><span class="p">}</span>
+</pre></div>
+</div>
+<p><strong>Response 422</strong> — invalid amount (e.g. zero or negative)</p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="products-transaction-view">
+<h2>Products (Transaction View)<a class="headerlink" href="#products-transaction-view" title="Link to this heading"></a></h2>
+<p>Products in this service mirror the inventory catalogue and track commerce-specific state.</p>
+<section id="get-products">
+<h3><code class="docutils literal notranslate"><span class="pre">GET</span> <span class="pre">/products</span></code><a class="headerlink" href="#get-products" title="Link to this heading"></a></h3>
+<p>Lists all products. Optional query parameter <code class="docutils literal notranslate"><span class="pre">state</span></code> to filter.</p>
+<p><strong>Query parameters</strong></p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Parameter</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">state</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Available</span></code> | <code class="docutils literal notranslate"><span class="pre">Reserved</span></code> | <code class="docutils literal notranslate"><span class="pre">Sold</span></code></p></td>
+<td><p>Filter by state</p></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Response 200</strong> — array of <code class="docutils literal notranslate"><span class="pre">ProductResponse</span></code></p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">[</span>
+<span class="w">  </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;title&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;iPhone 13 Pro 128GB&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;price&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">420.00</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;state&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Available&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;seller_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;alice@example.com&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;reserved_by&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">]</span>
+</pre></div>
+</div>
+</section>
+<hr class="docutils" />
+<section id="post-products-product-id-reserve">
+<h3><code class="docutils literal notranslate"><span class="pre">POST</span> <span class="pre">/products/{product_id}/reserve</span></code><a class="headerlink" href="#post-products-product-id-reserve" title="Link to this heading"></a></h3>
+<p>Places a time-limited reservation on a product. Only one reservation per product is active
+at a time.</p>
+<p><strong>Path parameter</strong></p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Parameter</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">product_id</span></code></p></td>
+<td><p>integer</p></td>
+<td><p>Product to reserve</p></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Reservation timeout</strong></p>
+<p>The reservation expires after <code class="docutils literal notranslate"><span class="pre">RESERVATION_TIMEOUT_SECONDS</span></code> (default: 600 s / 10 min).
+A background daemon automatically releases expired reservations and transitions the product
+back to <code class="docutils literal notranslate"><span class="pre">Available</span></code>.</p>
+<p><strong>Response 200</strong> — reservation created</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;state&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Reserved&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;reserved_by&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;buyer@example.com&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><strong>Response 404</strong> — product not found</p>
+<p><strong>Response 409</strong> — product already reserved or sold (<code class="docutils literal notranslate"><span class="pre">ReservationConflictException</span></code>)</p>
+<p><strong>Response 403</strong> — seller cannot reserve their own product</p>
+</section>
+<hr class="docutils" />
+<section id="delete-products-product-id-reserve">
+<h3><code class="docutils literal notranslate"><span class="pre">DELETE</span> <span class="pre">/products/{product_id}/reserve</span></code><a class="headerlink" href="#delete-products-product-id-reserve" title="Link to this heading"></a></h3>
+<p>Explicitly releases an active reservation. Only the buyer who reserved the product can
+release it.</p>
+<p><strong>Response 200</strong> — reservation released</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;state&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Available&quot;</span><span class="w"> </span><span class="p">}</span>
+</pre></div>
+</div>
+<p><strong>Response 400</strong> — product is not in <code class="docutils literal notranslate"><span class="pre">Reserved</span></code> state (<code class="docutils literal notranslate"><span class="pre">ReservationReleaseInvalidStateException</span></code>)</p>
+<p><strong>Response 403</strong> — not the reservation owner</p>
+</section>
+<hr class="docutils" />
+<section id="post-products-product-id-purchase">
+<h3><code class="docutils literal notranslate"><span class="pre">POST</span> <span class="pre">/products/{product_id}/purchase</span></code><a class="headerlink" href="#post-products-product-id-purchase" title="Link to this heading"></a></h3>
+<p>Completes the purchase of a reserved product. The buyer’s wallet is debited atomically;
+the seller’s wallet is credited.</p>
+<p><strong>Path parameter</strong></p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Parameter</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">product_id</span></code></p></td>
+<td><p>integer</p></td>
+<td><p>Product to purchase (must be <code class="docutils literal notranslate"><span class="pre">Reserved</span></code> by the caller)</p></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Response 200</strong> — purchase completed</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;transaction_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">17</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;product_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;buyer_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;buyer@example.com&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;seller_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;alice@example.com&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;amount&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">420.00</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;created_at&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-05-19T11:30:00Z&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><strong>Response 402</strong> — insufficient wallet funds (<code class="docutils literal notranslate"><span class="pre">InsufficientFundsException</span></code>)</p>
+<p><strong>Response 403</strong> — product is reserved by a different user (<code class="docutils literal notranslate"><span class="pre">PurchaseReservedByOtherException</span></code>)</p>
+<p><strong>Response 404</strong> — product not found</p>
+<p><strong>Response 409</strong> — invalid state transition (<code class="docutils literal notranslate"><span class="pre">InvalidStateTransitionException</span></code>)</p>
+</section>
+</section>
+<hr class="docutils" />
+<section id="transactions">
+<h2>Transactions<a class="headerlink" href="#transactions" title="Link to this heading"></a></h2>
+<section id="get-transactions">
+<h3><code class="docutils literal notranslate"><span class="pre">GET</span> <span class="pre">/transactions</span></code><a class="headerlink" href="#get-transactions" title="Link to this heading"></a></h3>
+<p>Returns the authenticated user’s full transaction history (as buyer or seller), newest first.</p>
+<p><strong>Query parameters</strong></p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Parameter</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Default</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">skip</span></code></p></td>
+<td><p>integer</p></td>
+<td><p>0</p></td>
+<td><p>Pagination offset</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">limit</span></code></p></td>
+<td><p>integer</p></td>
+<td><p>50</p></td>
+<td><p>Maximum records to return</p></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Response 200</strong> — <code class="docutils literal notranslate"><span class="pre">TransactionHistoryListResponse</span></code></p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;total&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;transactions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">    </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;transaction_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">17</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;product_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;product_title&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;iPhone 13 Pro 128GB&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;buyer_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;buyer@example.com&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;seller_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;alice@example.com&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;amount&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">420.00</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;role&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;buyer&quot;</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;created_at&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-05-19T11:30:00Z&quot;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Field</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">role</span></code></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">&quot;buyer&quot;</span></code> or <code class="docutils literal notranslate"><span class="pre">&quot;seller&quot;</span></code> — the authenticated user’s role in the transaction</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<hr class="docutils" />
+<section id="error-reference">
+<h2>Error Reference<a class="headerlink" href="#error-reference" title="Link to this heading"></a></h2>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Exception class</p></th>
+<th class="head"><p>HTTP status</p></th>
+<th class="head"><p>Meaning</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ProductNotFoundException</span></code></p></td>
+<td><p>404</p></td>
+<td><p>Product ID does not exist</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ProductForbiddenException</span></code></p></td>
+<td><p>403</p></td>
+<td><p>Caller is not allowed to act on this product</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">InvalidStateTransitionException</span></code></p></td>
+<td><p>409</p></td>
+<td><p>Requested state transition is not allowed by the state machine</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">InsufficientFundsException</span></code></p></td>
+<td><p>402</p></td>
+<td><p>Buyer’s wallet balance is below the product price</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">AtomicOperationException</span></code></p></td>
+<td><p>500</p></td>
+<td><p>Database write failed mid-transaction (rolled back)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ReservationConflictException</span></code></p></td>
+<td><p>409</p></td>
+<td><p>Product is already reserved or sold</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">PurchaseReservedByOtherException</span></code></p></td>
+<td><p>403</p></td>
+<td><p>Product is reserved by a different user</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ReservationReleaseInvalidStateException</span></code></p></td>
+<td><p>400</p></td>
+<td><p>Cannot release — product is not currently reserved</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<hr class="docutils" />
+<section id="reservation-cleanup-daemon">
+<h2>Reservation Cleanup Daemon<a class="headerlink" href="#reservation-cleanup-daemon" title="Link to this heading"></a></h2>
+<p>A background thread runs inside the Transaction Service and periodically scans for
+reservations whose <code class="docutils literal notranslate"><span class="pre">reserved_at</span></code> timestamp exceeds <code class="docutils literal notranslate"><span class="pre">RESERVATION_TIMEOUT_SECONDS</span></code>.
+Expired reservations are released automatically, transitioning the product back to
+<code class="docutils literal notranslate"><span class="pre">Available</span></code>. The cleanup interval is controlled by
+<code class="docutils literal notranslate"><span class="pre">RESERVATION_CLEANUP_INTERVAL_SECONDS</span></code> (default: 60 s).</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="inventory_api.html" class="btn btn-neutral float-left" title="Inventory Service API" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="agentic_api.html" class="btn btn-neutral float-right" title="Agentic Service API (Wallabot)" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, BSPQ26-E9.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
