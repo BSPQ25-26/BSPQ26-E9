@@ -49,10 +49,26 @@
 <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Project Overview</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#what-is-wallabot">What is Wallabot?</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#key-features">Key Features</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#sprint-deliverables">Sprint Deliverables</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#key-features">Key Features</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#user-management-authentication">User Management &amp; Authentication</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#product-catalogue">Product Catalogue</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#ai-powered-seller-assistance">AI-Powered Seller Assistance</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#wallet-commerce">Wallet &amp; Commerce</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#social-features">Social Features</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#internationalisation">Internationalisation</a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="#technology-stack">Technology Stack</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#repository-layout">Repository Layout</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#local-quick-start">Local Quick-Start</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#design-principles">Design Principles</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#microservices-with-no-shared-database">Microservices with No Shared Database</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#stateless-jwt-authentication">Stateless JWT Authentication</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#reliability-by-design">Reliability by Design</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#immutable-audit-trails">Immutable Audit Trails</a></li>
+</ul>
+</li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="architecture.html">System Architecture</a></li>
@@ -60,6 +76,10 @@
 <p class="caption" role="heading"><span class="caption-text">REST API Reference</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="api/index.html">REST API Reference</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Wallabot AI Agent</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="wallabot_agent.html">Wallabot AI Agent</a></li>
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Testing &amp; Quality</span></p>
 <ul>
@@ -99,117 +119,351 @@
 <section id="what-is-wallabot">
 <h2>What is Wallabot?<a class="headerlink" href="#what-is-wallabot" title="Link to this heading"></a></h2>
 <p>Wallabot is a full-stack <strong>C2C (consumer-to-consumer) second-hand marketplace</strong> inspired by
-Wallapop. It allows users to list products, browse listings, reserve items, and complete
-purchases through a digital wallet. The platform is augmented by an AI subsystem — the
-<em>Wallabot Agentic Service</em> — which provides intelligent product classification and price
-recommendations powered by LangChain and OpenAI GPT-4o-mini.</p>
+Wallapop. It allows registered users to list products, browse the catalogue, reserve items,
+and complete peer-to-peer purchases through an integrated digital wallet. The platform is
+augmented by an AI subsystem — the <em>Wallabot Agentic Service</em> — which provides intelligent
+product category suggestion and live market-based price estimation powered by LangChain LCEL,
+OpenAI GPT-4o-mini, and Tavily web search.</p>
+<p>The project was developed across three sprints by team <strong>BSPQ26-E9</strong> as part of the
+Software Engineering course at the University of Deusto.</p>
 </section>
+<hr class="docutils" />
+<section id="sprint-deliverables">
+<h2>Sprint Deliverables<a class="headerlink" href="#sprint-deliverables" title="Link to this heading"></a></h2>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Sprint</p></th>
+<th class="head"><p>Main deliverables</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Sprint 1</p></td>
+<td><p>User registration &amp; login, product CRUD, basic catalogue browsing</p></td>
+</tr>
+<tr class="row-odd"><td><p>Sprint 2</p></td>
+<td><p>Digital wallet, product reservation with configurable timeout, atomic purchase flow, transaction history</p></td>
+</tr>
+<tr class="row-even"><td><p>Sprint 3</p></td>
+<td><p>AI category suggestion agent, AI price recommendation agent, LangSmith observability tracing, user ratings system, public user profiles, full-text search on catalogue</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<hr class="docutils" />
 <section id="key-features">
 <h2>Key Features<a class="headerlink" href="#key-features" title="Link to this heading"></a></h2>
+<section id="user-management-authentication">
+<h3>User Management &amp; Authentication<a class="headerlink" href="#user-management-authentication" title="Link to this heading"></a></h3>
 <ul class="simple">
-<li><p><strong>User authentication</strong> — email/password registration and login with JWT, plus OAuth via
-Google and Facebook.</p></li>
-<li><p><strong>Product catalogue</strong> — create, browse, filter, and search listings with image uploads.</p></li>
-<li><p><strong>Smart AI assistance</strong> — automatic category suggestion and market-based price estimation
-when creating a listing.</p></li>
-<li><p><strong>Wallet &amp; transactions</strong> — deposit funds, reserve products, and complete peer-to-peer
-purchases atomically.</p></li>
-<li><p><strong>User ratings</strong> — buyers and sellers can rate each other after a completed transaction.</p></li>
-<li><p><strong>Internationalisation</strong> — the frontend supports English and Spanish (<code class="docutils literal notranslate"><span class="pre">vue-i18n</span></code>).</p></li>
+<li><p>Email and password registration with <strong>bcrypt</strong> password hashing</p></li>
+<li><p>JWT-based stateless authentication (HS256) shared across all microservices via a
+single <code class="docutils literal notranslate"><span class="pre">SECRET_KEY</span></code> environment variable — no inter-service token validation call per request</p></li>
+<li><p>Social login via <strong>Google OAuth 2.0</strong> and <strong>Facebook OAuth</strong> using the <code class="docutils literal notranslate"><span class="pre">authlib</span></code> library</p></li>
+<li><p>Account linking: a social account is bound to one provider and rejects conflicting
+link attempts (you cannot link the same email to two different providers)</p></li>
+<li><p>Token payload: <code class="docutils literal notranslate"><span class="pre">{&quot;sub&quot;:</span> <span class="pre">&quot;&lt;user_email&gt;&quot;,</span> <span class="pre">&quot;exp&quot;:</span> <span class="pre">&lt;unix_timestamp&gt;}</span></code></p></li>
 </ul>
 </section>
+<section id="product-catalogue">
+<h3>Product Catalogue<a class="headerlink" href="#product-catalogue" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p>Full CRUD for product listings with optional image upload</p></li>
+<li><p>Advanced filtering by state, category, price range, condition, and free-text keyword
+search (SQLite <code class="docutils literal notranslate"><span class="pre">LIKE</span></code> in development; full-text search enabled in PostgreSQL production)</p></li>
+<li><p>Images stored on the local filesystem (<code class="docutils literal notranslate"><span class="pre">data/uploads/</span></code>) in development or on
+<strong>Supabase Storage</strong> in production (configurable via environment variables)</p></li>
+<li><p>Product conditions: <code class="docutils literal notranslate"><span class="pre">New</span></code>, <code class="docutils literal notranslate"><span class="pre">Like</span> <span class="pre">New</span></code>, <code class="docutils literal notranslate"><span class="pre">Good</span></code>, <code class="docutils literal notranslate"><span class="pre">Fair</span></code>, <code class="docutils literal notranslate"><span class="pre">Poor</span></code></p></li>
+<li><p>Product states: <code class="docutils literal notranslate"><span class="pre">Available</span></code>, <code class="docutils literal notranslate"><span class="pre">Reserved</span></code>, <code class="docutils literal notranslate"><span class="pre">Sold</span></code></p></li>
+</ul>
+</section>
+<section id="ai-powered-seller-assistance">
+<h3>AI-Powered Seller Assistance<a class="headerlink" href="#ai-powered-seller-assistance" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p><strong>Category suggestion</strong> — the Wallabot agent classifies a new listing into the most
+appropriate category from a caller-provided taxonomy using GPT-4o-mini</p></li>
+<li><p><strong>Price recommendation</strong> — the agent queries Tavily for live market prices and returns
+a structured EUR estimate (point estimate + range) adjusted for declared condition</p></li>
+<li><p>Both agents operate with full retry logic (up to 3 attempts with correction feedback)
+and graceful fallbacks so the seller always receives a usable response</p></li>
+<li><p>Optional <strong>LangSmith</strong> tracing for every chain invocation (validation failures,
+latency threshold alerts, full input/output traces)</p></li>
+</ul>
+</section>
+<section id="wallet-commerce">
+<h3>Wallet &amp; Commerce<a class="headerlink" href="#wallet-commerce" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p>Digital wallet with an <strong>append-only ledger</strong> pattern — balance is never stored
+directly but derived from the last entry in <code class="docutils literal notranslate"><span class="pre">wallet_ledger</span></code> for tamper-proof auditability</p></li>
+<li><p><strong>Reservation system</strong> with a configurable timeout and a background cleanup daemon that
+automatically releases expired reservations and returns products to <code class="docutils literal notranslate"><span class="pre">Available</span></code></p></li>
+<li><p><strong>Atomic purchase</strong>: wallet debit (buyer) and wallet credit (seller) are executed
+simultaneously with the product state transition in a single database transaction,
+preventing partial-update inconsistencies</p></li>
+<li><p>Complete per-user transaction history</p></li>
+</ul>
+</section>
+<section id="social-features">
+<h3>Social Features<a class="headerlink" href="#social-features" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p>Star ratings (1–5 stars) with optional free-text review, submitted after a completed
+transaction</p></li>
+<li><p>Public user profiles: shows average rating, number of active listings, and member-since
+date</p></li>
+</ul>
+</section>
+<section id="internationalisation">
+<h3>Internationalisation<a class="headerlink" href="#internationalisation" title="Link to this heading"></a></h3>
+<ul class="simple">
+<li><p>Full English and Spanish UI support via <code class="docutils literal notranslate"><span class="pre">vue-i18n</span></code> (9.14.5)</p></li>
+<li><p>Language selection persisted in <code class="docutils literal notranslate"><span class="pre">localStorage</span></code></p></li>
+<li><p>All API error messages bilingual where applicable</p></li>
+</ul>
+</section>
+</section>
+<hr class="docutils" />
 <section id="technology-stack">
 <h2>Technology Stack<a class="headerlink" href="#technology-stack" title="Link to this heading"></a></h2>
 <table class="docutils align-default">
 <thead>
 <tr class="row-odd"><th class="head"><p>Layer</p></th>
 <th class="head"><p>Technology</p></th>
+<th class="head"><p>Version</p></th>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p>Frontend</p></td>
-<td><p>Vue 3, Vite, Pinia, Vue Router, Axios, vue-i18n</p></td>
+<tr class="row-even"><td><p>Frontend framework</p></td>
+<td><p>Vue 3</p></td>
+<td><p>3.5.30</p></td>
 </tr>
-<tr class="row-odd"><td><p>Backend (all services)</p></td>
-<td><p>Python 3.11+, FastAPI 0.135, SQLAlchemy 2, Pydantic v2</p></td>
+<tr class="row-odd"><td><p>Frontend build tool</p></td>
+<td><p>Vite</p></td>
+<td><p>8.0.0</p></td>
 </tr>
-<tr class="row-even"><td><p>AI / Agentic subsystem</p></td>
-<td><p>LangChain LCEL, OpenAI GPT-4o-mini, Tavily Web Search</p></td>
+<tr class="row-even"><td><p>State management</p></td>
+<td><p>Pinia</p></td>
+<td><p>3.0.4</p></td>
 </tr>
-<tr class="row-odd"><td><p>Observability</p></td>
-<td><p>LangSmith tracing (optional), structlog structured logging</p></td>
+<tr class="row-odd"><td><p>HTTP client</p></td>
+<td><p>Axios</p></td>
+<td><p>1.13.6</p></td>
 </tr>
-<tr class="row-even"><td><p>Database (local)</p></td>
-<td><p>SQLite per service</p></td>
+<tr class="row-even"><td><p>Internationalisation</p></td>
+<td><p>vue-i18n</p></td>
+<td><p>9.14.5</p></td>
+</tr>
+<tr class="row-odd"><td><p>Backend framework</p></td>
+<td><p>FastAPI</p></td>
+<td><p>0.135.1</p></td>
+</tr>
+<tr class="row-even"><td><p>Language</p></td>
+<td><p>Python</p></td>
+<td><p>3.11+</p></td>
+</tr>
+<tr class="row-odd"><td><p>ORM</p></td>
+<td><p>SQLAlchemy</p></td>
+<td><p>2.0.48</p></td>
+</tr>
+<tr class="row-even"><td><p>Request validation</p></td>
+<td><p>Pydantic v2</p></td>
+<td><p>latest</p></td>
+</tr>
+<tr class="row-odd"><td><p>AI orchestration</p></td>
+<td><p>LangChain LCEL</p></td>
+<td><p>latest</p></td>
+</tr>
+<tr class="row-even"><td><p>LLM</p></td>
+<td><p>OpenAI GPT-4o-mini</p></td>
+<td><p>via API</p></td>
+</tr>
+<tr class="row-odd"><td><p>Web search</p></td>
+<td><p>Tavily</p></td>
+<td><p>via API</p></td>
+</tr>
+<tr class="row-even"><td><p>Observability</p></td>
+<td><p>LangSmith</p></td>
+<td><p>optional</p></td>
+</tr>
+<tr class="row-odd"><td><p>Structured logging</p></td>
+<td><p>structlog</p></td>
+<td><p>latest</p></td>
+</tr>
+<tr class="row-even"><td><p>JWT / crypto</p></td>
+<td><p>python-jose + passlib</p></td>
+<td><p>latest</p></td>
+</tr>
+<tr class="row-odd"><td><p>Social OAuth</p></td>
+<td><p>authlib</p></td>
+<td><p>latest</p></td>
+</tr>
+<tr class="row-even"><td><p>Database (dev / CI)</p></td>
+<td><p>SQLite (per service)</p></td>
+<td><p>bundled</p></td>
 </tr>
 <tr class="row-odd"><td><p>Database (production)</p></td>
-<td><p>PostgreSQL on Supabase, 3 service-scoped roles</p></td>
+<td><p>PostgreSQL on Supabase</p></td>
+<td><p>latest</p></td>
 </tr>
-<tr class="row-even"><td><p>Container</p></td>
-<td><p>Docker, Docker Compose</p></td>
+<tr class="row-even"><td><p>Containerisation</p></td>
+<td><p>Docker + Docker Compose</p></td>
+<td><p>latest</p></td>
 </tr>
-<tr class="row-odd"><td><p>Deployment</p></td>
+<tr class="row-odd"><td><p>Production deployment</p></td>
 <td><p>Render Blueprint</p></td>
+<td><p>—</p></td>
 </tr>
 <tr class="row-even"><td><p>CI/CD</p></td>
 <td><p>GitHub Actions</p></td>
+<td><p>—</p></td>
+</tr>
+<tr class="row-odd"><td><p>Documentation</p></td>
+<td><p>Sphinx + MyST + RTD theme</p></td>
+<td><p>—</p></td>
 </tr>
 </tbody>
 </table>
 </section>
+<hr class="docutils" />
 <section id="repository-layout">
 <h2>Repository Layout<a class="headerlink" href="#repository-layout" title="Link to this heading"></a></h2>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>BSPQ26-E9/
 ├── backend/
-│   ├── auth-service/          # JWT auth, social login, ratings
-│   ├── inventory-service/     # Product catalogue and image storage
-│   ├── transaction-service/   # Wallet, reservation, purchase
-│   └── agentic-service/       # AI category &amp; price agents
-├── frontend/                  # Vue 3 SPA
+│   ├── auth-service/              # JWT auth, social login, ratings, user profiles
+│   │   ├── app/
+│   │   │   ├── api/
+│   │   │   │   └── v1/            # auth_router, social_auth_router, rating_router, user_router
+│   │   │   ├── core/              # security (JWT helpers, bcrypt)
+│   │   │   ├── db/                # session, init_db
+│   │   │   ├── models/            # User, SocialAccount, Rating
+│   │   │   ├── repositories/      # user_repository, rating_repository
+│   │   │   ├── schemas/           # auth, rating, user, common
+│   │   │   └── services/          # auth_service, rating_service
+│   │   └── tests/                 # 34 unit + integration tests (80% coverage)
+│   │
+│   ├── inventory-service/         # Product catalogue and image storage
+│   │   ├── app/
+│   │   │   ├── api/v1/            # product_router (CRUD + filtering + uploads)
+│   │   │   ├── db/                # session, init_db
+│   │   │   ├── models/            # Product (inventory_products table)
+│   │   │   ├── repositories/      # product_repository
+│   │   │   └── schemas/           # ProductCreate, ProductOut, ProductUpdate
+│   │   └── tests/                 # 44 unit tests (89% coverage)
+│   │
+│   ├── transaction-service/       # Wallet, reservation, purchase, state machine
+│   │   ├── app/
+│   │   │   ├── core/              # config, logging, exceptions, security
+│   │   │   ├── routers/           # products, wallet, transactions
+│   │   │   ├── services/          # state_machine (Available→Reserved→Sold)
+│   │   │   ├── models.py          # Product, WalletLedger, Transaction, ProductStateHistory
+│   │   │   └── schemas.py         # all transaction schemas
+│   │   └── tests/                 # 57 unit tests (83% coverage)
+│   │
+│   └── agentic-service/           # AI agents: category suggestion + price recommendation
+│       ├── app/
+│       │   ├── agent/             # category_agent, price_agent, tracing
+│       │   ├── api/               # wallabot_router
+│       │   └── schemas/           # CategoryRequest/Suggestion, PriceRequest/Recommendation
+│       └── test/                  # 75 tests including live API tests (87% coverage)
+│
+├── frontend/                      # Vue 3 SPA
+│   ├── src/
+│   │   ├── views/                 # LoginView, RegisterView, ProductsView, ProductDetailView,
+│   │   │                          #   CreateProductView, WalletView, ProfileView, etc.
+│   │   ├── components/            # Base components (Button, Card), Layout, Feedback
+│   │   ├── stores/                # auth.js (Pinia — JWT from localStorage)
+│   │   ├── services/              # auth.service.js, product.service.js,
+│   │   │                          #   wallet.service.js, wallabot.service.js
+│   │   ├── router/                # Vue Router (hash mode, auth guards)
+│   │   └── i18n/                  # en.json, es.json locale files
+│   └── ...
+│
 ├── tests/
-│   ├── integration/           # Cross-service end-to-end tests
-│   ├── performance/           # Locust load tests
-│   └── smoke/                 # Docker Compose health checks
-├── docs-sphinx/               # This documentation
-├── docker-compose.yml
-├── render.yaml
-└── .github/workflows/
+│   ├── integration/               # Cross-service end-to-end test flows
+│   ├── performance/               # Locust load tests
+│   └── smoke/                     # Docker Compose health checks
+│
+├── docs-sphinx/                   # This documentation (Sphinx + MyST)
+├── docker-compose.yml             # Local full-stack environment
+├── render.yaml                    # Render Blueprint (production deployment)
+└── .github/workflows/             # CI, CD, and docs pipelines
 </pre></div>
 </div>
 </section>
+<hr class="docutils" />
 <section id="local-quick-start">
 <h2>Local Quick-Start<a class="headerlink" href="#local-quick-start" title="Link to this heading"></a></h2>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># 1. Copy environment template</span>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># 1. Copy and fill in environment variables</span>
 cp<span class="w"> </span>.env.example<span class="w"> </span>.env
-<span class="c1"># 2. Start all services (requires Docker)</span>
+<span class="c1"># Required: SECRET_KEY, OPENAI_API_KEY, TAVILY_API_KEY</span>
+<span class="c1"># Optional: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, GOOGLE_CLIENT_ID, FACEBOOK_CLIENT_ID</span>
+<span class="c1"># Optional: LANGCHAIN_TRACING_V2, LANGCHAIN_API_KEY</span>
+
+<span class="c1"># 2. Build and start all services</span>
 docker<span class="w"> </span>compose<span class="w"> </span>up<span class="w"> </span>--build
 </pre></div>
 </div>
-<p>Once running the services are available at:</p>
+<p>Once running, all services are available at:</p>
 <table class="docutils align-default">
 <thead>
 <tr class="row-odd"><th class="head"><p>Service</p></th>
 <th class="head"><p>URL</p></th>
+<th class="head"><p>Interactive API docs</p></th>
 </tr>
 </thead>
 <tbody>
 <tr class="row-even"><td><p>Frontend</p></td>
 <td><p>http://localhost:5173</p></td>
+<td><p>—</p></td>
 </tr>
 <tr class="row-odd"><td><p>Auth Service</p></td>
 <td><p>http://localhost:8001</p></td>
+<td><p>http://localhost:8001/docs</p></td>
 </tr>
 <tr class="row-even"><td><p>Inventory Service</p></td>
 <td><p>http://localhost:8002</p></td>
+<td><p>http://localhost:8002/docs</p></td>
 </tr>
 <tr class="row-odd"><td><p>Transaction Service</p></td>
 <td><p>http://localhost:8003</p></td>
+<td><p>http://localhost:8003/docs</p></td>
 </tr>
 <tr class="row-even"><td><p>Agentic Service</p></td>
 <td><p>http://localhost:8004</p></td>
+<td><p>http://localhost:8004/docs</p></td>
 </tr>
 </tbody>
 </table>
+<p>FastAPI generates interactive <strong>Swagger UI</strong> at <code class="docutils literal notranslate"><span class="pre">/docs</span></code> and <strong>ReDoc</strong> at <code class="docutils literal notranslate"><span class="pre">/redoc</span></code> for
+each service. These are the fastest way to explore and test individual endpoints manually.</p>
+</section>
+<hr class="docutils" />
+<section id="design-principles">
+<h2>Design Principles<a class="headerlink" href="#design-principles" title="Link to this heading"></a></h2>
+<section id="microservices-with-no-shared-database">
+<h3>Microservices with No Shared Database<a class="headerlink" href="#microservices-with-no-shared-database" title="Link to this heading"></a></h3>
+<p>Each service owns its database exclusively. Cross-service reads use HTTP calls with
+service-scoped JWTs (e.g. the Auth Service fetches listing counts from the Inventory
+Service to populate the public profile endpoint). This ensures every service can be
+deployed, scaled, and tested independently.</p>
+</section>
+<section id="stateless-jwt-authentication">
+<h3>Stateless JWT Authentication<a class="headerlink" href="#stateless-jwt-authentication" title="Link to this heading"></a></h3>
+<p>JWTs are self-contained: each service validates the token locally using the shared
+<code class="docutils literal notranslate"><span class="pre">SECRET_KEY</span></code> without calling the Auth Service per request. The <code class="docutils literal notranslate"><span class="pre">sub</span></code> claim carries the
+user’s email and serves as the canonical <code class="docutils literal notranslate"><span class="pre">user_id</span></code> across all services.</p>
+</section>
+<section id="reliability-by-design">
+<h3>Reliability by Design<a class="headerlink" href="#reliability-by-design" title="Link to this heading"></a></h3>
+<p>The AI agents (Category and Price) are built so that they <strong>never block the seller flow</strong>.
+Every agent path ends in either a successful result or a graceful fallback with a
+<code class="docutils literal notranslate"><span class="pre">confidence=0.0</span></code> / <code class="docutils literal notranslate"><span class="pre">&quot;fallback:</span> <span class="pre">no</span> <span class="pre">market</span> <span class="pre">data</span> <span class="pre">found&quot;</span></code> signal. A complete LLM provider
+outage is handled silently with a hardcoded conservative estimate.</p>
+</section>
+<section id="immutable-audit-trails">
+<h3>Immutable Audit Trails<a class="headerlink" href="#immutable-audit-trails" title="Link to this heading"></a></h3>
+<p>Both the wallet ledger and the product state history use append-only rows — balances are
+derived from the latest ledger entry, and every state transition is recorded with the
+actor and timestamp. No financial or commerce data is ever deleted or overwritten.</p>
+</section>
 </section>
 </section>
 

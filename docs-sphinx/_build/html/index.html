@@ -53,6 +53,10 @@
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="api/index.html">REST API Reference</a></li>
 </ul>
+<p class="caption" role="heading"><span class="caption-text">Wallabot AI Agent</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="wallabot_agent.html">Wallabot AI Agent</a></li>
+</ul>
 <p class="caption" role="heading"><span class="caption-text">Testing &amp; Quality</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="testing.html">Testing &amp; Quality</a></li>
@@ -89,25 +93,39 @@
   <section id="wallabot-documentation">
 <h1>Wallabot Documentation<a class="headerlink" href="#wallabot-documentation" title="Link to this heading"></a></h1>
 <p><strong>Wallabot</strong> is an AI-powered C2C second-hand marketplace built with a FastAPI microservices
-backend, a Vue 3 frontend, and an LLM-driven agentic subsystem for smart product classification
-and price recommendations.</p>
-<div class="toctree-wrapper compound">
+backend, a Vue 3 frontend, and an LLM-driven agentic subsystem for intelligent product
+classification and price recommendations.</p>
+<p style="margin: 1.2em 0;">
+  <a href="BSPQ26-E9.pdf"
+     style="display:inline-block; padding:0.5em 1.2em; background:#2980b9;
+            color:#fff; border-radius:4px; text-decoration:none; font-weight:bold;">
+    ⬇ Download PDF
+  </a>
+</p><div class="toctree-wrapper compound">
 <p class="caption" role="heading"><span class="caption-text">Project Overview</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="overview.html">Project Overview</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="overview.html#what-is-wallabot">What is Wallabot?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="overview.html#sprint-deliverables">Sprint Deliverables</a></li>
 <li class="toctree-l2"><a class="reference internal" href="overview.html#key-features">Key Features</a></li>
 <li class="toctree-l2"><a class="reference internal" href="overview.html#technology-stack">Technology Stack</a></li>
 <li class="toctree-l2"><a class="reference internal" href="overview.html#repository-layout">Repository Layout</a></li>
 <li class="toctree-l2"><a class="reference internal" href="overview.html#local-quick-start">Local Quick-Start</a></li>
+<li class="toctree-l2"><a class="reference internal" href="overview.html#design-principles">Design Principles</a></li>
 </ul>
 </li>
 <li class="toctree-l1"><a class="reference internal" href="architecture.html">System Architecture</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="architecture.html#microservices-overview">Microservices Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="architecture.html#design-philosophy">Design Philosophy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="architecture.html#high-level-diagram">High-Level Diagram</a></li>
 <li class="toctree-l2"><a class="reference internal" href="architecture.html#service-responsibilities">Service Responsibilities</a></li>
 <li class="toctree-l2"><a class="reference internal" href="architecture.html#authentication-flow">Authentication Flow</a></li>
 <li class="toctree-l2"><a class="reference internal" href="architecture.html#product-state-machine">Product State Machine</a></li>
+<li class="toctree-l2"><a class="reference internal" href="architecture.html#wallet-ledger-architecture">Wallet Ledger Architecture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="architecture.html#atomic-purchase-flow">Atomic Purchase Flow</a></li>
 <li class="toctree-l2"><a class="reference internal" href="architecture.html#database-strategy">Database Strategy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="architecture.html#frontend-architecture">Frontend Architecture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="architecture.html#deployment-architecture-production">Deployment Architecture (Production)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="architecture.html#ci-cd-pipeline">CI/CD Pipeline</a></li>
 </ul>
 </li>
 </ul>
@@ -153,10 +171,31 @@ and price recommendations.</p>
 </ul>
 </div>
 <div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Wallabot AI Agent</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="wallabot_agent.html">Wallabot AI Agent</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="wallabot_agent.html#architecture-overview">Architecture Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="wallabot_agent.html#how-sellers-use-the-agents">How Sellers Use the Agents</a></li>
+<li class="toctree-l2"><a class="reference internal" href="wallabot_agent.html#langchain-lcel-chain-architecture">LangChain LCEL Chain Architecture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="wallabot_agent.html#category-agent">Category Agent</a></li>
+<li class="toctree-l2"><a class="reference internal" href="wallabot_agent.html#price-agent">Price Agent</a></li>
+<li class="toctree-l2"><a class="reference internal" href="wallabot_agent.html#observability-langsmith-tracing">Observability — LangSmith Tracing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="wallabot_agent.html#http-error-responses">HTTP Error Responses</a></li>
+<li class="toctree-l2"><a class="reference internal" href="wallabot_agent.html#reliability-design">Reliability Design</a></li>
+<li class="toctree-l2"><a class="reference internal" href="wallabot_agent.html#configuration-reference">Configuration Reference</a></li>
+<li class="toctree-l2"><a class="reference internal" href="wallabot_agent.html#default-category-list">Default Category List</a></li>
+<li class="toctree-l2"><a class="reference internal" href="wallabot_agent.html#end-to-end-example">End-to-End Example</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
 <p class="caption" role="heading"><span class="caption-text">Testing &amp; Quality</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="testing.html">Testing &amp; Quality</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="testing.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="testing.html#coverage-summary">Coverage Summary</a></li>
+<li class="toctree-l2"><a class="reference internal" href="testing.html#per-service-breakdown">Per-Service Breakdown</a></li>
 <li class="toctree-l2"><a class="reference internal" href="testing.html#test-layers">Test Layers</a></li>
 <li class="toctree-l2"><a class="reference internal" href="testing.html#running-all-tests-locally">Running All Tests Locally</a></li>
 <li class="toctree-l2"><a class="reference internal" href="testing.html#coverage-reports">Coverage Reports</a></li>
