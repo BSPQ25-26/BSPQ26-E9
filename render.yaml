@@ -10,6 +10,11 @@ services:
     envVars:
       - key: AUTH_DATABASE_URL
         value: sqlite:////app/data/auth.db
+      - key: TRANSACTION_SERVICE_URL
+        fromService:
+          name: transaction-service
+          type: web
+          property: hostURL
 
   - type: web
     name: inventory-service

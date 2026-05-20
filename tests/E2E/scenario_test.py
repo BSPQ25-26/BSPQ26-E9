@@ -7,17 +7,29 @@ This script exercises the new features with realistic black-box data:
 
 Run it against the Docker Compose stack after the services are healthy.
 python tests/E2E/scenario_test.py
+
+Creates seller-/buyer- test users and removes them plus related inventory and
+transaction data at the end (even if a scenario fails). Requires
+ENABLE_TEST_CLEANUP=true and TEST_CLEANUP_SECRET matching the stack (Compose defaults).
 """
 
 from __future__ import annotations
 
 import os
+import subprocess
+import sys
 import time
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
-import subprocess
 
 import requests
+
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
+
+from tests.support.cleanup import cleanup_test_users
 
 
 AUTH_URL = os.getenv("AUTH_SERVICE_URL", "http://localhost:8001")
@@ -189,9 +201,7 @@ def _create_rating(token: str, seller_id: int, transaction_id: int) -> dict[str,
     return response.json()
 
 
-def _run_profile_and_ratings_scenario() -> dict[str, Any]:
-    users = _seed_demo_users()
-
+def _run_profile_and_ratings_scenario(users: DemoUsers) -> dict[str, Any]:
     product = _create_transaction_product(
         users.seller_token,
         {
@@ -227,7 +237,6 @@ def _run_profile_and_ratings_scenario() -> dict[str, Any]:
     assert ratings[0]["reviewer_username"] == users.buyer_email
 
     return {
-        "users": users,
         "seller_id": seller_id,
         "transaction_id": int(transaction_id),
         "rating": rating,
@@ -370,27 +379,39 @@ def run_acceptance_suite() -> dict[str, Any]:
     print("Running Sprint 3 acceptance scenarios against the Docker stack")
     print(f"Frontend: {FRONTEND_URL}")
 
-    profile_and_ratings = _run_profile_and_ratings_scenario()
-    catalog_users = profile_and_ratings["users"]
-    catalog = _run_catalog_scenario(catalog_users)
-    wallabot = _run_wallabot_scenario()
+    demo_users: DemoUsers | None = None
+    try:
+        demo_users = _seed_demo_users()
+        profile_and_ratings = _run_profile_and_ratings_scenario(demo_users)
+        catalog = _run_catalog_scenario(demo_users)
+        wallabot = _run_wallabot_scenario()
 
-    summary = {
-        "profile_and_ratings": {
-            "seller_email": catalog_users.seller_email,
-            "buyer_email": catalog_users.buyer_email,
-            "seller_id": profile_and_ratings["seller_id"],
-            "transaction_id": profile_and_ratings["transaction_id"],
-        },
-        "catalog": catalog,
-        "wallabot": wallabot,
-        "frontend_routes_to_review": [
-            f"{FRONTEND_URL}/#/products",
-            f"{FRONTEND_URL}/#/products/create",
-        ],
-    }
+        summary = {
+            "profile_and_ratings": {
+                "seller_email": demo_users.seller_email,
+                "buyer_email": demo_users.buyer_email,
+                "seller_id": profile_and_ratings["seller_id"],
+                "transaction_id": profile_and_ratings["transaction_id"],
+            },
+            "catalog": catalog,
+            "wallabot": wallabot,
+            "frontend_routes_to_review": [
+                f"{FRONTEND_URL}/#/products",
+                f"{FRONTEND_URL}/#/products/create",
+            ],
+        }
 
-    return summary
+        return summary
+    finally:
+        if demo_users is not None:
+            results = cleanup_test_users(
+                emails=[demo_users.seller_email, demo_users.buyer_email],
+                auth_base_url=AUTH_URL,
+                transaction_base_url=TRANSACTION_URL,
+                inventory_base_url=INVENTORY_URL,
+                purge_test_patterns=False,
+            )
+            print("Cleanup (auth/inventory/transaction):", results)
 
 
 def main() -> None:

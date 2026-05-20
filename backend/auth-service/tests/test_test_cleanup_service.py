@@ -27,3 +27,24 @@ def test_cleanup_test_users_removes_matching_users_but_keeps_seed_users(client, 
         == 0
     )
     assert db.query(Rating).count() == 0
+
+
+def test_cleanup_test_users_removes_e2e_scenario_pattern_emails(client, db):
+    auth_service = AuthService()
+    auth_service.register(db, "seller-1700000000@example.com", "pass1234")
+    auth_service.register(db, "buyer-1700000000@example.com", "pass1234")
+
+    result = cleanup_test_users(
+        db,
+        emails=["seller-1700000000@example.com", "buyer-1700000000@example.com"],
+        run_id=None,
+        purge_test_patterns=False,
+    )
+
+    assert result["deleted_users"] == 2
+    assert (
+        db.query(User)
+        .filter(User.email.in_(["seller-1700000000@example.com", "buyer-1700000000@example.com"]))
+        .count()
+        == 0
+    )

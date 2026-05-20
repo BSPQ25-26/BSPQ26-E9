@@ -91,11 +91,15 @@ def client():
 
 @pytest.fixture()
 def db_session():
+    from app.db.base import Base
+    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
     session = TestingSessionLocal()
     try:
         yield session
     finally:
         session.close()
+        Base.metadata.drop_all(bind=engine)
 
 
 @pytest.fixture()
