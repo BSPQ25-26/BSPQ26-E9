@@ -1,8 +1,10 @@
+import os
 import bcrypt
 from jose import jwt, JWTError
 from datetime import datetime, timedelta
 
-SECRET_KEY = "mi_clave_secreta"
+# Must match transaction-service (and other services) — see root .env SECRET_KEY
+SECRET_KEY = os.getenv("SECRET_KEY", "mi_clave_secreta")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
