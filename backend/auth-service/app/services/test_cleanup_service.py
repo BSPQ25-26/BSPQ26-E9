@@ -20,6 +20,8 @@ PROTECTED_EMAILS = frozenset(
 INTEGRATION_EMAIL_RE = re.compile(r"^[\w-]+_[0-9a-f]{8}@example\.com$")
 PERF_EMAIL_RE = re.compile(r"^perf-[0-9a-f]{8}-.+@example\.com$")
 FRONTEND_IT_EMAIL_RE = re.compile(r"^frontend-it-\d+@example\.com$")
+# tests/E2E/scenario_test.py — seller-<unix_ts>@ / buyer-<unix_ts>@
+E2E_SCENARIO_EMAIL_RE = re.compile(r"^(seller|buyer)-\d+@example\.com$")
 
 
 def _is_test_email(email: str) -> bool:
@@ -29,6 +31,7 @@ def _is_test_email(email: str) -> bool:
         INTEGRATION_EMAIL_RE.match(email)
         or PERF_EMAIL_RE.match(email)
         or FRONTEND_IT_EMAIL_RE.match(email)
+        or E2E_SCENARIO_EMAIL_RE.match(email)
     )
 
 

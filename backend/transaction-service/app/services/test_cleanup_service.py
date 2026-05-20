@@ -9,6 +9,7 @@ from app.models import Product, ProductStateHistory, Transaction, WalletLedger
 INTEGRATION_EMAIL_RE = re.compile(r"^[\w-]+_[0-9a-f]{8}@example\.com$")
 PERF_EMAIL_RE = re.compile(r"^perf-[0-9a-f]{8}-.+@example\.com$")
 FRONTEND_IT_EMAIL_RE = re.compile(r"^frontend-it-\d+@example\.com$")
+E2E_SCENARIO_EMAIL_RE = re.compile(r"^(seller|buyer)-\d+@example\.com$")
 
 
 def _is_test_user_id(user_id: str) -> bool:
@@ -16,6 +17,7 @@ def _is_test_user_id(user_id: str) -> bool:
         INTEGRATION_EMAIL_RE.match(user_id)
         or PERF_EMAIL_RE.match(user_id)
         or FRONTEND_IT_EMAIL_RE.match(user_id)
+        or E2E_SCENARIO_EMAIL_RE.match(user_id)
     )
 
 

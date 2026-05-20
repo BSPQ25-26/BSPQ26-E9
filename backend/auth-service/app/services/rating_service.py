@@ -7,7 +7,8 @@ from app.repositories.rating_repository import RatingRepository
 from app.repositories.user_repository import UserRepository
 from app.core.security import create_access_token
 
-TRANSACTION_SERVICE_URL = os.getenv("TRANSACTION_SERVICE_URL", "http://transaction-service:8000")
+_raw = os.getenv("TRANSACTION_SERVICE_URL", "http://transaction-service:8000").rstrip("/")
+TRANSACTION_SERVICE_URL = _raw if _raw.startswith(("http://", "https://")) else f"https://{_raw}"
 
 
 def _check_transaction_eligibility(transaction_id: int, from_user_email: str):
