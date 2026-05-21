@@ -23,6 +23,9 @@ The CI pipeline enforces a minimum of 50% via `--cov-fail-under=50`.
 
 ```
 tests/
+├── E2E/                       # Sprint acceptance runner; requires a live Docker stack
+│   ├── scenario_test.py       # Black-box acceptance scenarios (ratings, catalog, Wallabot)
+│   └── SPRINT3_ACCEPTANCE.md  # Acceptance criteria and results checklist
 ├── integration/               # Cross-service tests; require a live Docker stack
 │   ├── test_product_crud_integration.py
 │   ├── test_protected_endpoints_integration.py
@@ -32,8 +35,12 @@ tests/
 │   ├── locustfile.py
 │   ├── perf_config.py
 │   └── reports/               # Auto-generated JSON + HTML reports
-└── smoke/
-    └── test_docker_smoke.py   # /health endpoint checks; require a live Docker stack
+├── smoke/
+│   └── test_docker_smoke.py   # /health endpoint checks; require a live Docker stack
+└── support/                   # Shared helpers used by E2E, integration, and performance tests
+    ├── cleanup.py             # POST /internal/test/cleanup against all three services
+    ├── integration_helpers.py # create_and_login_user, safe_request, base URLs
+    └── test_user_registry.py  # Session-scoped registry of emails created during a run
 
 backend/auth-service/tests/
 ├── conftest.py                # Shared fixtures: client, db, test database setup
@@ -710,6 +717,174 @@ Parametrised test over `GET`, `PUT`, `DELETE` methods. For each method:
 
 ---
 
+## E2E Acceptance Tests
+
+**Location:** `tests/E2E/`
+
+**Activation:** Run manually — not via pytest. No environment flag needed.
+
+The acceptance runner (`scenario_test.py`) is a **black-box HTTP script** that exercises
+Sprint 3 features end-to-end against a running Docker Compose stack. It seeds realistic demo
+users and products, executes five acceptance scenarios, verifies every assertion, and then
+deletes all test data in a `finally` block — regardless of whether any scenario failed.
+
+---
+
+### Acceptance Scenarios
+
+| # | Scenario | What is exercised |
+|---|----------|------------------|
+| 1 | **Ratings update the seller profile** | Buyer registers, tops up wallet, reserves and buys a seller product, posts a 5-star rating — then verifies the seller profile reflects the updated average rating and the ratings list contains the buyer review |
+| 2 | **Public profile accessible without auth** | Anonymous `GET /users/{id}/profile` returns 200 with `username`, `member_since`, `avg_rating`, and `active_listing_count` |
+| 3 | **Catalog filters narrow the visible products** | Four catalog products are created with different categories, conditions, and prices; `category + condition + min_price + max_price` filtering returns only the matching item |
+| 4 | **Search matches title and description** | Keyword `q=camera` returns only the product whose title contains that word; unrelated products are excluded |
+| 5 | **Wallabot category suggestion** | `POST /wallabot/category` with a realistic iPhone listing returns a non-empty `suggested_category`; live price recommendation is exercised only when `RUN_WALLABOT_PRICE=1` |
+
+---
+
+### How It Works
+
+```
+scenario_test.py
+    │
+    ├─ _seed_demo_users()
+    │       registers seller-{ts}@example.com and buyer-{ts}@example.com
+    │       logs in both and stores their JWTs
+    │
+    ├─ _run_profile_and_ratings_scenario(users)   ← Scenarios 1 + 2
+    │       creates product in Transaction Service
+    │       tops up buyer wallet (€700)
+    │       reserves and buys the product
+    │       resolves seller numeric ID via docker compose exec (see note below)
+    │       posts a 5-star rating via Auth Service
+    │       asserts seller profile and ratings list
+    │
+    ├─ _run_catalog_scenario(users)               ← Scenarios 3 + 4
+    │       creates 4 products in Inventory Service with varied attributes
+    │       asserts category+condition+price filter returns exactly 1 product
+    │       asserts keyword search returns exactly 1 product
+    │       asserts combined keyword+category+condition filter returns exactly 1 product
+    │
+    ├─ _run_wallabot_scenario()                   ← Scenario 5
+    │       posts category request and asserts non-empty suggested_category
+    │       (optionally) posts price request and asserts valid price range
+    │
+    └─ finally: cleanup_test_users(seller, buyer)
+            calls POST /internal/test/cleanup on auth, inventory, and transaction
+            deletes all rows created by this run from all three databases
+```
+
+---
+
+### Test Data Lifecycle
+
+Demo users are created with timestamp-based emails:
+
+```python
+seller_email = f"seller-{int(time.time())}@example.com"
+buyer_email  = f"buyer-{int(time.time())}@example.com"
+```
+
+The `finally` block always runs `cleanup_test_users()`, which calls
+`POST /internal/test/cleanup` in parallel on the auth, inventory, and transaction services.
+This endpoint is protected by `ENABLE_TEST_CLEANUP=true` (default in `docker-compose.yml`)
+and `TEST_CLEANUP_SECRET` (default `dev-test-cleanup`). If the services are not configured
+with `ENABLE_TEST_CLEANUP=true`, cleanup silently skips (returns `{"skipped": true}`) and
+test data remains in the database.
+
+**What is created and then deleted during a run:**
+
+| Data | Service | Cleaned up by |
+|------|---------|--------------|
+| 2 × `User` rows (seller + buyer) | auth-service | `/internal/test/cleanup` |
+| 1 × `WalletLedger` top-up entry | transaction-service | `/internal/test/cleanup` |
+| 1 × `WalletLedger` purchase entry (buyer) | transaction-service | `/internal/test/cleanup` |
+| 1 × `WalletLedger` sale entry (seller) | transaction-service | `/internal/test/cleanup` |
+| 1 × `Product` row + state history | transaction-service | `/internal/test/cleanup` |
+| 1 × `Transaction` record | transaction-service | `/internal/test/cleanup` |
+| 1 × `Rating` row | auth-service | `/internal/test/cleanup` |
+| 4 × `Product` rows (catalog scenario) | inventory-service | `/internal/test/cleanup` |
+
+---
+
+### Known Limitation — User ID Resolution
+
+The ratings scenario requires the seller's **numeric database ID** (auth-service uses an
+auto-increment integer primary key) in order to call `POST /ratings` with `to_user_id`.
+The registration and login endpoints only return a JWT, not the numeric ID. There is
+currently no HTTP endpoint to look up a user's ID from their email.
+
+The runner works around this with a `docker compose exec` call that queries the auth-service
+container's SQLite database directly:
+
+```python
+subprocess.run([
+    "docker", "compose", "exec", "-T", "auth-service",
+    "python", "-c", "SELECT id FROM users WHERE email = :email", seller_email
+])
+```
+
+**Consequence:** the acceptance runner only works inside a Docker Compose environment. It
+cannot be pointed at the Render deployment without first adding a `GET /users/me` endpoint
+to the auth-service that returns the authenticated caller's numeric ID.
+
+---
+
+### Running the Acceptance Suite
+
+**Prerequisites:** the full Docker stack must be healthy.
+
+```bash
+# 1. Start the stack
+docker compose up --build -d
+
+# 2. Wait for all four services to respond on /health, then run:
+python tests/E2E/scenario_test.py
+```
+
+To also exercise live Wallabot price recommendation (requires `OPENAI_API_KEY` and
+`TAVILY_API_KEY` to be set):
+
+```bash
+# Windows PowerShell
+$env:RUN_WALLABOT_PRICE="1"
+python tests/E2E/scenario_test.py
+
+# Linux / macOS
+RUN_WALLABOT_PRICE=1 python tests/E2E/scenario_test.py
+```
+
+To point the runner at a different stack (e.g. a staging environment):
+
+```bash
+$env:AUTH_SERVICE_URL="http://localhost:8001"
+$env:INVENTORY_SERVICE_URL="http://localhost:8002"
+$env:TRANSACTION_SERVICE_URL="http://localhost:8003"
+$env:WALLABOT_SERVICE_URL="http://localhost:8004"
+python tests/E2E/scenario_test.py
+```
+
+The script prints a summary on success and a traceback on failure. Exit code is `0` on
+success, non-zero if any scenario assertion fails (cleanup still runs either way).
+
+---
+
+### Sprint 3 Acceptance Results
+
+| Criterion | Status | Evidence |
+|-----------|--------|---------|
+| Ratings update the seller profile | **Met** | Runner creates a completed transaction, posts a 5-star rating, and asserts `avg_rating` is updated on the seller public profile |
+| Public profile accessible without authentication | **Met** | Anonymous `GET /users/{id}/profile` returns 200; confirmed by runner and `test_profile.py` unit tests |
+| Catalog filters narrow the visible products | **Met** | Runner creates 4 products and asserts category + condition + price filter returns exactly the expected item |
+| Search matches title and description | **Met** | Runner asserts `q=camera` returns only the camera bag product |
+| Wallabot suggests category and pricing guidance | **Partially met** | Category suggestion always exercised; live price recommendation gated behind `RUN_WALLABOT_PRICE=1` — not run by default |
+
+**Known gap:** Wallabot live pricing is only verified when `RUN_WALLABOT_PRICE=1` and the
+external AI providers (OpenAI, Tavily) are reachable and configured. The default acceptance
+run does not exercise `POST /wallabot/price`.
+
+---
+
 ## Performance / Load Tests
 
 **Location:** `tests/performance/`
@@ -886,6 +1061,13 @@ $env:OPENAI_API_KEY="sk-..."
 $env:TAVILY_API_KEY="tvly-..."
 $env:RUN_LIVE_TESTS=true
 pytest test/test_price_live.py -v
+```
+
+### E2E acceptance tests (requires Docker Compose)
+
+```bash
+docker compose up --build -d
+python tests/E2E/scenario_test.py
 ```
 
 ### Integration tests (requires Docker Compose)

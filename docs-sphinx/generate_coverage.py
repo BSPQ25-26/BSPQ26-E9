@@ -19,12 +19,15 @@ Output (written to docs-sphinx/source/_generated/):
 When any artifact is missing the script exits without modifying the _generated/
 files, so the last committed values are used as a fallback for local builds.
 """
+import logging
 import sys
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
 ARTIFACTS  = Path("coverage-artifacts")
 GENERATED  = Path("docs-sphinx/source/_generated")
+
+logger = logging.getLogger(__name__)
 
 # (artifact suffix, backend/ subdirectory, test/ directory name)
 SERVICES = [
@@ -59,8 +62,10 @@ def main() -> int:
         junit_path = base / "junit.xml"
 
         if not cov_path.exists():
-            print(f"[generate_coverage] SKIP — {cov_path} not found; "
-                  "keeping committed fallback values.")
+            logger.warning(
+                "SKIP — %s not found; keeping committed fallback values.",
+                cov_path,
+            )
             return 0
 
         cov   = parse_coverage_xml(cov_path)
@@ -98,7 +103,7 @@ def main() -> int:
         f"| **{total_covered} / {total_valid}** | **{total_pct}%** |"
     )
     (GENERATED / "coverage_summary_table.md").write_text("\n".join(lines) + "\n")
-    print(f"[generate_coverage] coverage_summary_table.md  — overall {total_pct}%")
+    logger.info("coverage_summary_table.md — overall %s%%", total_pct)
 
     # ── coverage_links_table.md ────────────────────────────────────────────────
     link_lines = [
@@ -111,7 +116,7 @@ def main() -> int:
             f"| [Open report](_static/coverage/{r['svc']}/index.html) |"
         )
     (GENERATED / "coverage_links_table.md").write_text("\n".join(link_lines) + "\n")
-    print("[generate_coverage] coverage_links_table.md")
+    logger.info("coverage_links_table.md")
 
     # ── per-service stats lines ────────────────────────────────────────────────
     for r in rows:
@@ -120,10 +125,14 @@ def main() -> int:
             f"`backend/{r['svc']}/{r['test_dir']}/`**\n"
         )
         (GENERATED / f"stats_{r['slug']}.md").write_text(content)
-        print(f"[generate_coverage] stats_{r['slug']}.md  — {r['pct']}%")
+        logger.info("stats_%s.md — %s%%", r["slug"], r["pct"])
 
     return 0
 
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s - %(message)s",
+    )
     sys.exit(main())

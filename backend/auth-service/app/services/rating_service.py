@@ -15,19 +15,31 @@ def _check_transaction_eligibility(transaction_id: int, from_user_email: str):
     try:
         service_token = create_access_token({"sub": from_user_email})
         headers = {"Authorization": f"Bearer {service_token}"}
-        response = httpx.get(
-            f"{TRANSACTION_SERVICE_URL}/products/history",
-            headers=headers,
-            timeout=3.0
-        )
-        if response.status_code != 200:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="No se puede verificar la transacción"
+        # History is paginated (default 20); scan pages until we find this id or exhaust results.
+        per_page = 100
+        page = 1
+        transaction = None
+        while True:
+            response = httpx.get(
+                f"{TRANSACTION_SERVICE_URL}/products/history",
+                headers=headers,
+                params={"page": page, "per_page": per_page, "role": "all"},
+                timeout=3.0,
             )
-        data = response.json()
-        transactions = data if isinstance(data, list) else data.get("items", data.get("transactions", []))
-        transaction = next((t for t in transactions if t.get("id") == transaction_id), None)
+            if response.status_code != 200:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="No se puede verificar la transacción"
+                )
+            data = response.json()
+            transactions = data if isinstance(data, list) else data.get("items", data.get("transactions", []))
+            transaction = next((t for t in transactions if t.get("id") == transaction_id), None)
+            if transaction:
+                break
+            total = data.get("total", 0) if isinstance(data, dict) else 0
+            if not transactions or page * per_page >= total:
+                break
+            page += 1
         if not transaction:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,

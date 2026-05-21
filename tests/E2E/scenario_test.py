@@ -15,6 +15,7 @@ ENABLE_TEST_CLEANUP=true and TEST_CLEANUP_SECRET matching the stack (Compose def
 
 from __future__ import annotations
 
+import logging
 import os
 import subprocess
 import sys
@@ -28,6 +29,8 @@ import requests
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
+
+logger = logging.getLogger("mini_wallapop.e2e")
 
 from tests.support.cleanup import cleanup_test_users
 
@@ -376,8 +379,8 @@ def _run_wallabot_scenario() -> dict[str, Any]:
 
 
 def run_acceptance_suite() -> dict[str, Any]:
-    print("Running Sprint 3 acceptance scenarios against the Docker stack")
-    print(f"Frontend: {FRONTEND_URL}")
+    logger.info("Running Sprint 3 acceptance scenarios against the Docker stack")
+    logger.info("Frontend: %s", FRONTEND_URL)
 
     demo_users: DemoUsers | None = None
     try:
@@ -411,14 +414,18 @@ def run_acceptance_suite() -> dict[str, Any]:
                 inventory_base_url=INVENTORY_URL,
                 purge_test_patterns=False,
             )
-            print("Cleanup (auth/inventory/transaction):", results)
+            logger.info("Cleanup (auth/inventory/transaction): %s", results)
 
 
 def main() -> None:
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s - %(message)s",
+    )
     summary = run_acceptance_suite()
-    print("\nAcceptance summary")
+    logger.info("Acceptance summary")
     for key, value in summary.items():
-        print(f"- {key}: {value}")
+        logger.info("- %s: %s", key, value)
 
 
 if __name__ == "__main__":

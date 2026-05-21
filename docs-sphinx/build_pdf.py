@@ -1,4 +1,5 @@
 """Build a single PDF from the Sphinx HTML output using WeasyPrint."""
+import logging
 import os
 from pathlib import Path
 from bs4 import BeautifulSoup
@@ -6,6 +7,8 @@ from weasyprint import HTML, CSS
 
 BUILD_DIR = Path(__file__).parent / "_build" / "html"
 OUTPUT_PDF = Path(__file__).parent / "_build" / "BSPQ26-E9.pdf"
+
+logger = logging.getLogger(__name__)
 
 PAGE_ORDER = [
     "index.html",
@@ -50,8 +53,12 @@ def main():
         combined.pages.extend(rendered.pages)
     combined.write_pdf(str(OUTPUT_PDF))
     size_kb = OUTPUT_PDF.stat().st_size // 1024
-    print(f"PDF written to {OUTPUT_PDF} ({size_kb} KB)")
+    logger.info("PDF written to %s (%s KB)", OUTPUT_PDF, size_kb)
 
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s - %(message)s",
+    )
     main()
